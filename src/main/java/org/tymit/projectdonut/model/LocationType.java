@@ -9,6 +9,13 @@ public class LocationType {
         this.encodedName = encodedName;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof LocationType
+                && ((LocationType) o).getVisibleName().equals(this.getVisibleName())
+                && ((LocationType) o).getEncodedname().equals(this.getEncodedname());
+    }
+
     public String getVisibleName() {
         return visibleName;
     }

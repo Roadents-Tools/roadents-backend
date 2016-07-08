@@ -18,7 +18,7 @@ public class LocationCacheHelper {
     }
 
     private static LocationCacheInstance[] initializeCacheInstanceList() {
-        return new LocationCacheInstance[0];
+        return new LocationCacheInstance[]{new MemoryMapLocationCache()};
     }
 
     public static LocationCacheHelper getHelper() {
@@ -31,5 +31,9 @@ public class LocationCacheHelper {
             if (cached != null) return cached;
         }
         return null;
+    }
+
+    public void cacheLocations(double[] center, double range, LocationType type, List<DestinationLocation> locations) {
+        allInstances[0].cacheLocations(center, range, type, locations);
     }
 }

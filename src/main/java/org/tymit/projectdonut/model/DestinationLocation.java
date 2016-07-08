@@ -16,6 +16,15 @@ public class DestinationLocation implements LocationPoint {
     }
 
     @Override
+    public boolean equals(Object o) {
+        return o instanceof DestinationLocation
+                && ((DestinationLocation) o).getCoordinates()[0] == this.getCoordinates()[0]
+                && ((DestinationLocation) o).getCoordinates()[1] == this.getCoordinates()[1]
+                && ((DestinationLocation) o).getName().equals(this.getName())
+                && ((DestinationLocation) o).getType().equals(this.getType());
+    }
+
+    @Override
     public String getName() {
         return name;
     }

@@ -17,7 +17,10 @@ import java.util.List;
 public class LocationRetriever {
     public static List<DestinationLocation> getLocations(double[] center, double range, LocationType type, List<CostArgs> args) {
         List<DestinationLocation> locations = LocationCacheHelper.getHelper().getCachedLocations(center, range, type);
-        if (locations == null) locations = LocationProviderHelper.getHelper().getLocations(center, range, type);
+        if (locations == null) {
+            locations = LocationProviderHelper.getHelper().getLocations(center, range, type);
+            LocationCacheHelper.getHelper().cacheLocations(center, range, type, locations);
+        }
         if (locations == null || locations.size() == 0) return new ArrayList<>(0);
 
         if (args == null || args.size() == 0) return locations;
