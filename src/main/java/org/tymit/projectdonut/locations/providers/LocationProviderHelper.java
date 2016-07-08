@@ -1,6 +1,6 @@
 package org.tymit.projectdonut.locations.providers;
 
-import org.tymit.projectdonut.model.LocationPoint;
+import org.tymit.projectdonut.model.DestinationLocation;
 import org.tymit.projectdonut.model.LocationType;
 
 import java.util.Collections;
@@ -31,14 +31,14 @@ public class LocationProviderHelper {
 
     //We use a method in cases with a lot of boilerplate
     private static LocationProvider[] initializeProvidersList() {
-        return new LocationProvider[0];
+        return new LocationProvider[]{new GoogleLocationsProvider()};
     }
 
-    public List<LocationPoint> getLocations(double[] center, double range, LocationType type) {
+    public List<DestinationLocation> getLocations(double[] center, double range, LocationType type) {
         if (typeToProviders.getOrDefault(type, null) != null && typeToProviders.get(type).size() > 0) {
             for (LocationProvider provider : typeToProviders.get(type)) {
                 if (!provider.isUsable()) continue;
-                List<LocationPoint> allPoints = provider.queryLocations(center, range, type);
+                List<DestinationLocation> allPoints = provider.queryLocations(center, range, type);
                 if (allPoints != null) return allPoints;
             }
         }
@@ -51,7 +51,7 @@ public class LocationProviderHelper {
 
             typeToProviders.get(type).add(attemptProvider);
             if (!attemptProvider.isUsable()) continue;
-            List<LocationPoint> allPoints = attemptProvider.queryLocations(center, range, type);
+            List<DestinationLocation> allPoints = attemptProvider.queryLocations(center, range, type);
             if (allPoints != null) return allPoints;
         }
         return null;

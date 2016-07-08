@@ -1,5 +1,6 @@
 package org.tymit.projectdonut.locations.caches;
 
+import org.tymit.projectdonut.model.DestinationLocation;
 import org.tymit.projectdonut.model.LocationPoint;
 import org.tymit.projectdonut.model.LocationType;
 
@@ -12,7 +13,7 @@ public interface LocationCacheInstance {
     void cacheLocations(double[] center, double range, LocationType type, List<LocationPoint> locations);
 
 
-    List<LocationPoint> getCachedLocations(double[] center, double range, LocationType type);
+    List<DestinationLocation> getCachedLocations(double[] center, double range, LocationType type);
 
     int getSize();
 
