@@ -2,7 +2,7 @@ package org.tymit.projectdonut.locations.caches;
 
 import org.tymit.projectdonut.model.DestinationLocation;
 import org.tymit.projectdonut.model.LocationType;
-import org.tymit.projectdonut.model.LocationUtils;
+import org.tymit.projectdonut.utils.LocationUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +33,7 @@ public class MemoryMapLocationCache implements LocationCacheInstance {
 
         //We sort the locations by distance to the center so that we can retrieve them quicker.
         locations.sort((destinationLocation, t1) ->
-                (int) Math.round(LocationUtils.distanceBetween(t1.getCoordinates(), center) - LocationUtils.distanceBetween(destinationLocation.getCoordinates(), center))
+                (int) Math.round(LocationUtils.distanceBetween(t1.getCoordinates(), center, true) - LocationUtils.distanceBetween(destinationLocation.getCoordinates(), center, true))
         );
 
         cache.put(tag, locations);
@@ -50,7 +50,7 @@ public class MemoryMapLocationCache implements LocationCacheInstance {
         int cacheSize = cache.get(tag).size();
         for (int i = 0; i < cacheSize; i++) {
             DestinationLocation toCheck = cache.get(tag).get(i);
-            if (LocationUtils.distanceBetween(toCheck.getCoordinates(), center) > range + ERROR_MARGIN) break;
+            if (LocationUtils.distanceBetween(toCheck.getCoordinates(), center, true) > range + ERROR_MARGIN) break;
             toReturn.add(toCheck);
         }
         return toReturn;

@@ -26,7 +26,7 @@ public class CostProviderHelper {
     }
 
     private static CostProvider[] initializeProvidersList() {
-        return new CostProvider[0];
+        return new CostProvider[]{new DistanceCostProvider()};
     }
 
     public static CostProviderHelper getHelper() {
