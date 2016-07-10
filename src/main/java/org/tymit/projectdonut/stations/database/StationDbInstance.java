@@ -12,4 +12,6 @@ public interface StationDbInstance {
     List<TransStation> queryStations(double[] center, double range, TransChain chain);
 
     boolean putStations(List<TransStation> stations);
+
+    boolean isUp();
 }

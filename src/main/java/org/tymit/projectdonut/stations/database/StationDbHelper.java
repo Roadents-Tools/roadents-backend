@@ -21,13 +21,17 @@ public class StationDbHelper {
     }
 
     private static StationDbInstance[] initializeDbList() {
-        return new StationDbInstance[0];
+        StationDbInstance[] allDbs = new StationDbInstance[MysqlStationDb.DB_URLS.length];
+        for (int i = 0; i < MysqlStationDb.DB_URLS.length; i++) {
+            allDbs[i] = new MysqlStationDb(MysqlStationDb.DB_URLS[i]);
+        }
+        return allDbs;
     }
 
     public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
         Set<TransStation> allStations = new HashSet<>();
         for (StationDbInstance dbInstance : allDatabases) {
-            allStations.addAll(dbInstance.queryStations(center, range, chain));
+            if (dbInstance.isUp()) allStations.addAll(dbInstance.queryStations(center, range, chain));
         }
         return new ArrayList<>(allStations);
     }

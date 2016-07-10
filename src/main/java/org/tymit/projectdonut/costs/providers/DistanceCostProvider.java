@@ -4,7 +4,7 @@ import com.google.common.collect.Sets;
 import org.tymit.projectdonut.costs.CostArgs;
 import org.tymit.projectdonut.model.LocationPoint;
 import org.tymit.projectdonut.utils.LocationUtils;
-import org.tymit.projectdonut.utils.LoggingUtil;
+import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.Collection;
 import java.util.Set;
@@ -22,7 +22,7 @@ public class DistanceCostProvider implements CostProvider {
     public static final String TAG = "distance";
     private static final String[] CACHEABLE = new String[]{"latlong"};
 
-    private static final double ERROR_MARGIN = 0.001; //We use fuzzy equals
+    private static final double ERROR_MARGIN = 0.0001; //We use fuzzy equals
 
 
     public String getTag() {
@@ -38,7 +38,7 @@ public class DistanceCostProvider implements CostProvider {
         Double compareTo = (Double) arg.getArgs().get(COMPARE_VALUE_TAG);
         String comparison = (String) arg.getArgs().get(COMPARISON_TAG);
         if (compareTo == null || comparison == null) {
-            LoggingUtil.logError(this.getClass().getName(), "Null compare values. ");
+            LoggingUtils.logMessage(this.getClass().getName(), "Null compare values. ");
             return true; //Bad requests are ignored
         }
 
@@ -58,7 +58,7 @@ public class DistanceCostProvider implements CostProvider {
             case "===":
                 return Math.abs(currentVal - compareTo) < ERROR_MARGIN;
             default:
-                LoggingUtil.logError(this.getClass().getName(), "Invalid Comparison: " + comparison);
+                LoggingUtils.logMessage(this.getClass().getName(), "Invalid Comparison: " + comparison);
                 return true;
         }
     }
@@ -66,7 +66,7 @@ public class DistanceCostProvider implements CostProvider {
     public Object getCostValue(CostArgs arg) {
         if (arg.getSubject() == null || arg.getArgs().get(POINT_TWO_TAG) == null
                 || arg.getSubject() == arg.getArgs().get(POINT_TWO_TAG)) {
-            LoggingUtil.logError(this.getClass().getName(), "Null coordinate values. ");
+            LoggingUtils.logMessage(this.getClass().getName(), "Null coordinate values. ");
             return 0.0; //We default to zero on error.
         }
 
@@ -74,7 +74,7 @@ public class DistanceCostProvider implements CostProvider {
         double[] subj = extractCoords(arg.getSubject());
         double[] oth = extractCoords(arg.getArgs().get(POINT_TWO_TAG));
         if (subj == null || oth == null) {
-            LoggingUtil.logError(this.getClass().getName(), "Could not extract coordinate values. ");
+            LoggingUtils.logMessage(this.getClass().getName(), "Could not extract coordinate values. ");
             return 0.0;
         }
 

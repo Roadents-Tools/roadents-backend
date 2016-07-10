@@ -27,4 +27,20 @@ public class TransChain {
     public void addStation(TransStation station) {
         stations.add(station);
     }
+
+    @Override
+    public int hashCode() {
+        return name != null ? name.hashCode() : 0;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        TransChain that = (TransChain) o;
+
+        return name != null ? name.equals(that.name) : that.name == null;
+
+    }
 }
