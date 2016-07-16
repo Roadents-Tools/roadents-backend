@@ -35,7 +35,7 @@ public class LogicCoreHelper {
         return new LogicCore[0];
     }
 
-    public Map<String, List<Object>> runCore(String coreTag, List<Object> args) {
+    public Map<String, List<Object>> runCore(String coreTag, Map<String, Object> args) {
         if (coreMap.get(coreTag) == null) {
             return NO_CORE_FOUND;
         }

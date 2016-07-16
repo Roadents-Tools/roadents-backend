@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class ApplicationRunner {
 
-    public static Map<String, List<Object>> runApplication(String tag, List<Object> args) {
+    public static Map<String, List<Object>> runApplication(String tag, Map<String, Object> args) {
         return LogicCoreHelper.getHelper().runCore(tag, args);
     }
 
