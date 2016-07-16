@@ -2,6 +2,7 @@ package org.tymit.projectdonut.locations.providers;
 
 import org.tymit.projectdonut.model.DestinationLocation;
 import org.tymit.projectdonut.model.LocationType;
+import org.tymit.projectdonut.utils.LoggingUtils;
 import se.walkercrou.places.GooglePlaces;
 import se.walkercrou.places.Param;
 import se.walkercrou.places.Place;
@@ -14,14 +15,17 @@ import java.util.List;
  */
 public class GoogleLocationsProvider implements LocationProvider {
 
-    private static final String[] API_KEYS = {
+    public static final String[] API_KEYS = {
             "AIzaSyB0pBdXuC4VRte73qnVtE5pLmxNs3ju0Gg"
     };
+    private static final int MAX_QUERY_CALLS = 2;
     private static double MILES_TO_METERS = 1609.344;
     private GooglePlaces gmaps;
+    private int queryCalls;
 
     public GoogleLocationsProvider() {
         gmaps = new GooglePlaces(API_KEYS[0]);
+        queryCalls = 0;
     }
 
     @Override
@@ -36,17 +40,27 @@ public class GoogleLocationsProvider implements LocationProvider {
 
     @Override
     public List<DestinationLocation> queryLocations(double[] center, double range, LocationType type) {
-        double rangeInMeters = range * MILES_TO_METERS;
-        List<Place> places = gmaps.getNearbyPlaces(
-                center[0], center[1], rangeInMeters,
-                Param.name("type").value(type.getEncodedname())
-        );
-        List<DestinationLocation> rval = new ArrayList<>(places.size());
-        for (Place place : places) {
-            String placeName = place.getName();
-            rval.add(new DestinationLocation(placeName, type, new double[]{place.getLatitude(), place.getLongitude()}));
+        if (queryCalls >= MAX_QUERY_CALLS) {
+            queryCalls = 0;
+            gmaps = new GooglePlaces(API_KEYS[0]);
         }
-        return rval;
+        queryCalls++;
+        double rangeInMeters = range * MILES_TO_METERS;
+        try {
+            List<Place> places = gmaps.getNearbyPlaces(
+                    center[0], center[1], rangeInMeters,
+                    Param.name("type").value(type.getEncodedname())
+            );
+            List<DestinationLocation> rval = new ArrayList<>(places.size());
+            for (Place place : places) {
+                String placeName = place.getName();
+                rval.add(new DestinationLocation(placeName, type, new double[]{place.getLatitude(), place.getLongitude()}));
+            }
+            return rval;
+        } catch (Exception e) {
+            LoggingUtils.logError(e);
+            return new ArrayList<>();
+        }
     }
 
 
