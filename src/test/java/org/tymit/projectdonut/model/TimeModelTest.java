@@ -9,15 +9,15 @@ import org.junit.Test;
 public class TimeModelTest {
 
     @Test
-    public void testTimeModel() throws Exception {
+    public void testTimeComparison() throws Exception {
         TimeModel a = TimeModel.now();
         a.set(TimeModel.DAY_OF_MONTH, 1);
 
         TimeModel b = new TimeModel();
         b.set(TimeModel.DAY_OF_MONTH, 2);
-        int bCa = b.compareTo(a);
+        long bCa = b.compareTo(a);
         Assert.assertTrue(bCa > 0);
-        int aCb = a.compareTo(b);
+        long aCb = a.compareTo(b);
         Assert.assertTrue(aCb < 0);
 
         a.setUnixTime(915192000l * 1000l); //Friday, January 1st, 1999, at exactly noon
@@ -26,6 +26,15 @@ public class TimeModelTest {
         b.set(TimeModel.DAY_OF_WEEK, 7);
         Assert.assertTrue(b.compareTo(a) > 0);
         Assert.assertTrue(a.compareTo(b) < 0);
+    }
+
+    @Test
+    public void testTimeMath() {
+        TimeModel a = new TimeModel().set(TimeModel.MINUTE, 5);
+        TimeModel b = new TimeModel().set(TimeModel.MINUTE, 10);
+        long compVal = a.compareTo(b);
+        boolean compare = compVal < 5 * 60 * 1000;
+        Assert.assertTrue(compare);
     }
 
 }
