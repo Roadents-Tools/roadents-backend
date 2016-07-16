@@ -45,16 +45,17 @@ public class TransStation implements LocationPoint {
     }
 
     public TimeModel getNextArrival(TimeModel start) {
-        int min = Integer.MAX_VALUE;
+        long min = Long.MAX_VALUE;
         TimeModel minTime = null;
         for (TimeModel possible : schedule) {
-            int compareVal = start.compareTo(possible);
+            long compareVal = possible.compareTo(start);
             if (compareVal > 0 && compareVal < min) {
                 min = compareVal;
                 minTime = possible;
             }
         }
-        return minTime;
+        TimeModel rval = minTime.toInstant(start);
+        return rval;
     }
 
     @Override
