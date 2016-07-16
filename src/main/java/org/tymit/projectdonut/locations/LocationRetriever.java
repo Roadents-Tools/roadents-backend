@@ -15,8 +15,11 @@ import java.util.List;
  * Created by ilan on 7/7/16.
  */
 public class LocationRetriever {
+
+    private static boolean isTest = false;
     public static List<DestinationLocation> getLocations(double[] center, double range, LocationType type, List<CostArgs> args) {
-        List<DestinationLocation> locations = LocationCacheHelper.getHelper().getCachedLocations(center, range, type);
+        List<DestinationLocation> locations = null;
+        if (!isTest) locations = LocationCacheHelper.getHelper().getCachedLocations(center, range, type);
         if (locations == null) {
             locations = LocationProviderHelper.getHelper().getLocations(center, range, type);
             LocationCacheHelper.getHelper().cacheLocations(center, range, type, locations);
@@ -33,5 +36,10 @@ public class LocationRetriever {
             }
         }
         return locations;
+    }
+
+    public static void setTestMode(boolean testMode) {
+        isTest = testMode;
+        LocationProviderHelper.setTestMode(true);
     }
 }

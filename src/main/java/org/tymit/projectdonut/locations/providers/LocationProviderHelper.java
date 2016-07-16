@@ -15,23 +15,32 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class LocationProviderHelper {
 
-    private static final LocationProvider[] allProviders = initializeProvidersList();
-
+    private static boolean isTest = false;
     private static LocationProviderHelper instance = new LocationProviderHelper();
-
+    private LocationProvider[] allProviders;
     private ConcurrentMap<LocationType, Set<LocationProvider>> typeToProviders;
 
     private LocationProviderHelper() {
+        initializeProvidersList();
         typeToProviders = new ConcurrentHashMap<>();
+    }
+
+    //We use a method in cases with a lot of boilerplate
+    private void initializeProvidersList() {
+        if (isTest) {
+            allProviders = new LocationProvider[]{new TestLocationProvider()};
+            return;
+        }
+        allProviders = new LocationProvider[]{new GoogleLocationsProvider()};
     }
 
     public static LocationProviderHelper getHelper() {
         return instance;
     }
 
-    //We use a method in cases with a lot of boilerplate
-    private static LocationProvider[] initializeProvidersList() {
-        return new LocationProvider[]{new GoogleLocationsProvider()};
+    public static void setTestMode(boolean testMode) {
+        isTest = testMode;
+        instance.initializeProvidersList();
     }
 
     public List<DestinationLocation> getLocations(double[] center, double range, LocationType type) {
