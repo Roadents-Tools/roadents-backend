@@ -13,19 +13,35 @@ import java.util.Set;
  */
 public class StationDbHelper {
 
-    private static final StationDbInstance[] allDatabases = initializeDbList();
     private static final StationDbHelper instance = new StationDbHelper();
+    private static boolean isTest = false;
+    private StationDbInstance[] allDatabases;
+
+    private StationDbHelper() {
+        initializeDbList();
+    }
+
+    private void initializeDbList() {
+
+        if (isTest) {
+            allDatabases = new StationDbInstance[]{new TestStationDb()};
+            return;
+        }
+
+        StationDbInstance[] allDbs = new StationDbInstance[MysqlStationDb.DB_URLS.length];
+        for (int i = 0; i < MysqlStationDb.DB_URLS.length; i++) {
+            allDbs[i] = new MysqlStationDb(MysqlStationDb.DB_URLS[i]);
+        }
+        allDatabases = allDbs;
+    }
 
     public static StationDbHelper getHelper() {
         return instance;
     }
 
-    private static StationDbInstance[] initializeDbList() {
-        StationDbInstance[] allDbs = new StationDbInstance[MysqlStationDb.DB_URLS.length];
-        for (int i = 0; i < MysqlStationDb.DB_URLS.length; i++) {
-            allDbs[i] = new MysqlStationDb(MysqlStationDb.DB_URLS[i]);
-        }
-        return allDbs;
+    public static void setTestMode(boolean testMode) {
+        isTest = testMode;
+        instance.initializeDbList();
     }
 
     public List<TransStation> queryStations(double[] center, double range, TransChain chain) {

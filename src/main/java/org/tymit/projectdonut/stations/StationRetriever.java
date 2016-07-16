@@ -14,6 +14,7 @@ import java.util.List;
  */
 public class StationRetriever {
     public static List<TransStation> getStations(double[] center, double range, TransChain chain, List<CostArgs> args) {
+
         List<TransStation> allStations = StationDbHelper.getHelper().queryStations(center, range, chain);
 
         if (args == null || args.size() == 0) return allStations;
@@ -25,5 +26,9 @@ public class StationRetriever {
             }
         }
         return allStations;
+    }
+
+    public static void setTestMode(boolean testMode) {
+        StationDbHelper.setTestMode(testMode);
     }
 }

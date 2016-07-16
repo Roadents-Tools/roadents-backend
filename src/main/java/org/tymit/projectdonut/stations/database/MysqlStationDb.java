@@ -49,7 +49,8 @@ public class MysqlStationDb implements StationDbInstance {
         try {
             connection = DriverManager.getConnection(url, USER, PASS);
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            LoggingUtils.logError(e);
+            connection = null;
         }
     }
 
@@ -94,7 +95,6 @@ public class MysqlStationDb implements StationDbInstance {
             }
             if (range < 0) continue;
             double dist = LocationUtils.distanceBetween(center, fromRow.getCoordinates(), true);
-            System.out.println(fromRow.getName() + ":" + dist);
             if (dist <= range + ERROR_MARGIN) outMap.put(fromRow, id);
         }
 
