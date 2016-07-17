@@ -1,5 +1,7 @@
 package org.tymit.projectdonut.model;
 
+import java.util.Arrays;
+
 /**
  * Created by ilan on 7/10/16.
  */
@@ -28,5 +30,21 @@ public class StartPoint implements LocationPoint {
     @Override
     public double[] getCoordinates() {
         return coords;
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(coords);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        StartPoint that = (StartPoint) o;
+
+        return Arrays.equals(coords, that.coords);
+
     }
 }

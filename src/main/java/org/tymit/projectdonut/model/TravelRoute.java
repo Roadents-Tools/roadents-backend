@@ -11,16 +11,20 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TravelRoute {
 
     private List<TransStation> stations;
-    private LocationPoint start;
+    private StartPoint start;
     private DestinationLocation end;
     private Map<String, Object> ascCosts;
     private TimeModel startTime;
 
-    public TravelRoute(LocationPoint start, TimeModel startTime) {
+    public TravelRoute(StartPoint start, TimeModel startTime) {
         this.start = start;
         stations = new ArrayList<>();
         ascCosts = new ConcurrentHashMap<>();
         this.startTime = startTime;
+    }
+
+    public StartPoint getStart() {
+        return start;
     }
 
     public TimeModel getStartTime() {

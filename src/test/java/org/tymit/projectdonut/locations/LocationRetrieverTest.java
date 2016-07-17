@@ -29,9 +29,6 @@ public class LocationRetrieverTest {
 
         Assert.assertEquals(locations.size(), l2.size());
         for (DestinationLocation pt : locations) Assert.assertTrue(l2.contains(pt));
-        long diff1 = midTime - startTime;
-        long diff2 = endTime - midTime;
-        Assert.assertTrue(midTime - startTime > endTime - midTime);
     }
 
 }

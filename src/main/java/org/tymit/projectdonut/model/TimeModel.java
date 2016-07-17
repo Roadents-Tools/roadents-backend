@@ -140,15 +140,6 @@ public class TimeModel implements Comparable {
         unixTime = -1;
     }
 
-    public TimeModel clone() {
-        TimeModel newModel = new TimeModel();
-        if (unixTime >= 0) newModel.setUnixTime(unixTime);
-        for (int tag : attributeMap.keySet()) {
-            newModel.set(tag, get(tag));
-        }
-        return newModel;
-    }
-
     public TimeModel toInstant(TimeModel base) {
         TimeModel newModel = base.clone();
         for (int i = 0; i < NUMBER_OF_KEYS; i++) {
@@ -210,5 +201,24 @@ public class TimeModel implements Comparable {
     public int compareTo(Object o) {
         if (!(o instanceof TimeModel)) return 0;
         return (int) compareTo((TimeModel) o);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        TimeModel model = (TimeModel) o;
+        if (getUnixTime() > 0 && getUnixTime() == model.getUnixTime()) return true;
+        return attributeMap.equals(model.attributeMap);
+    }
+
+    public TimeModel clone() {
+        TimeModel newModel = new TimeModel();
+        if (unixTime >= 0) newModel.setUnixTime(unixTime);
+        for (int tag : attributeMap.keySet()) {
+            newModel.set(tag, get(tag));
+        }
+        return newModel;
     }
 }

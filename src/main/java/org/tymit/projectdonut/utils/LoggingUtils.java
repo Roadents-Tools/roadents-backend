@@ -25,7 +25,6 @@ public class LoggingUtils {
         for (String[] msg : log) {
             System.out.printf("%-7s %s: %s\n\n", msg[0] + ",", msg[1], msg[2]);
         }
-        log.clear();
     }
 
     public static void logError(String origin, String message) {
@@ -33,8 +32,12 @@ public class LoggingUtils {
     }
 
     public static void logError(Exception e) {
-        if (printImmediate) return;
         errors.add(e);
+        log.add(errorToMessage(e));
+        if (printImmediate) printLog();
+    }
+
+    private static String[] errorToMessage(Exception e) {
         StringBuilder msg = new StringBuilder();
         msg.append(e.getMessage().replaceAll("\n\n", "\n"));
         for (StackTraceElement elm : e.getStackTrace()) {
@@ -44,8 +47,7 @@ public class LoggingUtils {
             msg.append(elm.getLineNumber());
             msg.append("\n");
         }
-        log.add(new String[]{"ERROR", e.getClass().getName(), msg.toString()});
-        if (printImmediate) printLog();
+        return new String[]{"ERROR", e.getClass().getName(), msg.toString()};
     }
 
     public static boolean isEmpty() {
