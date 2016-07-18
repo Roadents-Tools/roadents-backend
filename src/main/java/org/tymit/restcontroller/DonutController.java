@@ -32,8 +32,10 @@ public class DonutController {
 
     @RequestMapping("/routes")
     public String getRoutes(@RequestParam Map<String, String> urlArgs) {
+
         LoggingUtils.setPrintImmediate(true);
         LoggingUtils.logMessage("DonutController", "/routes called with args %s", urlArgs.toString());
+        long callTime = System.currentTimeMillis();
 
         String tag = urlArgs.getOrDefault("tag", TAG);
         Map<String, Object> args = new HashMap<>();
@@ -60,16 +62,19 @@ public class DonutController {
                         r.put(r2.getJSONObject(i));
                     }
                 });
-        LoggingUtils.logMessage("DonutController", "Got %d dests", routes.length());
+        long endTime = System.currentTimeMillis();
+        long diffTime = endTime - callTime;
+        LoggingUtils.logMessage("DonutController", "Got %d routes in %f seconds.", routes.length(), diffTime / 1000.0);
         return routes.toString();
 
     }
 
     @RequestMapping("/destinations")
     public String getDests(@RequestParam Map<String, String> urlArgs) {
-        LoggingUtils.setPrintImmediate(true);
 
+        LoggingUtils.setPrintImmediate(true);
         LoggingUtils.logMessage("DonutController", "/destinations called with args %s", urlArgs.toString());
+        long callTime = System.currentTimeMillis();
 
 
         String tag = urlArgs.getOrDefault("tag", TAG);
@@ -98,7 +103,10 @@ public class DonutController {
                     }
                 });
 
-        LoggingUtils.logMessage("DonutController", "Got %d routes", dests.length());
+
+        long endTime = System.currentTimeMillis();
+        long diffTime = endTime - callTime;
+        LoggingUtils.logMessage("DonutController", "Got %d dest in %f seconds.", dests.length(), diffTime / 1000.0);
         return dests.toString();
     }
 

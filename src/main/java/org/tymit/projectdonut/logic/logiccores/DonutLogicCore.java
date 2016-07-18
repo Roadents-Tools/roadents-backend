@@ -91,13 +91,13 @@ public class DonutLogicCore implements LogicCore {
         Set<TravelRoute> routes = new HashSet<>(existingRoutes);
         routes.addAll(possibleStationRoutes);
 
-        Set<TravelRoute> recursed = possibleStationRoutes.stream()
+        Set<TravelRoute> recursed = possibleStationRoutes.parallelStream()
                 .filter(route -> !existingRoutes.contains(route))
                 .flatMap(route -> {
                     long maxDeltaUnix = maxDelta.getUnixTimeDelta();
                     long newDeltaUnix = maxDeltaUnix - (long) route.getCosts().get(TIME_DELTA_TAG) + initialDeltaUnix;
                     TimeModel newDelta = TimeModel.fromUnixTimeDelta(newDeltaUnix);
-                    return performRecurse(route, newDelta, routes).stream();
+                    return performRecurse(route, newDelta, routes).parallelStream();
                 })
                 .collect(Collectors.toSet());
         routes.addAll(recursed);
@@ -108,7 +108,7 @@ public class DonutLogicCore implements LogicCore {
         long initialDelta = (long) initial.getCosts().getOrDefault(TIME_DELTA_TAG, 0l);
         Set<TravelRoute> allRoutes = new HashSet<>();
         allRoutes.add(initial);
-        getWalkableStationRoutes(initial, maxDelta).stream()
+        getWalkableStationRoutes(initial, maxDelta).parallelStream()
                 .flatMap(route -> {
                     allRoutes.add(route);
                     long routeDelta = (long) route.getCosts().get(TIME_DELTA_TAG);
@@ -122,7 +122,7 @@ public class DonutLogicCore implements LogicCore {
 
     private Set<TravelRoute> getWalkableStationRoutes(TravelRoute initial, TimeModel maxDelta) {
         Map<TransStation, Long> walkableToTimeDiff = getWalkableStations(initial.getCurrentEnd(), maxDelta);
-        Set<TravelRoute> rval = walkableToTimeDiff.keySet().stream()
+        Set<TravelRoute> rval = walkableToTimeDiff.keySet().parallelStream()
                 .filter(inChain -> !initial.isInRoute(inChain))
                 .filter(inChain -> maxDelta.compareTo(TimeModel.fromUnixTimeDelta(walkableToTimeDiff.get(inChain))) > 0)
                 .map(station -> {
@@ -144,7 +144,7 @@ public class DonutLogicCore implements LogicCore {
 
     private Map<TransStation, Long> getStationWalkTime(LocationPoint begin, Collection<TransStation> stations) {
         Map<TransStation, Long> rval = new ConcurrentHashMap<>();
-        stations.stream().forEach(station -> {
+        stations.parallelStream().forEach(station -> {
             double dist = LocationUtils.distanceBetween(begin.getCoordinates(), station.getCoordinates(), true);
             long time = LocationUtils.distanceToWalkTime(dist, true);
             rval.put(station, time);
@@ -154,7 +154,7 @@ public class DonutLogicCore implements LogicCore {
 
     private Set<TravelRoute> getArrivableChainRoutes(TravelRoute initial, TransStation station, TimeModel startTime, TimeModel maxDelta) {
         Map<TransStation, Long> arrivableToTimes = getArrivableChainTimes(station, startTime, maxDelta);
-        return arrivableToTimes.keySet().stream()
+        return arrivableToTimes.keySet().parallelStream()
                 .filter(inChain -> !initial.isInRoute(inChain))
                 .map(inChain -> {
                     TravelRoute newRoute = initial.clone();
@@ -171,7 +171,7 @@ public class DonutLogicCore implements LogicCore {
         TimeModel trueStart = station.getNextArrival(startTime);
 
         List<TransStation> inChain = StationRetriever.getStations(null, 0, station.getChain(), null);
-        inChain.stream().forEach(fromChain -> {
+        inChain.parallelStream().forEach(fromChain -> {
             TimeModel arriveTime = fromChain.getNextArrival(trueStart);
             long timeFromStart = arriveTime.getUnixTime() - startTime.getUnixTime();
             if (timeFromStart > maxDelta.getUnixTimeDelta()) return;
@@ -182,7 +182,7 @@ public class DonutLogicCore implements LogicCore {
 
     private Set<TravelRoute> getDestinationRoutes(TravelRoute initial, TimeModel maxDelta, LocationType type) {
         Map<DestinationLocation, Long> destsToTimes = getWalkableDestinations(initial.getCurrentEnd(), maxDelta, type);
-        return destsToTimes.keySet().stream()
+        return destsToTimes.keySet().parallelStream()
                 .map(dest -> {
                     TravelRoute newRoute = initial.clone();
                     addTimeToRoute(newRoute, destsToTimes.get(dest));
@@ -197,7 +197,7 @@ public class DonutLogicCore implements LogicCore {
         long deltaUnix = maxDelta.getUnixTimeDelta();
         double range = LocationUtils.timeToWalkDistance(deltaUnix, true);
         List<DestinationLocation> possibleDests = LocationRetriever.getLocations(center.getCoordinates(), range, type, null);
-        possibleDests.stream().forEach(destinationLocation -> {
+        possibleDests.parallelStream().forEach(destinationLocation -> {
             double dist = LocationUtils.distanceBetween(center.getCoordinates(), destinationLocation.getCoordinates(), true);
             long time = LocationUtils.distanceToWalkTime(dist, true);
             rval.put(destinationLocation, time);

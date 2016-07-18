@@ -22,7 +22,7 @@ public class LocationRetriever {
         if (!isTest) locations = LocationCacheHelper.getHelper().getCachedLocations(center, range, type);
         if (locations == null) {
             locations = LocationProviderHelper.getHelper().getLocations(center, range, type);
-            LocationCacheHelper.getHelper().cacheLocations(center, range, type, locations);
+            if (!isTest) LocationCacheHelper.getHelper().cacheLocations(center, range, type, locations);
         }
         if (locations == null || locations.size() == 0) return new ArrayList<>(0);
 
@@ -40,6 +40,6 @@ public class LocationRetriever {
 
     public static void setTestMode(boolean testMode) {
         isTest = testMode;
-        LocationProviderHelper.setTestMode(true);
+        LocationProviderHelper.setTestMode(testMode);
     }
 }

@@ -47,6 +47,7 @@ public class DonutLogicCoreTest {
         args.put("longitude", longitude);
         args.put("timedelta", timeDelta);
         args.put("type", "food");
+        args.put("test", true);
 
         Map<String, List<Object>> output = ApplicationRunner.runApplication("DONUT", args);
         List<Object> routes = output.get("ROUTES");

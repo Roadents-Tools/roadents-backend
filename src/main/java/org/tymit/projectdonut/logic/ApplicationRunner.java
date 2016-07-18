@@ -18,6 +18,9 @@ public class ApplicationRunner {
         if ((boolean) args.getOrDefault(TEST_KEY, false)) {
             LocationRetriever.setTestMode(true);
             StationRetriever.setTestMode(true);
+        } else {
+            LocationRetriever.setTestMode(false);
+            StationRetriever.setTestMode(false);
         }
         try {
             return LogicCoreHelper.getHelper().runCore(tag, args);
