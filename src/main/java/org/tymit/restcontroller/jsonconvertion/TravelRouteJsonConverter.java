@@ -88,7 +88,6 @@ public class TravelRouteJsonConverter implements JsonConverter<TravelRoute> {
                 storedChains.put(chainName, chain);
             }
             TransStation station = new TransStation(stationName, new double[]{stationLat, stationLong}, null, storedChains.get(chainName));
-            storedChains.get(chainName).addStation(station);
             route.addStation(station);
         }
 

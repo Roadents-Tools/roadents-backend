@@ -25,7 +25,13 @@ public class TransChain {
     }
 
     public void addStation(TransStation station) {
-        stations.add(station);
+        int oldIndex = stations.indexOf(station);
+        if (oldIndex < 0) {
+            stations.add(station);
+            return;
+        }
+        TransStation oldStation = stations.get(oldIndex);
+        if (oldStation.getSchedule() == null) stations.set(oldIndex, station);
     }
 
     @Override
@@ -42,5 +48,12 @@ public class TransChain {
 
         return name != null ? name.equals(that.name) : that.name == null;
 
+    }
+
+    @Override
+    public String toString() {
+        return "TransChain{" +
+                "name='" + name + '\'' +
+                '}';
     }
 }

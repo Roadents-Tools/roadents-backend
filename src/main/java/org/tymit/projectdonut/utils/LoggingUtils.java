@@ -10,7 +10,11 @@ public class LoggingUtils {
     private static List<String[]> log = new ArrayList<>();
     private static List<Exception> errors = new ArrayList<>();
 
-    private static boolean printImmediate = false;
+    private static boolean printImmediate;
+
+    static {
+        setPrintImmediate(false);
+    }
 
     public static void logMessage(String tag, String messageLocale, Object... args) {
         logMessage(tag, String.format(messageLocale, args));
@@ -25,6 +29,10 @@ public class LoggingUtils {
         for (String[] msg : log) {
             System.out.printf("%-7s %s: %s\n\n", msg[0] + ",", msg[1], msg[2]);
         }
+    }
+
+    public static void logError(String origin, String message, Object... args) {
+        logError(origin, String.format(message, args));
     }
 
     public static void logError(String origin, String message) {

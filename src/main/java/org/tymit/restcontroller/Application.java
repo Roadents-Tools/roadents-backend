@@ -2,6 +2,7 @@ package org.tymit.restcontroller;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.tymit.projectdonut.stations.updates.StationDbUpdater;
 
 /**
  * Created by ilan on 7/15/16.
@@ -10,7 +11,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class Application {
 
+    //How often to updatae the station database; currently 15 minutes.
+    private static final long DB_UPDATE_INTERVAL = 1000l * 60l * 15l;
+
     public static void main(String[] args) {
+        StationDbUpdater.getUpdater().setBackgroundInterval(DB_UPDATE_INTERVAL);
         SpringApplication.run(Application.class, args);
     }
 }

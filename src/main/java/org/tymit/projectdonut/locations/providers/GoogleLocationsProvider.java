@@ -1,5 +1,8 @@
 package org.tymit.projectdonut.locations.providers;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import org.slf4j.LoggerFactory;
 import org.tymit.projectdonut.model.DestinationLocation;
 import org.tymit.projectdonut.model.LocationType;
 import org.tymit.projectdonut.utils.LoggingUtils;
@@ -20,12 +23,22 @@ public class GoogleLocationsProvider implements LocationProvider {
     };
     private static final int MAX_QUERY_CALLS = 2;
     private static double MILES_TO_METERS = 1609.344;
+
+    static {
+        disableApacheLogging();
+    }
+
     private GooglePlaces gmaps;
     private int queryCalls;
 
     public GoogleLocationsProvider() {
         gmaps = new GooglePlaces(API_KEYS[0]);
         queryCalls = 0;
+    }
+
+    private static void disableApacheLogging() {
+        Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+        root.setLevel(Level.OFF);
     }
 
     @Override

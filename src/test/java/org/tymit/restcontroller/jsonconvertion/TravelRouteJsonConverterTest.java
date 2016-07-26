@@ -7,6 +7,7 @@ import org.junit.Test;
 import org.tymit.projectdonut.locations.LocationRetriever;
 import org.tymit.projectdonut.model.*;
 import org.tymit.projectdonut.stations.StationRetriever;
+import org.tymit.projectdonut.stations.updates.StationDbUpdater;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.List;
@@ -23,6 +24,7 @@ public class TravelRouteJsonConverterTest {
 
         LocationRetriever.setTestMode(true);
         StationRetriever.setTestMode(true);
+        StationDbUpdater.getUpdater().updateStationsSync(); //Force a test db population
         LoggingUtils.setPrintImmediate(true);
 
         final double latitude = 37.358658;

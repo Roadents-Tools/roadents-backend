@@ -5,6 +5,7 @@ import org.tymit.projectdonut.costs.CostCalculator;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.stations.database.StationDbHelper;
+import org.tymit.projectdonut.stations.updates.StationDbUpdater;
 
 import java.util.Iterator;
 import java.util.List;
@@ -29,6 +30,7 @@ public class StationRetriever {
     }
 
     public static void setTestMode(boolean testMode) {
+        StationDbUpdater.setTestMode(testMode);
         StationDbHelper.setTestMode(testMode);
     }
 }

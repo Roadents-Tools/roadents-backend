@@ -119,7 +119,6 @@ public class MysqlStationDb implements StationDbInstance {
             List<TimeModel> schedule = decodeSchedule(scheduleJson);
 
             TransStation rval = new TransStation(name, latlong, schedule, chain);
-            chain.addStation(rval);
             return rval;
         } catch (Exception e) {
             throw new RuntimeException(e);

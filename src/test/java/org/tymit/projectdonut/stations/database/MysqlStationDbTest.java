@@ -46,7 +46,6 @@ public class MysqlStationDbTest {
                 }
                 String stationName = String.format("TEST STATION: chain=%s, i=%d", chain.getName(), i);
                 TransStation station = new TransStation(stationName, new double[]{rng.nextDouble(), rng.nextDouble()}, chainSchedule, chain);
-                chain.addStation(station);
                 allStations.add(station);
             }
         }

@@ -1,5 +1,6 @@
 package org.tymit.projectdonut.model;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -8,17 +9,25 @@ import java.util.List;
  */
 public class TransStation implements LocationPoint {
 
-    private double[] location;
-    private LocationType type = new LocationType("Station", "TransStation");
-    private String name;
+    private static final LocationType type = new LocationType("Station", "TransStation");
+    private final double[] location;
+    private final String name;
     private List<TimeModel> schedule;
     private TransChain chain;
+
+
+    public TransStation(String name, double[] location) {
+        this.name = name;
+        this.location = location;
+    }
 
     public TransStation(String name, double[] location, List<TimeModel> schedule, TransChain chain) {
         this.location = location;
         this.name = name;
         this.schedule = schedule;
         this.chain = chain;
+
+        chain.addStation(this);
     }
 
     @Override
@@ -41,7 +50,7 @@ public class TransStation implements LocationPoint {
     }
 
     public List<TimeModel> getSchedule() {
-        return schedule;
+        return new ArrayList<>(schedule);
     }
 
     public TimeModel getNextArrival(TimeModel start) {
@@ -56,6 +65,10 @@ public class TransStation implements LocationPoint {
         }
         TimeModel rval = minTime.toInstant(start);
         return rval;
+    }
+
+    public TransStation clone(List<TimeModel> newSchedule, TransChain newChain) {
+        return new TransStation(name, location, newSchedule, newChain);
     }
 
     @Override
@@ -77,5 +90,18 @@ public class TransStation implements LocationPoint {
         if (name != null ? !name.equals(that.name) : that.name != null) return false;
         return chain != null ? chain.equals(that.chain) : that.chain == null;
 
+    }
+
+    public TransStation clone() {
+        return new TransStation(name, location, schedule, chain);
+    }
+
+    @Override
+    public String toString() {
+        return "TransStation{" +
+                "chain=" + ((chain != null) ? chain.toString() : "null") +
+                ", name='" + name + '\'' +
+                ", location=" + Arrays.toString(location) +
+                '}';
     }
 }
