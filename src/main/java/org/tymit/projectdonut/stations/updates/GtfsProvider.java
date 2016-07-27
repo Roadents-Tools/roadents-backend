@@ -26,8 +26,16 @@ public class GtfsProvider implements StationProvider {
     private static final String DIRECTORY_BASE = "GtfsData/";
 
     public static final String[] GTFS_ZIPS = new String[]{
-            DIRECTORY_BASE + "VtaGtfs.zip",
-            DIRECTORY_BASE + "NycGtfs.zip"
+            DIRECTORY_BASE + "Vta.zip",
+            DIRECTORY_BASE + "NycSubway.zip",
+            DIRECTORY_BASE + "NycBusManhattan.zip",
+            DIRECTORY_BASE + "NysBusBrooklyn.zip",
+            DIRECTORY_BASE + "NysBusBronx.zip",
+            DIRECTORY_BASE + "NysBusStatenIsland.zip",
+            DIRECTORY_BASE + "NycBusCompany.zip",
+            DIRECTORY_BASE + "NycBusQueens.zip",
+            DIRECTORY_BASE + "MetroNorthRailroad.zip",
+            DIRECTORY_BASE + "LongIslandRailroad.zip"
     };
 
     static {
@@ -42,32 +50,10 @@ public class GtfsProvider implements StationProvider {
 
     public GtfsProvider(String fileName) {
         zipFileName = fileName;
-        File file = new File(fileName);
-        try {
-            store = readData(file);
-        } catch (IOException e) {
-            LoggingUtils.logError(e);
-            isWorking = false;
-        }
-    }
-
-    private static GtfsDaoImpl readData(File file) throws IOException {
-        GtfsReader reader = new GtfsReader();
-        reader.setInputLocation(file);
-        GtfsDaoImpl store = new GtfsDaoImpl();
-        reader.setEntityStore(store);
-        reader.run();
-        return store;
     }
 
     public GtfsProvider(File file) {
         zipFileName = file.getName();
-        try {
-            store = readData(file);
-        } catch (IOException e) {
-            LoggingUtils.logError(e);
-            isWorking = false;
-        }
     }
 
     private static void disableApacheLogging() {
@@ -92,6 +78,16 @@ public class GtfsProvider implements StationProvider {
     }
 
     private void cacheData() {
+        File zipFile = new File(zipFileName);
+
+        try {
+            store = readData(zipFile);
+        } catch (IOException e) {
+            LoggingUtils.logError(e);
+            isWorking = false;
+            return;
+        }
+
         cache = new ConcurrentHashMap<>();
 
         Map<String, TransChain> chains = getChainsFromTrips();
@@ -113,6 +109,15 @@ public class GtfsProvider implements StationProvider {
                     zipFileName
             );
         }
+    }
+
+    private GtfsDaoImpl readData(File file) throws IOException {
+        GtfsReader reader = new GtfsReader();
+        reader.setInputLocation(file);
+        GtfsDaoImpl store = new GtfsDaoImpl();
+        reader.setEntityStore(store);
+        reader.run();
+        return store;
     }
 
     /**
@@ -206,5 +211,28 @@ public class GtfsProvider implements StationProvider {
             rval.put(idString, station);
         });
         return rval;
+    }
+
+    @Override
+    public int hashCode() {
+        return zipFileName != null ? zipFileName.hashCode() : 0;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        GtfsProvider provider = (GtfsProvider) o;
+
+        return zipFileName != null ? zipFileName.equals(provider.zipFileName) : provider.zipFileName == null;
+
+    }
+
+    @Override
+    public String toString() {
+        return "GtfsProvider{" +
+                "zipFileName='" + zipFileName + '\'' +
+                '}';
     }
 }
