@@ -51,6 +51,7 @@ public class DonutLogicCoreTest {
 
         Map<String, List<Object>> output = ApplicationRunner.runApplication("DONUT", args);
         List<Object> routes = output.get("ROUTES");
+        Assert.assertTrue(routes.size() > 0);
 
         //Test that we have no destination dupes.
         Set<DestinationLocation> allDests = new HashSet<>();
