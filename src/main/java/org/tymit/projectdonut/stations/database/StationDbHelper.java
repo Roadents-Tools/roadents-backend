@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
  */
 public class StationDbHelper {
 
-    private static final StationDbHelper instance = new StationDbHelper();
+    private static StationDbHelper instance = new StationDbHelper();
     private static boolean isTest = false;
     private StationDbInstance[] allDatabases;
 
@@ -39,7 +39,7 @@ public class StationDbHelper {
 
     public static void setTestMode(boolean testMode) {
         isTest = testMode;
-        instance.initializeDbList();
+        instance = new StationDbHelper();
     }
 
     public List<TransStation> queryStations(double[] center, double range, TransChain chain) {

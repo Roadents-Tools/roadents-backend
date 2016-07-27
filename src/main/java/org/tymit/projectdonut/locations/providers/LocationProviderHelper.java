@@ -40,7 +40,7 @@ public class LocationProviderHelper {
 
     public static void setTestMode(boolean testMode) {
         isTest = testMode;
-        instance.initializeProvidersList();
+        instance = new LocationProviderHelper();
     }
 
     public List<DestinationLocation> getLocations(double[] center, double range, LocationType type) {
