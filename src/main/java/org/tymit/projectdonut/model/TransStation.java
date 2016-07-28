@@ -58,6 +58,12 @@ public class TransStation implements LocationPoint {
         TimeModel minTime = null;
         for (TimeModel possible : schedule) {
             long compareVal = possible.compareTo(start);
+            if (compareVal < 0 && possible.get(TimeModel.HOUR) < 0) {
+                compareVal = possible.set(TimeModel.HOUR, start.get(TimeModel.HOUR) + 1).compareTo(start);
+            }
+            if (compareVal < 0 && possible.get(TimeModel.DAY_OF_MONTH) < 0) {
+                compareVal = possible.set(TimeModel.DAY_OF_MONTH, start.get(TimeModel.DAY_OF_MONTH) + 1).compareTo(start);
+            }
             if (compareVal > 0 && compareVal < min) {
                 min = compareVal;
                 minTime = possible;
