@@ -57,7 +57,7 @@ public class TestStationProvider implements StationProvider {
         List<TimeModel> schedule = new ArrayList<>();
         for (int h : HOURS) {
             for (int m : MINUTES) {
-                schedule.add(new TimeModel().set(TimeModel.HOUR, h).set(TimeModel.MINUTE, m));
+                schedule.add(TimeModel.empty().set(TimeModel.HOUR, h).set(TimeModel.MINUTE, m));
             }
         }
         for (int i = 0; i < CHAINS; i++) {

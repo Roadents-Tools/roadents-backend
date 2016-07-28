@@ -39,7 +39,7 @@ public class MysqlStationDbTest {
             for (int i = 0; i < 5; i++) {
                 List<TimeModel> chainSchedule = new ArrayList<>(7);
                 for (int j = 0; j < 7; j++) {
-                    TimeModel newModel = new TimeModel()
+                    TimeModel newModel = TimeModel.empty()
                             .set(TimeModel.DAY_OF_WEEK, i)
                             .set(TimeModel.HOUR, j);
                     chainSchedule.add(newModel);

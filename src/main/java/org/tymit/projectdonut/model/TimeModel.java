@@ -36,9 +36,13 @@ public class TimeModel implements Comparable {
     private boolean recalculateUnixTime; //if we set stuff after unix time
     private long unixTime = -1; //Separate long because it encompasses all data.
 
-    public TimeModel() {
+    private TimeModel() {
         attributeMap = new HashMap<>();
         recalculateUnixTime = true;
+    }
+
+    public static TimeModel empty() {
+        return new TimeModel();
     }
 
     public static TimeModel now() {
@@ -46,18 +50,18 @@ public class TimeModel implements Comparable {
     }
 
     public static TimeModel fromUnixTime(long time) {
-        TimeModel rval = new TimeModel();
-        rval.setUnixTime(time);
-        return rval;
-    }
+        TimeModel newModel = new TimeModel();
 
-    public TimeModel set(int key, int value) {
-        if (key >= NUMBER_OF_KEYS || key < 0) {
-            throw new IllegalArgumentException("Invalid Key.");
+        newModel.unixTime = time;
+
+        Calendar toCalc = Calendar.getInstance();
+        toCalc.setTimeInMillis(time);
+
+        for (int i = 0; i < NUMBER_OF_KEYS; i++) {
+            newModel.attributeMap.put(i, toCalc.get(TIMEMODEL_TO_CALENDAR_KEYS[i]));
         }
-        attributeMap.put(key, value);
-        recalculateUnixTime = true;
-        return this;
+        newModel.recalculateUnixTime = false;
+        return newModel;
     }
 
     public static TimeModel fromUnixTimeDelta(long time) {
@@ -65,20 +69,30 @@ public class TimeModel implements Comparable {
         int total = (int) (time / 1000l);
 
         int seconds = total % 60;
-        rval.set(SECOND, seconds);
+        rval.attributeMap.put(SECOND, seconds);
         total = total / 60;
 
         int minutes = total % 60;
-        rval.set(MINUTE, minutes);
+        rval.attributeMap.put(MINUTE, minutes);
         total = total / 60;
 
         int hours = total % 24;
-        rval.set(HOUR, hours);
+        rval.attributeMap.put(HOUR, hours);
         total = total / 24;
 
         int days = total;
-        rval.set(DAY_OF_MONTH, days);
+        rval.attributeMap.put(DAY_OF_MONTH, days);
         return rval;
+    }
+
+    public TimeModel set(int key, int value) {
+        if (key >= NUMBER_OF_KEYS || key < 0) {
+            throw new IllegalArgumentException("Invalid Key.");
+        }
+        TimeModel newModel = clone();
+        newModel.attributeMap.put(key, value);
+        newModel.recalculateUnixTime = true;
+        return newModel;
     }
 
     private Calendar toCalendar() {
@@ -104,24 +118,15 @@ public class TimeModel implements Comparable {
         if (recalculateUnixTime || unixTime < 0) {
             Calendar instance = new GregorianCalendar();
             for (int i = 0; i < NUMBER_OF_KEYS; i++) {
+                if (i == DAY_OF_WEEK) continue;
                 int currentValue = get(i);
                 if (currentValue < 0) return -1;
+                instance.set(TIMEMODEL_TO_CALENDAR_KEYS[i], currentValue);
             }
-            return instance.getTimeInMillis();
+            unixTime = instance.getTimeInMillis();
+            recalculateUnixTime = false;
         }
         return unixTime;
-    }
-
-    public void setUnixTime(long time) {
-        this.unixTime = time;
-
-        Calendar toCalc = Calendar.getInstance();
-        toCalc.setTimeInMillis(time);
-
-        for (int i = 0; i < NUMBER_OF_KEYS; i++) {
-            set(i, toCalc.get(TIMEMODEL_TO_CALENDAR_KEYS[i]));
-        }
-        recalculateUnixTime = false;
     }
 
     public long getUnixTimeDelta() {
@@ -135,12 +140,23 @@ public class TimeModel implements Comparable {
         return unixDelta;
     }
 
-    public void clear() {
-        attributeMap.clear();
-        unixTime = -1;
+
+    public TimeModel addUnixTime(long unixTime) {
+        if (isDelta()) {
+            long newUnix = getUnixTimeDelta() + unixTime;
+            return TimeModel.fromUnixTimeDelta(newUnix);
+        } else {
+            long newUnix = getUnixTime() + unixTime;
+            return TimeModel.fromUnixTime(newUnix);
+        }
+    }
+
+    public boolean isDelta() {
+        return getUnixTime() > 0;
     }
 
     public TimeModel toInstant(TimeModel base) {
+        if (!isDelta()) return this;
         TimeModel newModel = base.clone();
         for (int i = 0; i < NUMBER_OF_KEYS; i++) {
             int ourVal = get(i);
@@ -150,8 +166,9 @@ public class TimeModel implements Comparable {
     }
 
     public long compareTo(TimeModel o) {
-        if (this.getUnixTime() > 0 && o.getUnixTime() > 0)
+        if (this.getUnixTime() > 0 && o.getUnixTime() > 0) {
             return getUnixTime() - o.getUnixTime();
+        }
 
         Calendar self = new GregorianCalendar();
         Calendar other = new GregorianCalendar();
@@ -215,10 +232,21 @@ public class TimeModel implements Comparable {
 
     public TimeModel clone() {
         TimeModel newModel = new TimeModel();
-        if (unixTime >= 0) newModel.setUnixTime(unixTime);
+        if (unixTime >= 0 && !recalculateUnixTime) {
+            return TimeModel.fromUnixTime(unixTime);
+        }
         for (int tag : attributeMap.keySet()) {
-            newModel.set(tag, get(tag));
+            newModel.attributeMap.put(tag, get(tag));
         }
         return newModel;
+    }
+
+    @Override
+    public String toString() {
+        return "TimeModel{" +
+                "attributeMap=" + attributeMap +
+                ", unixTime=" + unixTime +
+                ", recalc:" + recalculateUnixTime +
+                '}';
     }
 }

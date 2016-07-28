@@ -173,18 +173,18 @@ public class GtfsProvider implements StationProvider {
                     rval.get(tripId).putIfAbsent(station, new ArrayList<>());
 
 
-                    TimeModel model = new TimeModel();
+                    TimeModel model = TimeModel.empty();
                     int secondsSinceMidnight = (stopTime.getDepartureTime() > 0) ? stopTime.getDepartureTime() : stopTime.getArrivalTime();
 
 
                     int trueSeconds = secondsSinceMidnight % 60;
-                    model.set(TimeModel.SECOND, trueSeconds);
+                    model = model.set(TimeModel.SECOND, trueSeconds);
 
                     int trueMins = (secondsSinceMidnight / 60) % 60;
-                    model.set(TimeModel.MINUTE, trueMins);
+                    model = model.set(TimeModel.MINUTE, trueMins);
 
                     int trueHours = secondsSinceMidnight / 60 / 60;
-                    model.set(TimeModel.HOUR, trueHours);
+                    model = model.set(TimeModel.HOUR, trueHours);
                     rval.get(tripId).get(station).add(model);
                 });
         return rval;
