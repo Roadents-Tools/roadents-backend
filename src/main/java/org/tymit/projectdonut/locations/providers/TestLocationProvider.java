@@ -6,12 +6,21 @@ import org.tymit.projectdonut.model.LocationType;
 import org.tymit.projectdonut.utils.LocationUtils;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Created by ilan on 7/14/16.
  */
 public class TestLocationProvider implements LocationProvider {
+
+    private static Collection<DestinationLocation> testLocations = null;
+
+    public static void setTestLocations(Collection<DestinationLocation> testLocations) {
+        TestLocationProvider.testLocations = testLocations;
+    }
+
     @Override
     public boolean isUsable() {
         return true;
@@ -24,6 +33,13 @@ public class TestLocationProvider implements LocationProvider {
 
     @Override
     public List<DestinationLocation> queryLocations(double[] center, double range, LocationType type) {
+        if (testLocations == null) return buildNullLocations(center, range, type);
+        return testLocations.stream()
+                .filter(location -> location.getType().equals(type) && LocationUtils.distanceBetween(center, location.getCoordinates(), true) < range + 0.001)
+                .collect(Collectors.toList());
+    }
+
+    private static List<DestinationLocation> buildNullLocations(double[] center, double range, LocationType type) {
         final double[][] mulipliers = new double[][]{
                 new double[]{.01, 0},
                 new double[]{-.01, 0},

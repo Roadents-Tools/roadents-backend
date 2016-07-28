@@ -5,6 +5,7 @@ import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.utils.LocationUtils;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,7 +16,18 @@ import java.util.stream.Collectors;
  */
 public class TestStationDb implements StationDbInstance {
 
-    private Map<TransChain, List<TransStation>> chainsToStations = new ConcurrentHashMap<>();
+    private static final TransChain NULL_CHAIN = new TransChain("NULLCHAINNAME");
+    private static Map<TransChain, List<TransStation>> chainsToStations = new ConcurrentHashMap<>();
+
+    public static void setTestStations(Collection<TransStation> testStations) {
+        chainsToStations.clear();
+        testStations.forEach(station -> {
+            TransChain stationChain = station.getChain();
+            if (stationChain == null) stationChain = NULL_CHAIN;
+            chainsToStations.putIfAbsent(stationChain, new ArrayList<>());
+            chainsToStations.get(stationChain).add(station);
+        });
+    }
 
     @Override
     public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
