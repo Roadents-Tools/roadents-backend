@@ -15,6 +15,13 @@ import java.util.stream.Collectors;
  */
 public class TestLocationProvider implements LocationProvider {
 
+    private static final double[][] MULTIPLIERS = new double[][]{
+            new double[]{.01, 0},
+            new double[]{-.01, 0},
+            new double[]{0, .01},
+            new double[]{0, -.01}
+    };
+    public static final int DEFAULT_POINTS_PER_QUERY = MULTIPLIERS.length;
     private static Collection<DestinationLocation> testLocations = null;
 
     public static void setTestLocations(Collection<DestinationLocation> testLocations) {
@@ -40,14 +47,9 @@ public class TestLocationProvider implements LocationProvider {
     }
 
     private static List<DestinationLocation> buildNullLocations(double[] center, double range, LocationType type) {
-        final double[][] mulipliers = new double[][]{
-                new double[]{.01, 0},
-                new double[]{-.01, 0},
-                new double[]{0, .01},
-                new double[]{0, -.01}
-        };
-        List<DestinationLocation> rval = new ArrayList<>(4);
-        for (double[] muliplier : mulipliers) {
+
+        List<DestinationLocation> rval = new ArrayList<>(DEFAULT_POINTS_PER_QUERY);
+        for (double[] muliplier : MULTIPLIERS) {
             double newLat = center[0] + range * muliplier[0];
             double newLong = center[1] + range * muliplier[1];
             double[] newCenter = new double[]{newLat, newLong};
