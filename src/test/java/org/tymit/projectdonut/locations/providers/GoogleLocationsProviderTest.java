@@ -4,6 +4,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.tymit.projectdonut.model.DestinationLocation;
 import org.tymit.projectdonut.model.LocationType;
+import org.tymit.projectdonut.utils.LocationUtils;
 
 import java.util.List;
 
@@ -23,6 +24,17 @@ public class GoogleLocationsProviderTest {
         GoogleLocationsProvider provider = new GoogleLocationsProvider();
         List<DestinationLocation> testDests = provider.queryLocations(testPt, testRange, testType);
         Assert.assertTrue(testDests.size() > 0);
+        testDests.forEach(dest -> {
+                    double dist = LocationUtils.distanceBetween(dest.getCoordinates(), testPt, true);
+                    System.out.printf("%s @ (%f, %f), %f miles from center.\n",
+                            dest.getName(),
+                            dest.getCoordinates()[0], dest.getCoordinates()[1],
+                            dist);
+                    Assert.assertTrue(dist <= testRange);
+                }
+        );
+
+
 
     }
 
