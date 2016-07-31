@@ -39,8 +39,10 @@ public class LocationProviderHelper {
     }
 
     public static void setTestMode(boolean testMode) {
+        if (isTest == testMode) return;
         isTest = testMode;
         instance = new LocationProviderHelper();
+        TestLocationProvider.setTestLocations(null);
     }
 
     public List<DestinationLocation> getLocations(double[] center, double range, LocationType type) {

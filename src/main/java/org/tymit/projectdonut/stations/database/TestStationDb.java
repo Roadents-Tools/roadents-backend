@@ -21,6 +21,7 @@ public class TestStationDb implements StationDbInstance {
 
     public static void setTestStations(Collection<TransStation> testStations) {
         chainsToStations.clear();
+        if (testStations == null) return;
         testStations.forEach(station -> {
             TransChain stationChain = station.getChain();
             if (stationChain == null) stationChain = NULL_CHAIN;

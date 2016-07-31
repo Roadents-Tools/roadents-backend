@@ -38,8 +38,10 @@ public class StationDbHelper {
     }
 
     public static void setTestMode(boolean testMode) {
+        if (isTest == testMode) return;
         isTest = testMode;
         instance = new StationDbHelper();
+        TestStationDb.setTestStations(null);
     }
 
     public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
