@@ -93,7 +93,6 @@ public class TransStation implements LocationPoint {
         TransStation that = (TransStation) o;
 
         if (!Arrays.equals(location, that.location)) return false;
-        if (name != null ? !name.equals(that.name) : that.name != null) return false;
         return chain != null ? chain.equals(that.chain) : that.chain == null;
 
     }

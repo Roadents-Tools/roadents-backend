@@ -1,6 +1,7 @@
 package org.tymit.projectdonut.model;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,7 +46,24 @@ public class TravelRoute {
     }
 
     public boolean isInRoute(LocationPoint location) {
-        return location.equals(start) || location.equals(end) || stations.contains(location);
+
+        if (location == null) return false;
+
+        if (Arrays.equals(location.getCoordinates(), start.getCoordinates())) {
+            return true;
+        }
+
+        if (end != null && Arrays.equals(location.getCoordinates(), end.getCoordinates())) {
+            return true;
+        }
+
+        for (TransStation station : stations) {
+            if (Arrays.equals(station.getCoordinates(), location.getCoordinates())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public DestinationLocation getDestination() {
@@ -82,10 +100,10 @@ public class TravelRoute {
 
         TravelRoute route = (TravelRoute) o;
 
-        if (!stations.equals(route.stations)) return false;
-        if (!start.equals(route.start)) return false;
-        if (end != null ? !end.equals(route.end) : route.end != null) return false;
-        return startTime.equals(route.startTime);
+        return stations.equals(route.stations)
+                && start.equals(route.start)
+                && (end != null) ? end.equals(route.end) : route.end == null
+                && startTime.equals(route.startTime);
 
     }
 

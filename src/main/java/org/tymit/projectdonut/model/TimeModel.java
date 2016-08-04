@@ -152,7 +152,7 @@ public class TimeModel implements Comparable {
     }
 
     public boolean isDelta() {
-        return getUnixTime() > 0;
+        return getUnixTime() < 0;
     }
 
     public TimeModel toInstant(TimeModel base) {
