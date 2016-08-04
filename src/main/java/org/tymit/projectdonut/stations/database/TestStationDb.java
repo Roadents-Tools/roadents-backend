@@ -57,4 +57,9 @@ public class TestStationDb implements StationDbInstance {
     public boolean isUp() {
         return true;
     }
+
+    @Override
+    public void close() {
+        chainsToStations.clear();
+    }
 }

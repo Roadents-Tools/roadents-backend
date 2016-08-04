@@ -14,4 +14,6 @@ public interface StationDbInstance {
     boolean putStations(List<TransStation> stations);
 
     boolean isUp();
+
+    void close();
 }

@@ -3,7 +3,11 @@ package org.tymit.projectdonut.stations.database;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -13,13 +17,19 @@ public class StationDbHelper {
 
     private static StationDbHelper instance = new StationDbHelper();
     private static boolean isTest = false;
-    private StationDbInstance[] allDatabases;
+    private StationDbInstance[] allDatabases = null;
 
     private StationDbHelper() {
         initializeDbList();
     }
 
     private void initializeDbList() {
+
+        if (allDatabases != null) {
+            for (StationDbInstance db : allDatabases) {
+                db.close();
+            }
+        }
 
         if (isTest) {
             allDatabases = new StationDbInstance[]{new TestStationDb()};
