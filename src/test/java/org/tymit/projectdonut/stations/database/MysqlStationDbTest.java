@@ -9,10 +9,10 @@ import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 /**
  * Created by ilan on 7/10/16.
@@ -53,7 +53,9 @@ public class MysqlStationDbTest {
         if (!putSuccess) LoggingUtils.printLog();
         Assert.assertTrue(putSuccess);
 
-        List<TransStation> retStations = instance.queryStations(null, 0, null);
+        List<TransStation> retStations = allStations.stream()
+                .flatMap(station -> instance.queryStations(station.getCoordinates(), 0, station.getChain()).stream())
+                .collect(Collectors.toList());
         if (retStations == null) LoggingUtils.printLog();
         Assert.assertEquals(25, retStations.size());
 
@@ -62,7 +64,6 @@ public class MysqlStationDbTest {
         Assert.assertEquals(5, selectiveRet.size());
 
         TransStation singleStation = allStations.get(0);
-        System.out.println(singleStation.getName());
         List<TransStation> rangeQueried = instance.queryStations(singleStation.getCoordinates(), 0, null);
         if (rangeQueried == null) LoggingUtils.printLog();
         Assert.assertEquals(1, rangeQueried.size());
@@ -70,11 +71,14 @@ public class MysqlStationDbTest {
 
     @After
     public void cleanupDb() {
-        try {
-            instance.clearDb();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        instance.removeItems(
+                MysqlSupport.CHAIN_NAME_KEY + " LIKE '%TESTCHAIN%'",
+                new String[] { MysqlSupport.CHAIN_TABLE_NAME }
+        );
+        instance.removeItems(
+                MysqlSupport.STATION_NAME_KEY + " LIKE '%TEST STATION:%'",
+                new String[] { MysqlSupport.STATION_TABLE_NAME }
+        );
     }
 
 }
