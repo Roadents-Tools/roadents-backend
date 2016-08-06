@@ -59,6 +59,11 @@ public class GoogleLocationsProvider implements LocationProvider {
         if (queryCalls >= MAX_QUERY_CALLS) {
             queryCalls = 0;
             gmaps = new GooglePlaces(API_KEYS[0]);
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                LoggingUtils.logError(e);
+            }
         }
         queryCalls++;
         try {
