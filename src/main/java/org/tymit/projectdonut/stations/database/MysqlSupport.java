@@ -17,11 +17,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
 
 /**
  * Created by ilan on 7/31/16.
  */
 public class MysqlSupport {
+
+    /**
+     * Database Table and Field Names
+     **/
     public static final String CHAIN_TABLE_NAME = "transchain";
     public static final String CHAIN_ID_KEY = CHAIN_TABLE_NAME + ".id";
     public static final String CHAIN_NAME_KEY = CHAIN_TABLE_NAME + ".name";
@@ -37,16 +42,31 @@ public class MysqlSupport {
     public static final String STATION_NAME_KEY = STATION_TABLE_NAME + ".name";
     public static final String STATION_ID_KEY = STATION_TABLE_NAME + ".id";
 
+    /**
+     * Constants for Database Math
+     **/
+    private static final double MILES_TO_LAT = 1.0 / 69.5;
+    private static final double MILES_TO_LONG = 1/69.5;
+
     public static Map<TransStation, Integer> getStationIdMap(Connection connection, double[] center, double range, TransChain chain) throws SQLException {
-        String whereclause = "";
+        StringJoiner whereclause = new StringJoiner(" AND ");
         if (chain != null) {
-            whereclause += " WHERE " + CHAIN_NAME_KEY + "='" + chain.getName().replaceAll("'", "\\'") + "'";
+            whereclause.add(CHAIN_NAME_KEY + "='" + chain.getName().replaceAll("'", "\\'") + "'");
+        }
+
+        if (center != null && range < 0) {
+            return new HashMap<>();
+        } else if (center != null && range == 0) {
+            whereclause.add(String.format("%s=%f", STATION_LAT_KEY, center[0]));
+            whereclause.add(String.format("%s=%f", STATION_LONG_KEY, center[1]));
+        } else if (center != null && range > 0) {
+            whereclause.add(stationCenterRangeBoxWhere(center, range));
         }
 
         String query = "SELECT * FROM " + STATION_CHAIN_COST_TABLE_NAME
                 + " INNER JOIN " + STATION_TABLE_NAME + " ON " + COST_STATION_KEY + " = " + STATION_ID_KEY
                 + " INNER JOIN " + CHAIN_TABLE_NAME + " ON " + COST_CHAIN_KEY + " = " + CHAIN_ID_KEY
-                + whereclause;
+                + ((whereclause.length() > 0) ? " WHERE " + whereclause.toString() : "");
 
         Statement stm = connection.createStatement();
         ResultSet rawOut = stm.executeQuery(query);
@@ -62,7 +82,6 @@ public class MysqlSupport {
                 outMap.put(fromRow, id);
                 continue;
             }
-            if (range < 0) continue;
             double dist = LocationUtils.distanceBetween(center, fromRow.getCoordinates(), true);
             if (dist <= range + ERROR_MARGIN) outMap.put(fromRow, id);
         }
@@ -71,6 +90,12 @@ public class MysqlSupport {
         stm.close();
         rawOut.close();
         return outMap;
+    }
+
+    private static String stationCenterRangeBoxWhere(double[] center, double range) {
+        return String.format(" %s > %f AND %s < %f AND %s > %f AND %s < %f",
+                STATION_LAT_KEY, center[0] - range * MILES_TO_LAT, STATION_LAT_KEY, center[0] + range * MILES_TO_LAT,
+                STATION_LONG_KEY, center[1] - range * MILES_TO_LONG, STATION_LONG_KEY, center[1] + range*MILES_TO_LONG);
     }
 
     public static TransStation getStationFromRow(ResultSet currentRow, Map<String, TransChain> availableChains) throws SQLException {
