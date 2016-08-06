@@ -1,9 +1,18 @@
 package org.tymit.projectdonut.logic.logiccores;
 
-import org.tymit.projectdonut.model.*;
+import com.google.common.collect.Lists;
+import org.tymit.projectdonut.model.DestinationLocation;
+import org.tymit.projectdonut.model.LocationType;
+import org.tymit.projectdonut.model.StartPoint;
+import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.TravelRoute;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
@@ -65,18 +74,22 @@ public class DonutLogicCore implements LogicCore {
     private Map<DestinationLocation, TravelRoute> runDonut(StartPoint center, TimeModel startTime, TimeModel maxTimeDelta, LocationType type) {
         TravelRoute startRoute = new TravelRoute(center, startTime);
 
-        Map<LocationPoint, TravelRoute> stationRoutes = new ConcurrentHashMap<>();
-        stationRoutes.put(center, startRoute);
-        DonutLogicSupport.buildStationRouteList(startRoute, startTime, maxTimeDelta, stationRoutes);
+        Map<String, TravelRoute> stationRoutes = new ConcurrentHashMap<>();
+        stationRoutes.put(DonutLogicSupport.getLocationTag(center), startRoute);
+        DonutLogicSupport.buildStationRouteList(Lists.asList(startRoute, new TravelRoute[0]), startTime, maxTimeDelta, stationRoutes);
+
+        LoggingUtils.logMessage(getClass().getName(), "Got %d station routes.", stationRoutes.size());
 
         Set<TravelRoute> destRoutes = stationRoutes.values().stream()
                 .filter(route -> maxTimeDelta.getUnixTimeDelta() >= (long) route.getCosts().getOrDefault(TIME_DELTA_TAG, 0l))
                 .flatMap(route -> {
-                    TimeModel trueDelta = maxTimeDelta.addUnixTime((long) route.getCosts().getOrDefault(TIME_DELTA_TAG, 0l));
+                    TimeModel trueDelta = maxTimeDelta.addUnixTime(-1 * (long) route.getCosts().getOrDefault(TIME_DELTA_TAG, 0l));
                     Map<DestinationLocation, Long> possibleDests = DonutLogicSupport.getWalkableDestinations(route.getCurrentEnd(), trueDelta, type);
                     return DonutLogicSupport.addDestinationsToRoute(route, possibleDests).stream();
                 })
                 .collect(Collectors.toSet());
+
+        LoggingUtils.logMessage(getClass().getName(), "Got %d dest routes.", destRoutes.size());
 
         ConcurrentMap<DestinationLocation, TravelRoute> destToShortest = new ConcurrentHashMap<>();
         destRoutes.stream()

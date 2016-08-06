@@ -1,20 +1,35 @@
 package org.tymit.projectdonut.logic.logiccores;
 
+import com.google.common.collect.Lists;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.tymit.projectdonut.locations.LocationRetriever;
 import org.tymit.projectdonut.locations.providers.TestLocationProvider;
-import org.tymit.projectdonut.model.*;
+import org.tymit.projectdonut.model.DestinationLocation;
+import org.tymit.projectdonut.model.LocationPoint;
+import org.tymit.projectdonut.model.LocationType;
+import org.tymit.projectdonut.model.StartPoint;
+import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.TransChain;
+import org.tymit.projectdonut.model.TransStation;
+import org.tymit.projectdonut.model.TravelRoute;
 import org.tymit.projectdonut.stations.StationRetriever;
 import org.tymit.projectdonut.stations.database.TestStationDb;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Created by ilan on 7/27/16.
@@ -83,14 +98,64 @@ public class DonutLogicSupportTest {
         }
         TestStationDb.setTestStations(allStations);
 
+        Set<String> uniqueCoords = allStations.parallelStream()
+                .map(DonutLogicSupport::getLocationTag)
+                .collect(Collectors.toSet());
+
+
+
         TravelRoute initRoute = new TravelRoute(new StartPoint(CENTER), STARTTIME);
-        Map<LocationPoint, TravelRoute> allRoutes = new ConcurrentHashMap<>();
-        allRoutes.put(initRoute.getCurrentEnd(), initRoute);
+        Map<String, TravelRoute> allRoutes = new ConcurrentHashMap<>();
+        allRoutes.put(DonutLogicSupport.getLocationTag(initRoute.getCurrentEnd()), initRoute);
 
-        DonutLogicSupport.buildStationRouteList(initRoute, STARTTIME, MAXDELTA, allRoutes);
 
-        Assert.assertEquals(WALKABLEPTS.length * STATIONS + 1, allRoutes.size());
+        DonutLogicSupport.buildStationRouteList(Lists.newArrayList(initRoute), STARTTIME, MAXDELTA, allRoutes);
 
+        Set<String> allRouteTags = allRoutes.keySet();
+        Set<String> missing = new HashSet<>(uniqueCoords).stream()
+                .filter(tag -> !allRouteTags.contains(tag))
+                .collect(Collectors.toSet());
+
+        if (missing.size() > 0) {
+            System.out.printf("Have: \n");
+            for (String tag : allRouteTags) {
+                System.out.printf("  %s\n", tag);
+            }
+            System.out.printf("Missing: \n");
+            for (String tag : missing) {
+                System.out.printf("  %s\n", tag);
+            }
+        }
+
+        Assert.assertEquals(uniqueCoords.size() + 1, allRoutes.size());
+
+    }
+
+
+    @Test
+    public void getAllChainsForStop() throws Exception {
+        final int maxChains = 10;
+        List<TransChain> testChains = IntStream.range(0, maxChains)
+                .mapToObj(num -> new TransChain("TESTCHAIN: " + num))
+                .collect(Collectors.toList());
+
+
+        Map<double[], Set<TransStation>> stations = new HashMap<>();
+        Arrays.stream(WALKABLEPTS)
+                .map(pt -> {
+                    stations.put(pt, new HashSet<>());
+                    return pt;
+                })
+                .forEach(pt -> testChains.stream()
+                        .map(chain -> new TransStation("TEST STATION " + Arrays.toString(pt) + ' ' + chain.getName(), pt, null, chain))
+                        .forEach(station -> stations.get(pt).add(station)));
+        TestStationDb.setTestStations(stations.values().stream().reduce(new HashSet<>(), (stations1, stations2) -> {
+            stations1.addAll(stations2);
+            return stations1;
+        }));
+        stations.values()
+                .forEach(stationList -> stationList.stream()
+                        .forEach(station -> Assert.assertEquals(stationList, DonutLogicSupport.getAllChainsForStop(station))));
     }
 
     @Test
@@ -185,7 +250,7 @@ public class DonutLogicSupportTest {
     public void addStationsToRoute() throws Exception {
         Map<TransStation, Long> testStats = new HashMap<>();
         for (long i = 0; i < 30l; i++) {
-            TransStation testStation = new TransStation("Test: " + i, CENTER);
+            TransStation testStation = new TransStation("Test: " + i, new double[] { 0, 0 });
             testStats.put(testStation, i);
         }
 
@@ -228,8 +293,9 @@ public class DonutLogicSupportTest {
         //Check
         Assert.assertEquals(STATIONS, arrivable.size());
         for (TransStation station : arrivable.keySet()) {
-            TimeModel arriveTime = STARTTIME.addUnixTime(arrivable.get(station));
-            Assert.assertEquals(0, arriveTime.get(TimeModel.MINUTE) % 10);
+            int result = STARTTIME.addUnixTime(arrivable.get(station)).get(TimeModel.MINUTE) % 10;
+            int expected = station.getSchedule().get(0).get(TimeModel.MINUTE) % 10;
+            Assert.assertEquals(expected, result);
         }
     }
 
