@@ -4,6 +4,7 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.StringJoiner;
 
 /**
  * Created by ilan on 7/8/16.
@@ -21,6 +22,16 @@ public class TimeModel implements Comparable {
     public static final int DAY_OF_WEEK = 6;
 
     public static final int NUMBER_OF_KEYS = 7;
+
+    private static final String[] KEY_TO_TAG_NAME = new String[] {
+            "YEAR",
+            "MONTH",
+            "DAY_OF_MONTH",
+            "HOUR",
+            "MINUTE",
+            "SECOND",
+            "DAY_OF_WEEK"
+    };
 
     private static final int[] TIMEMODEL_TO_CALENDAR_KEYS = new int[]{
             Calendar.YEAR,
@@ -160,7 +171,7 @@ public class TimeModel implements Comparable {
         TimeModel newModel = base.clone();
         for (int i = 0; i < NUMBER_OF_KEYS; i++) {
             int ourVal = get(i);
-            if (ourVal > 0) newModel.set(i, ourVal);
+            if (ourVal >= 0) newModel = newModel.set(i, ourVal);
         }
         return newModel;
     }
@@ -210,8 +221,7 @@ public class TimeModel implements Comparable {
             }
         }
 
-        long timeDiff = (self.getTimeInMillis() - other.getTimeInMillis());
-        return timeDiff;
+        return (self.getTimeInMillis() - other.getTimeInMillis());
     }
 
     @Override
@@ -226,8 +236,7 @@ public class TimeModel implements Comparable {
         if (o == null || getClass() != o.getClass()) return false;
 
         TimeModel model = (TimeModel) o;
-        if (getUnixTime() > 0 && getUnixTime() == model.getUnixTime()) return true;
-        return attributeMap.equals(model.attributeMap);
+        return getUnixTime() > 0 && getUnixTime() == model.getUnixTime() || attributeMap.equals(model.attributeMap);
     }
 
     public TimeModel clone() {
@@ -244,9 +253,20 @@ public class TimeModel implements Comparable {
     @Override
     public String toString() {
         return "TimeModel{" +
-                "attributeMap=" + attributeMap +
+                "attributeMap=" + attributeMapToString() +
                 ", unixTime=" + unixTime +
                 ", recalc:" + recalculateUnixTime +
                 '}';
+    }
+
+    private String attributeMapToString() {
+        StringJoiner rval = new StringJoiner(",");
+
+        for (int key : attributeMap.keySet()) {
+            String entry = KEY_TO_TAG_NAME[key] + '=' + attributeMap.get(key);
+            rval.add(entry);
+        }
+
+        return '{' + rval.toString() + '}';
     }
 }
