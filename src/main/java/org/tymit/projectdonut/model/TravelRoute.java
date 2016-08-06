@@ -41,8 +41,7 @@ public class TravelRoute {
     }
 
     public boolean addStation(TransStation station) {
-        if (isInRoute(station)) return false;
-        return stations.add(station);
+        return !isInRoute(station) && stations.add(station);
     }
 
     public boolean isInRoute(LocationPoint location) {
@@ -100,9 +99,13 @@ public class TravelRoute {
 
         TravelRoute route = (TravelRoute) o;
 
-        return stations.equals(route.stations)
-                && start.equals(route.start)
-                && (end != null) ? end.equals(route.end) : route.end == null
+        if (stations.size() != route.stations.size()) return false;
+        for (int i = 0; i < stations.size(); i++) {
+            if (!route.stations.get(i).equals(stations.get(i))) return false;
+        }
+
+        return start.equals(route.start)
+                && ((end != null) ? end.equals(route.end) : route.end == null)
                 && startTime.equals(route.startTime);
 
     }
