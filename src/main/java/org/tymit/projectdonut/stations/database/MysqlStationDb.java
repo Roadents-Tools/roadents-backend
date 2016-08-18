@@ -53,6 +53,7 @@ public class MysqlStationDb implements StationDbInstance {
                 if (!connection.createStatement().execute(deleteQuery)) success = false;
                 connection.close();
             } catch (SQLException e) {
+                LoggingUtils.logError(e);
                 success = false;
             }
         }
