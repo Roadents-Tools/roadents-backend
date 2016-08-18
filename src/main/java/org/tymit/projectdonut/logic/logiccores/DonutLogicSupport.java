@@ -11,8 +11,10 @@ import org.tymit.projectdonut.stations.StationRetriever;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -129,7 +131,6 @@ public class DonutLogicSupport {
                     map1.putAll(map2);
                     return map1;
                 });
-
         Map<TransStation, Long> rval = new ConcurrentHashMap<>(walkable);
         arrivable.keySet().stream().forEach(keyStation -> {
             if (walkable.containsKey(keyStation)) {
@@ -163,25 +164,54 @@ public class DonutLogicSupport {
     }
 
     public static Map<TransStation, Long> getArrivableStations(TransStation station, TimeModel startTime, TimeModel maxDelta) {
+
         Map<TransStation, Long> rval = new ConcurrentHashMap<>();
         if (station.getChain() == null) return rval;
+        if (station.getSchedule() == null || station.getSchedule().isEmpty()){
+            LoggingUtils.logMessage("DONUT","Station has no schedule. Retrying query.");
+            List<TransStation> trueStation = StationRetriever.getStations(station.getCoordinates(), 0.001,station.getChain(), null);
+            if (trueStation.size() != 1 || trueStation.get(0).getSchedule() == null || trueStation.get(0).getSchedule().isEmpty()){
+                LoggingUtils.logError("DONUT", "Error in requery.\nData:\nList size: %d\nTrueStation: %s",
+                        trueStation.size(),
+                        (!trueStation.isEmpty()) ? trueStation.get(0).toString() : "Null");
+            }
+        }
+
         TimeModel trueStart = station.getNextArrival(startTime);
         if (trueStart.getUnixTime() < startTime.getUnixTime()) {
-            throw new RuntimeException(
-                    String.format("truestart is %d, but startTime is %d, %d more than that.",
-                            trueStart.getUnixTime(), startTime.getUnixTime(), startTime.getUnixTime() - trueStart.getUnixTime())
-            );
+            String errorMsg = "";
+            errorMsg += String.format("Truestart is %d, but startTime is %d, %d more than that.\n",
+                    trueStart.getUnixTime(), startTime.getUnixTime(), startTime.getUnixTime() - trueStart.getUnixTime());
+            errorMsg += String.format("Data:\nTrueStart: %s\nStartTime: %s",trueStart.toString(), startTime.toString());
+            LoggingUtils.logError("DONUT", errorMsg);
+            return new HashMap<>();
         }
 
         List<TransStation> inChain = StationRetriever.getStations(null, 0, station.getChain(), null);
         inChain.stream().forEach(fromChain -> {
+            if (Arrays.equals(fromChain.getCoordinates(), station.getCoordinates())) return;
+            if (fromChain.getSchedule() == null || fromChain.getSchedule().isEmpty()){
+                LoggingUtils.logMessage("DONUT","Station has no schedule. Retrying query.");
+                List<TransStation> trueStation = StationRetriever.getStations(fromChain.getCoordinates(), 0.001,fromChain.getChain(), null);
+                if (trueStation.size() != 1 || trueStation.get(0).getSchedule() == null || trueStation.get(0).getSchedule().isEmpty()){
+                    LoggingUtils.logError("DONUT", "Error in requery.\nData:\nList size: %d\nTrueStation: %s",
+                            trueStation.size(),
+                            (!trueStation.isEmpty()) ? trueStation.get(0).toString() : "Null");
+                }
+            }
             TimeModel arriveTime = fromChain.getNextArrival(trueStart);
             if (arriveTime.getUnixTime() < trueStart.getUnixTime()) {
-                throw new RuntimeException(
-                        String.format("arriveTime is %d, but startTime is %d, %d more than that.",
-                                arriveTime.getUnixTime(), startTime.getUnixTime(), startTime.getUnixTime() - arriveTime.getUnixTime())
-                );
+                String errorMsg = "";
+                errorMsg += String.format("ArriveTime is %d, but trueStart is %d, %d more than that.\n\n",
+                        arriveTime.getUnixTime(), startTime.getUnixTime(), startTime.getUnixTime() - arriveTime.getUnixTime());
+                errorMsg += String.format("Time Data:\nArrivetime: %s\nStarttime: %s\n TrueStart: %s\nMaxDelta: %s\n\n",
+                        arriveTime.toString(), startTime.toString(), trueStart.toString(), maxDelta.toString());
+
+                errorMsg += String.format("Station Data:\nStation: %s\nChain: %s\nFromChain: %s", station.toString(), station.getChain().toString(), fromChain.toString());
+                LoggingUtils.logMessage("DONUT", errorMsg);
+                return;
             }
+
             long timeFromStart = arriveTime.getUnixTime() - startTime.getUnixTime();
             if (timeFromStart > maxDelta.getUnixTimeDelta()) return;
             rval.put(fromChain, timeFromStart);
