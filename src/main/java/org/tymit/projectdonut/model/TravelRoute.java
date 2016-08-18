@@ -1,5 +1,7 @@
 package org.tymit.projectdonut.model;
 
+import org.tymit.projectdonut.utils.LoggingUtils;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -115,7 +117,9 @@ public class TravelRoute {
         for (String tag : ascCosts.keySet()) route.putCost(tag, ascCosts.get(tag));
         stations.forEach(route::addStation);
         if (end != null) route.setDestination(end);
-        if (!this.equals(route) && route.equals(this)) throw new Error("INEQUAL CLONE");
+        if (!this.equals(route) && route.equals(this)) {
+            LoggingUtils.logError("TravelRoute", "Inequal clone.");
+        }
         return route;
     }
 
