@@ -1,8 +1,12 @@
 package org.tymit.projectdonut.model;
 
+import org.tymit.projectdonut.utils.LoggingUtils;
+
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by ilan on 7/7/16.
@@ -25,6 +29,7 @@ public class TransStation implements LocationPoint {
         this.location = location;
         this.name = name;
         this.schedule = schedule;
+        schedule.remove(TimeModel.empty());
         this.chain = chain;
 
         chain.addStation(this);
@@ -56,13 +61,15 @@ public class TransStation implements LocationPoint {
     public TimeModel getNextArrival(TimeModel start) {
         long min = Long.MAX_VALUE;
         TimeModel minTime = null;
+
+        Map<TimeModel, Long> results = new HashMap<>();
         for (TimeModel possible : schedule) {
             long compareVal = possible.compareTo(start);
-            if (compareVal < 0 && possible.get(TimeModel.HOUR) < 0) {
+            if (compareVal <= 0 && possible.get(TimeModel.HOUR) < 0) {
                 possible = possible.set(TimeModel.HOUR, start.get(TimeModel.HOUR) + 1);
                 compareVal = possible.compareTo(start);
             }
-            if (compareVal < 0 && possible.get(TimeModel.DAY_OF_MONTH) < 0) {
+            if (compareVal <= 0 && possible.get(TimeModel.DAY_OF_MONTH) < 0) {
                 possible = possible.set(TimeModel.DAY_OF_MONTH, start.get(TimeModel.DAY_OF_MONTH) + 1);
                 compareVal = possible.compareTo(start);
             }
@@ -70,6 +77,20 @@ public class TransStation implements LocationPoint {
                 min = compareVal;
                 minTime = possible;
             }
+            if (compareVal == 0 && minTime == null){
+                minTime = TimeModel.empty();
+            }
+
+            results.put(possible, compareVal);
+        }
+        if (minTime == null){
+            String errMsg = "Mintime is NULL.\n\n";
+            errMsg += String.format("Data:\nThis: %s\nStart: %s\nSchedule: %s\n", this.toString(), start.toString(), this.getSchedule().toString());
+            for (TimeModel trial : results.keySet()){
+                errMsg += String.format("%s -> %d", trial.toString(), results.get(trial));
+            }
+            LoggingUtils.logError("TransStation", errMsg);
+            throw new RuntimeException(errMsg);
         }
         TimeModel rval = minTime.toInstant(start);
         return rval;
