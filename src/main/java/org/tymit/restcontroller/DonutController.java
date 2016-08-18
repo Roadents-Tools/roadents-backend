@@ -12,7 +12,9 @@ import org.tymit.projectdonut.utils.LoggingUtils;
 import org.tymit.restcontroller.jsonconvertion.DestinationJsonConverter;
 import org.tymit.restcontroller.jsonconvertion.TravelRouteJsonConverter;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -52,7 +54,21 @@ public class DonutController {
         boolean test = Boolean.valueOf(urlArgs.get(TEST_TAG));
         args.put(TEST_TAG, test);
         TravelRouteJsonConverter converter = new TravelRouteJsonConverter();
-        JSONArray routes = ApplicationRunner.runApplication(tag, args)
+        Map<String, List<Object>> results = null;
+        try {
+            results = ApplicationRunner.runApplication(tag, args);
+        } catch (Exception e){
+            LoggingUtils.logError(e);
+        }
+        if (results == null) {
+            results = new HashMap<>();
+            results.put("ERRORS", new ArrayList());
+            results.get("ERRORS").add(new Exception("Null results set."));
+        }
+        if (results.containsKey("ERRORS")){
+            results.get("ERRORS").forEach(errObj -> LoggingUtils.logError((Exception) errObj));
+        }
+        JSONArray routes = results
                 .get("ROUTES")
                 .parallelStream()
                 .map(routeObj -> (TravelRoute) routeObj)
