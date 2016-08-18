@@ -1,5 +1,6 @@
 package org.tymit.restcontroller.jsonconvertion;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.tymit.projectdonut.model.StartPoint;
 
@@ -13,7 +14,9 @@ public class StartPointJsonConverter implements JsonConverter<StartPoint> {
     @Override
     public String toJson(StartPoint input) {
         JSONObject obj = new JSONObject();
-        obj.put(COORDS_TAG, input.getCoordinates());
+        JSONArray arr = new JSONArray();
+        for (double coord : input.getCoordinates()) arr.put(coord);
+        obj.put(COORDS_TAG, arr);
         return obj.toString();
     }
 
