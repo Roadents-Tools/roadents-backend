@@ -2,7 +2,6 @@ package org.tymit.restcontroller;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.tymit.projectdonut.stations.updates.StationDbUpdater;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 /**
@@ -17,8 +16,8 @@ public class Application {
 
     public static void main(String[] args) {
         LoggingUtils.setPrintImmediate(true);
-        StationDbUpdater.getUpdater().updateStationsAsync();
-        StationDbUpdater.getUpdater().setBackgroundInterval(DB_UPDATE_INTERVAL);
+        //StationDbUpdater.getUpdater().updateStationsAsync();
+        //StationDbUpdater.getUpdater().setBackgroundInterval(DB_UPDATE_INTERVAL);
         SpringApplication.run(Application.class, args);
     }
 }
