@@ -14,7 +14,6 @@ import org.tymit.projectdonut.utils.LoggingUtils;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -32,11 +31,14 @@ public class DonutLogicSupport {
     public static final String TIME_DELTA_TAG = "timedelta";
 
     public static void buildStationRouteList(Collection<? extends TravelRoute> currentLayer, TimeModel startTime, TimeModel maxDelta, Map<String, TravelRoute> collector) {
-        List<TravelRoute> nextLayer = currentLayer.stream()
+        List<TravelRoute> nextLayer = currentLayer.parallelStream()
                 .flatMap(route -> buildStationRouteListIterator(route, startTime, maxDelta, collector).stream())
                 .collect(Collectors.toList());
         LoggingUtils.logMessage("DONUT", "Next recursive layer size: " + nextLayer.size());
-        if (nextLayer.size() == 0) return;
+        if (nextLayer.size() == 0){
+
+            return;
+        }
         buildStationRouteList(nextLayer, startTime, maxDelta, collector);
 
     }
@@ -51,32 +53,14 @@ public class DonutLogicSupport {
         Map<TransStation, Long> allPossibleStationsRaw = getAllPossibleStations(initial.getCurrentEnd(), trueStart, deltaLeft);
 
         //Filter so that we only have 1 station per coordinate.
-        Set<String> newTags = new HashSet<>();
-        Map<TransStation, Long> allPossibleStations = new ConcurrentHashMap<>();
-        allPossibleStationsRaw.keySet().stream().forEach(possible -> {
-            String tag = getLocationTag(possible);
-            if (newTags.contains(tag)) return;
-            allPossibleStations.put(possible, allPossibleStationsRaw.get(possible));
-            newTags.add(tag);
-        });
-
+        Map<TransStation, Long> allPossibleStations = filterAllPossibleStations(allPossibleStationsRaw);
         List<TravelRoute> newRoutesList = addStationsToRoute(initial, allPossibleStations);
         Set<TravelRoute> newRoutes = new HashSet<>(newRoutesList);
         newRoutes.removeAll(collector.values());
 
         return newRoutes.stream()
-
-                .distinct()
-
-                //Filter things we have already
                 .filter(route -> !collector.values().contains(route))
-
-                //Filter routes that have gone over time
                 .filter(route -> ((long) route.getCosts().getOrDefault(TIME_DELTA_TAG, 0l)) < maxDelta.getUnixTimeDelta())
-
-                // We should only have 1 path to get to any location -- the shortest.
-                // We use a map to guarantee this and then filter all those with greater times and lengths
-                // than the one already in the map.
                 .filter(route -> {
 
                     String currentEndTag = getLocationTag(route.getCurrentEnd());
@@ -93,13 +77,33 @@ public class DonutLogicSupport {
                     return oldLength > newLength;
 
                 })
-
-                //Finally, collect and recurse.
                 .map(route -> {
                     collector.put(getLocationTag(route.getCurrentEnd()), route);
                     return route;
                 })
                 .collect(Collectors.toList());
+    }
+
+    public static Map<TransStation, Long> filterAllPossibleStations(Map<TransStation, Long> raw){
+        Map<String, TransStation> newTags = new ConcurrentHashMap<>();
+        Map<TransStation, Long> rval = new ConcurrentHashMap<>();
+        raw.keySet().stream().forEach(possible -> {
+            String tag = getLocationTag(possible);
+
+            if (!newTags.containsKey(tag)){
+                rval.put(possible, raw.get(possible));
+                newTags.put(tag, possible);
+                return;
+            }
+
+            TransStation old = newTags.get(tag);
+            long oldTime = rval.get(old);
+            if (oldTime < raw.get(possible)) return;
+
+            rval.put(possible, raw.get(possible));
+            newTags.put(tag, possible);
+        });
+        return rval;
     }
 
     public static Map<DestinationLocation, Long> getWalkableDestinations(LocationPoint center, TimeModel maxDelta, LocationType type) {
@@ -111,7 +115,7 @@ public class DonutLogicSupport {
 
     public static <T extends LocationPoint> Map<T, Long> getWalkTimes(LocationPoint begin, Collection<T> points) {
         Map<T, Long> rval = new ConcurrentHashMap<>();
-        points.stream().forEach(point -> {
+        points.parallelStream().forEach(point -> {
             double dist = LocationUtils.distanceBetween(begin.getCoordinates(), point.getCoordinates(), true);
             long time = LocationUtils.distanceToWalkTime(dist, true);
             rval.put(point, time);
@@ -167,56 +171,35 @@ public class DonutLogicSupport {
 
         Map<TransStation, Long> rval = new ConcurrentHashMap<>();
         if (station.getChain() == null) return rval;
-        if (station.getSchedule() == null || station.getSchedule().isEmpty()){
-            LoggingUtils.logMessage("DONUT","Station has no schedule. Retrying query.");
-            List<TransStation> trueStation = StationRetriever.getStations(station.getCoordinates(), 0.001,station.getChain(), null);
-            if (trueStation.size() != 1 || trueStation.get(0).getSchedule() == null || trueStation.get(0).getSchedule().isEmpty()){
-                LoggingUtils.logError("DONUT", "Error in requery.\nData:\nList size: %d\nTrueStation: %s",
-                        trueStation.size(),
-                        (!trueStation.isEmpty()) ? trueStation.get(0).toString() : "Null");
-            }
-        }
+        TransStation stationWithSchedule = getStationWithSchedule(station);
 
-        TimeModel trueStart = station.getNextArrival(startTime);
-        if (trueStart.getUnixTime() < startTime.getUnixTime()) {
-            String errorMsg = "";
-            errorMsg += String.format("Truestart is %d, but startTime is %d, %d more than that.\n",
-                    trueStart.getUnixTime(), startTime.getUnixTime(), startTime.getUnixTime() - trueStart.getUnixTime());
-            errorMsg += String.format("Data:\nTrueStart: %s\nStartTime: %s",trueStart.toString(), startTime.toString());
-            LoggingUtils.logError("DONUT", errorMsg);
-            return new HashMap<>();
-        }
+        TimeModel trueStart = stationWithSchedule.getNextArrival(startTime);
 
-        List<TransStation> inChain = StationRetriever.getStations(null, 0, station.getChain(), null);
+        List<TransStation> inChain = StationRetriever.getStations(null, 0, stationWithSchedule.getChain(), null);
         inChain.stream().forEach(fromChain -> {
-            if (Arrays.equals(fromChain.getCoordinates(), station.getCoordinates())) return;
-            if (fromChain.getSchedule() == null || fromChain.getSchedule().isEmpty()){
-                LoggingUtils.logMessage("DONUT","Station has no schedule. Retrying query.");
-                List<TransStation> trueStation = StationRetriever.getStations(fromChain.getCoordinates(), 0.001,fromChain.getChain(), null);
-                if (trueStation.size() != 1 || trueStation.get(0).getSchedule() == null || trueStation.get(0).getSchedule().isEmpty()){
-                    LoggingUtils.logError("DONUT", "Error in requery.\nData:\nList size: %d\nTrueStation: %s",
-                            trueStation.size(),
-                            (!trueStation.isEmpty()) ? trueStation.get(0).toString() : "Null");
-                }
-            }
+            if (Arrays.equals(fromChain.getCoordinates(), stationWithSchedule.getCoordinates())) return;
+            fromChain = getStationWithSchedule(fromChain);
             TimeModel arriveTime = fromChain.getNextArrival(trueStart);
-            if (arriveTime.getUnixTime() < trueStart.getUnixTime()) {
-                String errorMsg = "";
-                errorMsg += String.format("ArriveTime is %d, but trueStart is %d, %d more than that.\n\n",
-                        arriveTime.getUnixTime(), startTime.getUnixTime(), startTime.getUnixTime() - arriveTime.getUnixTime());
-                errorMsg += String.format("Time Data:\nArrivetime: %s\nStarttime: %s\n TrueStart: %s\nMaxDelta: %s\n\n",
-                        arriveTime.toString(), startTime.toString(), trueStart.toString(), maxDelta.toString());
-
-                errorMsg += String.format("Station Data:\nStation: %s\nChain: %s\nFromChain: %s", station.toString(), station.getChain().toString(), fromChain.toString());
-                LoggingUtils.logMessage("DONUT", errorMsg);
-                return;
-            }
 
             long timeFromStart = arriveTime.getUnixTime() - startTime.getUnixTime();
             if (timeFromStart > maxDelta.getUnixTimeDelta()) return;
             rval.put(fromChain, timeFromStart);
         });
         return rval;
+    }
+
+    public static TransStation getStationWithSchedule(TransStation station){
+        if (!(station.getSchedule() == null || station.getSchedule().isEmpty())) return station;
+
+        LoggingUtils.logMessage("DONUT", "Station has no schedule. Retrying query.");
+        List<TransStation> trueStation = StationRetriever.getStations(station.getCoordinates(), 0.001, station.getChain(), null);
+        if (trueStation.size() != 1 || trueStation.get(0).getSchedule() == null || trueStation.get(0).getSchedule().isEmpty()) {
+            LoggingUtils.logError("DONUT", "Error in requery.\nData:\nList size: %d\nTrueStation: %s",
+                    trueStation.size(),
+                    (!trueStation.isEmpty()) ? trueStation.get(0).toString() : "Null");
+            return station;
+        }
+        return trueStation.get(0);
     }
 
     public static Set<TransStation> getAllChainsForStop(TransStation orig) {

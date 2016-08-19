@@ -94,6 +94,7 @@ public class DonutLogicCore implements LogicCore {
         ConcurrentMap<DestinationLocation, TravelRoute> destToShortest = new ConcurrentHashMap<>();
         destRoutes.stream()
                 .forEach(route -> {
+                    if (route.getRoute().size() == 3) return;
                     DestinationLocation dest = route.getDestination();
                     if (destToShortest.putIfAbsent(dest, route) == null) return;
                     TravelRoute oldRoute = destToShortest.get(dest);

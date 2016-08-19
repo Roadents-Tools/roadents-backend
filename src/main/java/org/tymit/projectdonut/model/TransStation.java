@@ -93,6 +93,10 @@ public class TransStation implements LocationPoint {
             throw new RuntimeException(errMsg);
         }
         TimeModel rval = minTime.toInstant(start);
+        if (rval.getUnixTime() < start.getUnixTime()){
+            LoggingUtils.logError("TransStation", "Rval before start.\nRval: %s\nStart: %s\n", rval.toString(), start.toString());
+            throw new RuntimeException();
+        }
         return rval;
     }
 
