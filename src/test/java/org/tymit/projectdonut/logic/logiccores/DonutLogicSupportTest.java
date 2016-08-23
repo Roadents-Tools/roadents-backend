@@ -50,7 +50,8 @@ public class DonutLogicSupportTest {
             new double[]{37.358658, -121.996699},
             new double[]{37.358658, -122.020827},
             new double[]{37.369902, -122.008763},
-            new double[]{37.347414, -122.008763}
+            new double[]{37.347414, -122.008763},
+            new double[]{37.357414, -122.008763}
     };
 
     @Before
@@ -291,7 +292,7 @@ public class DonutLogicSupportTest {
         Map<TransStation, Long> arrivable = DonutLogicSupport.getArrivableStations(testStations.get(0), STARTTIME, MAXDELTA);
 
         //Check
-        Assert.assertEquals(STATIONS, arrivable.size());
+        Assert.assertEquals(STATIONS-1, arrivable.size());
         for (TransStation station : arrivable.keySet()) {
             int result = STARTTIME.addUnixTime(arrivable.get(station)).get(TimeModel.MINUTE) % 10;
             int expected = station.getSchedule().get(0).get(TimeModel.MINUTE) % 10;

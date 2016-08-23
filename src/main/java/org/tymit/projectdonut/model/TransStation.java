@@ -29,7 +29,7 @@ public class TransStation implements LocationPoint {
         this.location = location;
         this.name = name;
         this.schedule = schedule;
-        schedule.remove(TimeModel.empty());
+        if(schedule != null) schedule.remove(TimeModel.empty());
         this.chain = chain;
 
         chain.addStation(this);
