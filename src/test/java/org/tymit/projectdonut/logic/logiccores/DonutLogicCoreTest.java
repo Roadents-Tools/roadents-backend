@@ -7,13 +7,23 @@ import org.junit.Test;
 import org.tymit.projectdonut.locations.LocationRetriever;
 import org.tymit.projectdonut.locations.providers.TestLocationProvider;
 import org.tymit.projectdonut.logic.ApplicationRunner;
-import org.tymit.projectdonut.model.*;
+import org.tymit.projectdonut.model.DestinationLocation;
+import org.tymit.projectdonut.model.LocationPoint;
+import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.TransChain;
+import org.tymit.projectdonut.model.TransStation;
+import org.tymit.projectdonut.model.TravelRoute;
 import org.tymit.projectdonut.stations.StationRetriever;
 import org.tymit.projectdonut.stations.database.TestStationDb;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by ilan on 7/10/16.
@@ -125,12 +135,12 @@ public class DonutLogicCoreTest {
         routes.stream()
                 .map(o -> (TravelRoute) o)
                 .forEach(route -> {
-                    long savedDelta = (long) route.getCosts().getOrDefault("timedelta", 0l);
+                    long savedDelta = route.getTotalTime();
                     long calcDelta = 0;
                     int routeSize = route.getRoute().size();
                     for (int i = 1; i < routeSize; i++) {
-                        LocationPoint current = route.getRoute().get(i);
-                        LocationPoint prev = route.getRoute().get(i - 1);
+                        LocationPoint current = route.getRoute().get(i).getPt();
+                        LocationPoint prev = route.getRoute().get(i - 1).getPt();
                         if (!(prev instanceof TransStation
                                 && current instanceof TransStation
                                 && ((TransStation) prev).getChain().equals(((TransStation) current).getChain())

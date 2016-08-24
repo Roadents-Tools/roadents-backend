@@ -47,4 +47,12 @@ public class StartPoint implements LocationPoint {
         return Arrays.equals(coords, that.coords);
 
     }
+
+    @Override
+    public String toString() {
+        return "StartPoint{" +
+                "name='" + name + '\'' +
+                ", coords=" + Arrays.toString(coords) +
+                '}';
+    }
 }

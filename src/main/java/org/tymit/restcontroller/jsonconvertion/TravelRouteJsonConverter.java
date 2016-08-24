@@ -2,8 +2,14 @@ package org.tymit.restcontroller.jsonconvertion;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.tymit.projectdonut.model.*;
+import org.tymit.projectdonut.model.DestinationLocation;
+import org.tymit.projectdonut.model.StartPoint;
+import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.TransChain;
+import org.tymit.projectdonut.model.TravelRoute;
+import org.tymit.projectdonut.model.TravelRouteNode;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,29 +43,16 @@ public class TravelRouteJsonConverter implements JsonConverter<TravelRoute> {
     }
 
     private JSONArray convertRoute(TravelRoute input) {
-        List<LocationPoint> route = input.getRoute();
-        StartPoint start = input.getStart();
-        DestinationLocation end = input.getDestination();
+
+        TravelRouteNodeJsonConverter conv = new TravelRouteNodeJsonConverter();
+
+        List<TravelRouteNode> route = input.getRoute();
 
         JSONArray routeJson = new JSONArray();
-        routeJson.put(new JSONObject(startConverter.toJson(start)));
-        for (int i = 1; i < route.size() - 1; i++) {
-            JSONObject stationObj = new JSONObject();
 
-            TransStation station = (TransStation) route.get(i);
-            String stationName = station.getName();
-            stationObj.put(STATION_NAME_TAG, stationName);
-            String chainName = station.getChain().getName();
-            stationObj.put(STATION_CHAIN_TAG, chainName);
-            double stationLat = station.getCoordinates()[0];
-            stationObj.put(STATION_LAT_TAG, stationLat);
-            double stationLong = station.getCoordinates()[1];
-            stationObj.put(STATION_LONG_TAG, stationLong);
-
-            routeJson.put(stationObj);
+        for (TravelRouteNode node : route) {
+            routeJson.put(new JSONObject(conv.toJson(node)));
         }
-
-        routeJson.put(new JSONObject(destConverter.toJson(end)));
 
         return routeJson;
     }
@@ -69,30 +62,29 @@ public class TravelRouteJsonConverter implements JsonConverter<TravelRoute> {
 
         JSONObject jsonObject = new JSONObject(json);
 
-        StartPoint start = startConverter.fromJson(jsonObject.getJSONObject(START_TAG).toString());
         TimeModel startTime = TimeModel.fromUnixTime(jsonObject.getLong(START_TIME_TAG));
-        TravelRoute route = new TravelRoute(start, startTime);
 
         Map<String, TransChain> storedChains = new ConcurrentHashMap<>();
+
+        List<TravelRouteNode> nodes = new ArrayList<>();
+        TravelRouteNode startNode = null;
+        TravelRouteNode endNode = null;
+
+        TravelRouteNodeJsonConverter conv = new TravelRouteNodeJsonConverter(storedChains);
+
         JSONArray routeList = jsonObject.getJSONArray(ROUTE_TAG);
-        for (int i = 1; i < routeList.length() - 1; i++) {
-
-            JSONObject stationObj = routeList.getJSONObject(i);
-            String stationName = stationObj.getString(STATION_NAME_TAG);
-            double stationLat = stationObj.getDouble(STATION_LAT_TAG);
-            double stationLong = stationObj.getDouble(STATION_LONG_TAG);
-            String chainName = stationObj.getString(STATION_CHAIN_TAG);
-
-            if (storedChains.get(chainName) == null) {
-                TransChain chain = new TransChain(chainName);
-                storedChains.put(chainName, chain);
-            }
-            TransStation station = new TransStation(stationName, new double[]{stationLat, stationLong}, null, storedChains.get(chainName));
-            route.addStation(station);
+        for (int i = 0; i < routeList.length(); i++) {
+            JSONObject nodeObj = routeList.getJSONObject(i);
+            TravelRouteNode node = conv.fromJson(nodeObj.toString());
+            if (node.getPt() instanceof StartPoint) startNode = node;
+            else if (node.getPt() instanceof DestinationLocation) endNode = node;
+            else nodes.add(node);
         }
 
-        DestinationLocation end = destConverter.fromJson(jsonObject.getJSONObject(END_TAG).toString());
-        route.setDestination(end);
+        TravelRoute route = new TravelRoute((StartPoint) startNode.getPt(), startTime);
+        nodes.forEach(route::addNode);
+        route.setDestinationNode(endNode);
+
         return route;
     }
 }

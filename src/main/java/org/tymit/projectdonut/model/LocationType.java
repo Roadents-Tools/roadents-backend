@@ -16,6 +16,14 @@ public class LocationType {
                 && ((LocationType) o).getEncodedname().equals(this.getEncodedname());
     }
 
+    @Override
+    public String toString() {
+        return "LocationType{" +
+                "visibleName='" + visibleName + '\'' +
+                ", encodedName='" + encodedName + '\'' +
+                '}';
+    }
+
     public String getVisibleName() {
         return visibleName;
     }

@@ -24,18 +24,23 @@ public class TravelRouteNode {
     }
 
     public boolean isStart() {
-        return (pt instanceof StartPoint) || (waitTimeFromPrev < 0 && waitTimeFromPrev < 0 && travelTimeFromPrev < 0);
+        return pt instanceof StartPoint;
     }
 
     public boolean arrivesByFoot() {
         return !isStart() && waitTimeFromPrev < 0 && travelTimeFromPrev < 0;
     }
 
+    public boolean isDest() {
+        return pt instanceof DestinationLocation;
+    }
+
     public long getTotalTimeToArrive() {
         if (isStart()) return -1;
-        long totalTime = waitTimeFromPrev;
-        if (travelTimeFromPrev > 0) totalTime += travelTimeFromPrev;
+        long totalTime = 0;
         if (waitTimeFromPrev > 0) totalTime += waitTimeFromPrev;
+        if (travelTimeFromPrev > 0) totalTime += travelTimeFromPrev;
+        if (walkTimeFromPrev > 0) totalTime += walkTimeFromPrev;
         return totalTime;
     }
 
@@ -76,6 +81,16 @@ public class TravelRouteNode {
         if (travelTimeFromPrev != that.travelTimeFromPrev) return false;
         return pt.equals(that.pt);
 
+    }
+
+    @Override
+    public String toString() {
+        return "TravelRouteNode{" +
+                "pt=" + pt.toString() +
+                ", walkTimeFromPrev=" + walkTimeFromPrev +
+                ", waitTimeFromPrev=" + waitTimeFromPrev +
+                ", travelTimeFromPrev=" + travelTimeFromPrev +
+                '}';
     }
 
     public static class Builder {
