@@ -1,6 +1,7 @@
 package org.tymit.projectdonut.logic.logiccores;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -8,13 +9,13 @@ import org.junit.Test;
 import org.tymit.projectdonut.locations.LocationRetriever;
 import org.tymit.projectdonut.locations.providers.TestLocationProvider;
 import org.tymit.projectdonut.model.DestinationLocation;
-import org.tymit.projectdonut.model.LocationPoint;
 import org.tymit.projectdonut.model.LocationType;
 import org.tymit.projectdonut.model.StartPoint;
 import org.tymit.projectdonut.model.TimeModel;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.model.TravelRoute;
+import org.tymit.projectdonut.model.TravelRouteNode;
 import org.tymit.projectdonut.stations.StationRetriever;
 import org.tymit.projectdonut.stations.database.TestStationDb;
 import org.tymit.projectdonut.utils.LocationUtils;
@@ -162,17 +163,19 @@ public class DonutLogicSupportTest {
     @Test
     public void getWalkableDestinations() throws Exception {
         final LocationType testType = new LocationType("TestType", "TestType");
-        Map<DestinationLocation, Long> expected = new HashMap<>(WALKABLEPTS.length);
+        Set<TravelRouteNode> expected = Sets.newHashSetWithExpectedSize(WALKABLEPTS.length);
+        Set<DestinationLocation> testLocations = Sets.newHashSetWithExpectedSize(WALKABLEPTS.length);
         for (double[] walkable : WALKABLEPTS) {
             DestinationLocation testStation = new DestinationLocation(String.format("Test: %f,%f", walkable[0], walkable[1]), testType, walkable);
             double dist = LocationUtils.distanceBetween(walkable, CENTER, true);
             long delta = LocationUtils.distanceToWalkTime(dist, true);
-            expected.put(testStation, delta);
+            expected.add(new TravelRouteNode.Builder().setPoint(testStation).setWalkTime(delta).build());
+            testLocations.add(testStation);
         }
 
-        TestLocationProvider.setTestLocations(expected.keySet());
+        TestLocationProvider.setTestLocations(testLocations);
 
-        Map<DestinationLocation, Long> results = DonutLogicSupport.getWalkableDestinations(new StartPoint(CENTER), MAXDELTA, testType);
+        Set<TravelRouteNode> results = DonutLogicSupport.getWalkableDestinations(new StartPoint(CENTER), MAXDELTA, testType);
         Assert.assertEquals(expected, results);
     }
 
@@ -216,8 +219,8 @@ public class DonutLogicSupportTest {
         TestStationDb.setTestStations(allStations);
 
         //Run method
-        Map<TransStation, Long> fromStart = DonutLogicSupport.getAllPossibleStations(new StartPoint(CENTER), STARTTIME, MAXDELTA);
-        List<Map<TransStation, Long>> fromWalkables = testStations.stream()
+        Set<TravelRouteNode> fromStart = DonutLogicSupport.getAllPossibleStations(new StartPoint(CENTER), STARTTIME, MAXDELTA);
+        List<Set<TravelRouteNode>> fromWalkables = testStations.stream()
                 .map(station -> DonutLogicSupport.getAllPossibleStations(station, STARTTIME, MAXDELTA))
                 .collect(Collectors.toList());
 
@@ -233,38 +236,20 @@ public class DonutLogicSupportTest {
     @Test
     public void getWalkableStations() throws Exception {
 
-        Map<TransStation, Long> expected = new HashMap<>(WALKABLEPTS.length);
+        Set<TravelRouteNode> expected = new HashSet<>(WALKABLEPTS.length);
+        Set<TransStation> testStations = new HashSet<>(WALKABLEPTS.length);
         for (double[] walkable : WALKABLEPTS) {
             TransStation testStation = new TransStation(String.format("Test: %f,%f", walkable[0], walkable[1]), walkable);
             double dist = LocationUtils.distanceBetween(walkable, CENTER, true);
             long delta = LocationUtils.distanceToWalkTime(dist, true);
-            expected.put(testStation, delta);
+            expected.add(new TravelRouteNode.Builder().setWalkTime(delta).setPoint(testStation).build());
+            testStations.add(testStation);
         }
 
-        TestStationDb.setTestStations(expected.keySet());
+        TestStationDb.setTestStations(testStations);
 
-        Map<TransStation, Long> results = DonutLogicSupport.getWalkableStations(new StartPoint(CENTER), MAXDELTA);
+        Set<TravelRouteNode> results = DonutLogicSupport.getWalkableStations(new StartPoint(CENTER), MAXDELTA);
         Assert.assertEquals(expected, results);
-    }
-
-    @Test
-    public void addStationsToRoute() throws Exception {
-        Map<TransStation, Long> testStats = new HashMap<>();
-        for (long i = 0; i < 30l; i++) {
-            TransStation testStation = new TransStation("Test: " + i, new double[] { 0, 0 });
-            testStats.put(testStation, i);
-        }
-
-        TravelRoute testRoute = new TravelRoute(new StartPoint(CENTER), STARTTIME);
-        List<TravelRoute> destRoutes = DonutLogicSupport.addStationsToRoute(testRoute, testStats);
-        Assert.assertEquals(testStats.size(), destRoutes.size());
-        for (TravelRoute route : destRoutes) {
-            LocationPoint currentEnd = route.getCurrentEnd();
-            Assert.assertNotNull(currentEnd);
-            Assert.assertTrue(currentEnd instanceof TransStation);
-            TransStation station = (TransStation) currentEnd;
-            Assert.assertEquals((long) testStats.get(station), (long) route.getCosts().getOrDefault(DonutLogicSupport.TIME_DELTA_TAG, 0l));
-        }
     }
 
     @Test
@@ -289,43 +274,18 @@ public class DonutLogicSupportTest {
         TestStationDb.setTestStations(testStations);
 
         //Perform the test
-        Map<TransStation, Long> arrivable = DonutLogicSupport.getArrivableStations(testStations.get(0), STARTTIME, MAXDELTA);
+        Set<TravelRouteNode> arrivable = DonutLogicSupport.getArrivableStations(testStations.get(0), STARTTIME, MAXDELTA);
 
         //Check
         Assert.assertEquals(STATIONS-1, arrivable.size());
-        for (TransStation station : arrivable.keySet()) {
-            int result = STARTTIME.addUnixTime(arrivable.get(station)).get(TimeModel.MINUTE) % 10;
+        for (TravelRouteNode stationNode : arrivable) {
+
+            TransStation station = (TransStation) stationNode.getPt();
+
+            int result = STARTTIME.addUnixTime(stationNode.getTotalTimeToArrive()).get(TimeModel.MINUTE) % 10;
             int expected = station.getSchedule().get(0).get(TimeModel.MINUTE) % 10;
             Assert.assertEquals(expected, result);
         }
-    }
-
-    @Test
-    public void addDestinationsToRoute() throws Exception {
-        Map<DestinationLocation, Long> testDests = new HashMap<>();
-        for (long i = 0; i < 30l; i++) {
-            DestinationLocation testLocation = new DestinationLocation("Test: " + i, new LocationType("TestType", "TestType"), new double[]{i, i});
-            testDests.put(testLocation, i);
-        }
-
-        TravelRoute testRoute = new TravelRoute(new StartPoint(CENTER), STARTTIME);
-        List<TravelRoute> destRoutes = DonutLogicSupport.addDestinationsToRoute(testRoute, testDests);
-        Assert.assertEquals(testDests.size(), destRoutes.size());
-        for (TravelRoute route : destRoutes) {
-            DestinationLocation dest = route.getDestination();
-            Assert.assertNotNull(dest);
-            Assert.assertEquals((long) testDests.get(dest), (long) route.getCosts().getOrDefault(DonutLogicSupport.TIME_DELTA_TAG, 0l));
-        }
-    }
-
-    @Test
-    public void addTimeToRoute() throws Exception {
-        TravelRoute testRoute = new TravelRoute(new StartPoint(CENTER), STARTTIME);
-        Assert.assertEquals(0l, (long) testRoute.getCosts().getOrDefault(DonutLogicSupport.TIME_DELTA_TAG, 0l));
-        DonutLogicSupport.addTimeToRoute(testRoute, 1l);
-        Assert.assertEquals(1l, (long) testRoute.getCosts().getOrDefault(DonutLogicSupport.TIME_DELTA_TAG, 0l));
-        DonutLogicSupport.addTimeToRoute(testRoute, 1l);
-        Assert.assertEquals(2l, (long) testRoute.getCosts().getOrDefault(DonutLogicSupport.TIME_DELTA_TAG, 0l));
     }
 
     @After

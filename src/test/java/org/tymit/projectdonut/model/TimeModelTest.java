@@ -45,4 +45,12 @@ public class TimeModelTest {
         Assert.assertTrue(compare);
     }
 
+    @Test
+    public void testTimeAddition() {
+        long startTime = 1469678207308l;
+        TimeModel a = TimeModel.fromUnixTime(startTime);
+        TimeModel b = a.addUnixTime(1000l);
+        Assert.assertEquals(startTime + 1000l, b.getUnixTime());
+    }
+
 }

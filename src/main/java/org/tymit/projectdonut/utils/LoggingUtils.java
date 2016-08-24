@@ -29,6 +29,7 @@ public class LoggingUtils {
         for (String[] msg : log) {
             System.out.printf("%-7s %s: %s\n\n", msg[0] + ",", msg[1], msg[2]);
         }
+        log.clear();
     }
 
     public static void logError(String origin, String message, Object... args) {
@@ -48,6 +49,7 @@ public class LoggingUtils {
     private static String[] errorToMessage(Exception e) {
         StringBuilder msg = new StringBuilder();
         msg.append(e.getMessage().replaceAll("\n\n", "\n"));
+        msg.append("\n\n");
         for (StackTraceElement elm : e.getStackTrace()) {
             if (!elm.getClassName().contains("tymit")) continue; //Only our classes
             msg.append("     ");

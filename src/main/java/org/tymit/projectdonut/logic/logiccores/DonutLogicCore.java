@@ -6,6 +6,8 @@ import org.tymit.projectdonut.model.LocationType;
 import org.tymit.projectdonut.model.StartPoint;
 import org.tymit.projectdonut.model.TimeModel;
 import org.tymit.projectdonut.model.TravelRoute;
+import org.tymit.projectdonut.model.TravelRouteNode;
+import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.ArrayList;
@@ -81,10 +83,10 @@ public class DonutLogicCore implements LogicCore {
         LoggingUtils.logMessage(getClass().getName(), "Got %d station routes.", stationRoutes.size());
 
         Set<TravelRoute> destRoutes = stationRoutes.values().stream()
-                .filter(route -> maxTimeDelta.getUnixTimeDelta() >= (long) route.getCosts().getOrDefault(TIME_DELTA_TAG, 0l))
+                .filter(route -> maxTimeDelta.getUnixTimeDelta() >= route.getTotalTime())
                 .flatMap(route -> {
-                    TimeModel trueDelta = maxTimeDelta.addUnixTime(-1 * (long) route.getCosts().getOrDefault(TIME_DELTA_TAG, 0l));
-                    Map<DestinationLocation, Long> possibleDests = DonutLogicSupport.getWalkableDestinations(route.getCurrentEnd(), trueDelta, type);
+                    TimeModel trueDelta = maxTimeDelta.addUnixTime(-1 * route.getTotalTime());
+                    Set<TravelRouteNode> possibleDests = DonutLogicSupport.getWalkableDestinations(route.getCurrentEnd(), trueDelta, type);
                     return DonutLogicSupport.addDestinationsToRoute(route, possibleDests).stream();
                 })
                 .collect(Collectors.toSet());
@@ -93,13 +95,26 @@ public class DonutLogicCore implements LogicCore {
 
         ConcurrentMap<DestinationLocation, TravelRoute> destToShortest = new ConcurrentHashMap<>();
         destRoutes.stream()
+                //See server issue #48 to see more information of the middleman timing issue
+                .map(route -> {
+                    if (route.getRoute().size() != 3) return route;
+                    long destWalkTime = LocationUtils.distanceToWalkTime(LocationUtils.distanceBetween(route.getStart().getCoordinates(), route.getDestination().getCoordinates(), true), true);
+                    if (destWalkTime > maxTimeDelta.getUnixTimeDelta()) {
+                        LoggingUtils.logError(getTag(), "Failed to find or create valid route.\nWalk time: %d\nFake time: %d", destWalkTime, route.getTotalTime());
+                    }
+                    TravelRouteNode destNode = new TravelRouteNode.Builder().setPoint(route.getDestination()).setWalkTime(destWalkTime).build();
+                    route = new TravelRoute(route.getStart(), route.getStartTime());
+                    route.setDestinationNode(destNode);
+                    return route;
+                })
+                .filter(travelRoute -> travelRoute.getRoute().size() != 3)
                 .forEach(route -> {
-                    if (route.getRoute().size() == 3) return;
                     DestinationLocation dest = route.getDestination();
                     if (destToShortest.putIfAbsent(dest, route) == null) return;
+                    LoggingUtils.logMessage(getClass().getName(), "Found collision for dest %s", dest.toString());
                     TravelRoute oldRoute = destToShortest.get(dest);
-                    long oldLong = (long) oldRoute.getCosts().get(TIME_DELTA_TAG);
-                    long thisLong = (long) route.getCosts().get(TIME_DELTA_TAG);
+                    long oldLong = oldRoute.getTotalTime();
+                    long thisLong = route.getTotalTime();
                     if (oldLong > thisLong && !destToShortest.replace(dest, oldRoute, route)) {
                         LoggingUtils.logError(getTag(), "Donut route filtering concurrency issue.");
                     }

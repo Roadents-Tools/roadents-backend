@@ -5,7 +5,13 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.tymit.projectdonut.locations.LocationRetriever;
-import org.tymit.projectdonut.model.*;
+import org.tymit.projectdonut.model.DestinationLocation;
+import org.tymit.projectdonut.model.LocationType;
+import org.tymit.projectdonut.model.StartPoint;
+import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.TransStation;
+import org.tymit.projectdonut.model.TravelRoute;
+import org.tymit.projectdonut.model.TravelRouteNode;
 import org.tymit.projectdonut.stations.StationRetriever;
 import org.tymit.projectdonut.stations.updates.StationDbUpdater;
 import org.tymit.projectdonut.utils.LoggingUtils;
@@ -37,15 +43,17 @@ public class TravelRouteJsonConverterTest {
         for (int i = 0; i < 5; i++) {
             List<TransStation> stationsInRange = StationRetriever.getStations(testRoute.getCurrentEnd().getCoordinates(), range, null, null);
             TransStation currentStation = stationsInRange.get(i % stationsInRange.size());
-            if (!testRoute.addStation(currentStation)) continue;
+            TravelRouteNode stationNode = new TravelRouteNode.Builder().setPoint(currentStation).setTravelTime(1).setWaitTime(1).build();
+            if (!testRoute.addNode(stationNode)) continue;
             List<TransStation> stationsInChain = StationRetriever.getStations(null, 0, currentStation.getChain(), null);
             TransStation chainStation = stationsInChain.get(i % stationsInChain.size());
-            testRoute.addStation(chainStation);
+            TravelRouteNode chainStationNode = new TravelRouteNode.Builder().setPoint(chainStation).setTravelTime(1).setWaitTime(1).build();
+            testRoute.addNode(chainStationNode);
         }
 
         LocationType testType = new LocationType("food", "food");
         List<DestinationLocation> locations = LocationRetriever.getLocations(testRoute.getCurrentEnd().getCoordinates(), range, testType, null);
-        testRoute.setDestination(locations.get(0));
+        testRoute.setDestinationNode(new TravelRouteNode.Builder().setWalkTime(1).setPoint(locations.get(0)).build());
     }
 
     @Test

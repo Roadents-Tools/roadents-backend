@@ -55,4 +55,13 @@ public class DestinationLocation implements LocationPoint {
         return Math.abs(location.getCoordinates()[1] - getCoordinates()[1]) <= ERROR_MARGIN;
 
     }
+
+    @Override
+    public String toString() {
+        return "DestinationLocation{" +
+                "name='" + name + '\'' +
+                ", type=" + type +
+                ", latLong=" + Arrays.toString(latLong) +
+                '}';
+    }
 }
