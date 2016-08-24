@@ -74,7 +74,8 @@ public class TravelRouteNodeJsonConverter implements JsonConverter<TravelRouteNo
             obj.put(DEST_POINT_TAG, ptData);
             return obj;
         } else if (pt instanceof TransStation) {
-            return convertStation((TransStation) pt);
+            obj.put(STATION_POINT_TAG, convertStation((TransStation) pt));
+            return obj;
         } else {
             LoggingUtils.logError(getClass().getName() + "::extractPt", "pt was not instance of known types.");
             return ERROR;
@@ -117,7 +118,7 @@ public class TravelRouteNodeJsonConverter implements JsonConverter<TravelRouteNo
             if (destConv == null) destConv = new DestinationJsonConverter();
             return destConv.fromJson(input.getJSONObject(DEST_POINT_TAG).toString());
         } else if (input.has(STATION_POINT_TAG)) {
-            return convertStation(input.getJSONObject(START_POINT_TAG));
+            return convertStation(input.getJSONObject(STATION_POINT_TAG));
         } else {
             LoggingUtils.logError(getClass().getName() + "::extractPt", "pt was not instance of known types.");
             return null;
