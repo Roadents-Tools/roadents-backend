@@ -16,4 +16,6 @@ public interface StationProvider {
     boolean updatesData();
 
     Map<TransChain, List<TransStation>> getUpdatedStations();
+
+    boolean close();
 }

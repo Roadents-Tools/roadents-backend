@@ -113,6 +113,9 @@ public class StationDbUpdater {
             if (!nonSuccess) {
                 isSuccessful = false;
             }
+            non.close();
+            oldData.clear();
+            System.gc();
             LoggingUtils.logMessage(getClass().getName(), (nonSuccess) ? "Success!" : "Fail");
         }
 
@@ -124,6 +127,9 @@ public class StationDbUpdater {
             if (!nonSuccess) {
                 isSuccessful = false;
             }
+            non.close();
+            newData.clear();
+            System.gc();
             LoggingUtils.logMessage(getClass().getName(), (nonSuccess) ? "Success!" : "Fail");
         }
 

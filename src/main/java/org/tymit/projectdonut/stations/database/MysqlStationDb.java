@@ -93,7 +93,7 @@ public class MysqlStationDb implements StationDbInstance {
         //We do this to a) only insert chains if we need to and
         // b) so that we don't run out of memory.
         LoadingCache<TransChain, Integer> chainToId = CacheBuilder.newBuilder()
-                .maximumSize(500)
+                .maximumSize(1000)
                 .build(new CacheLoader<TransChain, Integer>() {
                     @Override
                     public Integer load(TransChain key) throws Exception {
@@ -106,7 +106,7 @@ public class MysqlStationDb implements StationDbInstance {
 
         //Ditto for the stations.
         LoadingCache<TransStation, Integer> stationToId = CacheBuilder.newBuilder()
-                .maximumSize(500)
+                .maximumSize(1000)
                 .build(new CacheLoader<TransStation, Integer>() {
                            @Override
                            public Integer load(TransStation key) throws Exception {
@@ -121,7 +121,7 @@ public class MysqlStationDb implements StationDbInstance {
             //Insert new schedules and costs
         return stations.stream().map(station -> {
             try {
-                int stationId = stationToId.get(station);
+                int stationId = stationToId.get(convertToKey(station));
                 int chainId = chainToId.get(station.getChain());
                 String encodedSchedule = MysqlSupport.encodeSchedule(station.getSchedule());
                 Connection con = getConnection();
@@ -131,7 +131,7 @@ public class MysqlStationDb implements StationDbInstance {
             } catch (Exception e) {
                 LoggingUtils.logError(e);
                 return false;
-                }
+            }
         }).allMatch(Boolean::booleanValue);
     }
 
@@ -143,5 +143,9 @@ public class MysqlStationDb implements StationDbInstance {
     @Override
     public void close() {
         connSource.close();
+    }
+
+    public TransStation convertToKey(TransStation base) {
+        return new TransStation(base.getName(), base.getCoordinates());
     }
 }

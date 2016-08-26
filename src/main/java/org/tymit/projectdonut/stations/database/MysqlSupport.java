@@ -201,18 +201,8 @@ public class MysqlSupport {
     }
 
     public static void insertOrUpdateCosts(Connection connection, int stationId, int chainId, String encodedSchedule) throws SQLException {
-        String existingQuery = String.format("SELECT * FROM %s WHERE %s=%d AND %s=%d",
-                STATION_CHAIN_COST_TABLE_NAME, COST_STATION_KEY, stationId, COST_CHAIN_KEY, chainId);
-
-        Statement stm = connection.createStatement();
-        ResultSet rs = stm.executeQuery(existingQuery);
-        if (rs.next()) {
-            updateCosts(connection, stationId, chainId, encodedSchedule);
-        } else {
-            insertNewCosts(connection, stationId, chainId, encodedSchedule);
-        }
-        stm.close();
-
+        delectCosts(connection, stationId, chainId);
+        insertNewCosts(connection, stationId, chainId, encodedSchedule);
     }
 
     public static void insertNewCosts(Connection connection, int stationId, int chainId, String encodedSchedule) throws SQLException {
@@ -223,6 +213,16 @@ public class MysqlSupport {
 
         Statement stm = connection.createStatement();
         stm.executeUpdate(insertQuery);
+        stm.close();
+    }
+
+    public static void delectCosts(Connection connection, int stationId, int chainId) throws SQLException {
+
+        String deleteQuery = String.format("DELETE FROM %s WHERE %s=%d AND %s=%d",
+                STATION_CHAIN_COST_TABLE_NAME, COST_STATION_KEY, stationId, COST_CHAIN_KEY, chainId);
+
+        Statement stm = connection.createStatement();
+        stm.execute(deleteQuery);
         stm.close();
     }
 

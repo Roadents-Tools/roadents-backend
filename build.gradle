@@ -12,6 +12,9 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'spring-boot'
+apply plugin: 'application'
+
+mainClassName = 'org.tymit.restcontroller.Application'
 
 jar {
     baseName = 'donutserver'

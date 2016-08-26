@@ -43,7 +43,6 @@ public class GtfsProvider implements StationProvider {
         disableApacheLogging();
     }
 
-    private GtfsDaoImpl store;
     private String zipFileName;
     private Map<TransChain, List<TransStation>> cache;
     private boolean isWorking = true;
@@ -77,8 +76,17 @@ public class GtfsProvider implements StationProvider {
         return new ConcurrentHashMap<>(cache);
     }
 
+    @Override
+    public boolean close() {
+        cache.clear();
+        cache = null;
+        return true;
+    }
+
     private void cacheData() {
         File zipFile = new File(zipFileName);
+
+        GtfsDaoImpl store;
 
         try {
             store = readData(zipFile);

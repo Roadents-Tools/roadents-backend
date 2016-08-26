@@ -52,6 +52,11 @@ public class TestStationProvider implements StationProvider {
         return initStations(calledTime);
     }
 
+    @Override
+    public boolean close() {
+        return true;
+    }
+
     private Map<TransChain, List<TransStation>> initStations(String timeCalled) {
         Map<TransChain, List<TransStation>> allStations = new HashMap<>(CHAINS);
         List<TimeModel> schedule = new ArrayList<>();
