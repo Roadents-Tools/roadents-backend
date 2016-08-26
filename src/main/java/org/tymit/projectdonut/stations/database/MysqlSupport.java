@@ -170,7 +170,7 @@ public class MysqlSupport {
 
     public static int insertOrGetStation(Connection connection, TransStation station) throws SQLException {
         String idQuery = String.format("SELECT %s FROM %s WHERE %s=%s AND %s=%f AND %s=%f",
-                STATION_ID_KEY, STATION_TABLE_NAME, STATION_NAME_KEY, "'" + station.getName() + "'",
+                STATION_ID_KEY, STATION_TABLE_NAME, STATION_NAME_KEY, "'" + station.getName().replaceAll("'", "\\'") + "'",
                 STATION_LAT_KEY, station.getCoordinates()[0], STATION_LONG_KEY, station.getCoordinates()[1]
         );
         Statement stm = connection.createStatement();
