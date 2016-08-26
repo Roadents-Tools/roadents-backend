@@ -37,7 +37,7 @@ public class TimeModel implements Comparable {
             Calendar.YEAR,
             Calendar.MONTH,
             Calendar.DAY_OF_MONTH,
-            Calendar.HOUR,
+            Calendar.HOUR_OF_DAY,
             Calendar.MINUTE,
             Calendar.SECOND,
             Calendar.DAY_OF_WEEK
