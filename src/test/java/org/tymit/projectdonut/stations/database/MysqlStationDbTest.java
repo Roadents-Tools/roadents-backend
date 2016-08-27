@@ -69,6 +69,17 @@ public class MysqlStationDbTest {
         Assert.assertEquals(1, rangeQueried.size());
     }
 
+    @Test
+    public void testApostrepheAndQuotes() {
+        TransChain chain = new TransChain("Ilan's chain");
+        TransChain chain2 = new TransChain("Ilan\"s chain");
+        List<TransStation> allStations = new ArrayList<>();
+        allStations.add(new TransStation("Ilan's Test Station", new double[] { 131, 131 }, null, chain));
+        allStations.add(new TransStation("Ilan\"s Test Station", new double[] { 131, 131 }, null, chain2));
+        instance.putStations(allStations);
+
+    }
+
     @After
     public void cleanupDb() {
         instance.removeItems(
