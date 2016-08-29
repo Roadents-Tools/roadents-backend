@@ -51,7 +51,7 @@ public class MysqlSupport {
     public static Map<TransStation, Integer> getStationIdMap(Connection connection, double[] center, double range, TransChain chain) throws SQLException {
         StringJoiner whereclause = new StringJoiner(" AND ");
         if (chain != null) {
-            whereclause.add(CHAIN_NAME_KEY + "='" + chain.getName().replaceAll("'", "\\'") + "'");
+            whereclause.add(CHAIN_NAME_KEY + "=\"" + chain.getName().replaceAll("'", "\\'") + "\"");
         }
 
         if (center != null && range < 0) {
@@ -140,8 +140,7 @@ public class MysqlSupport {
 
     public static int insertOrGetChain(Connection connection, TransChain newChain) throws SQLException {
         String idQuery = String.format("SELECT %s FROM %s WHERE %s=%s",
-                CHAIN_ID_KEY, CHAIN_TABLE_NAME, CHAIN_NAME_KEY, "'" + newChain.getName().replaceAll("'", "\\'") + "'"
-        );
+                CHAIN_ID_KEY, CHAIN_TABLE_NAME, CHAIN_NAME_KEY, "\"" + newChain.getName().replaceAll("'", "\\'") + "\"");
 
         Statement stm = connection.createStatement();
         ResultSet rs = stm.executeQuery(idQuery);
@@ -153,8 +152,7 @@ public class MysqlSupport {
         stm.close();
 
         String insertQuery = String.format("INSERT INTO %s (%s) VALUES (%s)",
-                CHAIN_TABLE_NAME, CHAIN_NAME_KEY, "'" + newChain.getName().replaceAll("'", "\\'") + "'"
-        );
+                CHAIN_TABLE_NAME, CHAIN_NAME_KEY, "\"" + newChain.getName().replaceAll("'", "\\'") + "\"");
         stm = connection.createStatement();
         stm.executeUpdate(insertQuery);
         stm.close();
@@ -170,7 +168,7 @@ public class MysqlSupport {
 
     public static int insertOrGetStation(Connection connection, TransStation station) throws SQLException {
         String idQuery = String.format("SELECT %s FROM %s WHERE %s=%s AND %s=%f AND %s=%f",
-                STATION_ID_KEY, STATION_TABLE_NAME, STATION_NAME_KEY, "'" + station.getName().replaceAll("'", "\\'") + "'",
+                STATION_ID_KEY, STATION_TABLE_NAME, STATION_NAME_KEY, "\"" + station.getName().replaceAll("'", "\\'") + "\"",
                 STATION_LAT_KEY, station.getCoordinates()[0], STATION_LONG_KEY, station.getCoordinates()[1]
         );
         Statement stm = connection.createStatement();
@@ -184,7 +182,7 @@ public class MysqlSupport {
 
         String insertQuery = String.format("INSERT INTO %s (%s,%s,%s) VALUES (%s,%f,%f)",
                 STATION_TABLE_NAME, STATION_NAME_KEY, STATION_LAT_KEY, STATION_LONG_KEY,
-                "'" + station.getName().replaceAll("'", "\\'") + "'", station.getCoordinates()[0], station.getCoordinates()[1]
+                "\"" + station.getName().replaceAll("'", "\\'") + "\"", station.getCoordinates()[0], station.getCoordinates()[1]
         );
 
         stm = connection.createStatement();
@@ -208,8 +206,7 @@ public class MysqlSupport {
     public static void insertNewCosts(Connection connection, int stationId, int chainId, String encodedSchedule) throws SQLException {
         String insertQuery = String.format("INSERT INTO %s (%s,%s,%s) VALUES (%d,%d,%s)",
                 STATION_CHAIN_COST_TABLE_NAME, COST_STATION_KEY, COST_CHAIN_KEY, COST_SCHEDULE_KEY,
-                stationId, chainId, "'" + encodedSchedule.replaceAll("'", "\\'") + "'"
-        );
+                stationId, chainId, "\'" + encodedSchedule + "\'");
 
         Statement stm = connection.createStatement();
         stm.executeUpdate(insertQuery);
@@ -228,7 +225,7 @@ public class MysqlSupport {
 
     public static void updateCosts(Connection connection, int stationId, int chainId, String encodedSchedule) throws SQLException {
         String insertQuery = String.format("UPDATE %s SET %s = %s WHERE %s=%d AND %s=%d",
-                STATION_CHAIN_COST_TABLE_NAME, COST_SCHEDULE_KEY, "'" + encodedSchedule.replaceAll("'", "\\'") + "'",
+                STATION_CHAIN_COST_TABLE_NAME, COST_SCHEDULE_KEY, "\"" + encodedSchedule.replaceAll("'", "\\'") + "\"",
                 COST_STATION_KEY, stationId, COST_CHAIN_KEY, chainId
         );
 
