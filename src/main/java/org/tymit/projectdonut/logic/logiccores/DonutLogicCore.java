@@ -111,7 +111,6 @@ public class DonutLogicCore implements LogicCore {
                 .forEach(route -> {
                     DestinationLocation dest = route.getDestination();
                     if (destToShortest.putIfAbsent(dest, route) == null) return;
-                    LoggingUtils.logMessage(getClass().getName(), "Found collision for dest %s", dest.toString());
                     TravelRoute oldRoute = destToShortest.get(dest);
                     long oldLong = oldRoute.getTotalTime();
                     long thisLong = route.getTotalTime();

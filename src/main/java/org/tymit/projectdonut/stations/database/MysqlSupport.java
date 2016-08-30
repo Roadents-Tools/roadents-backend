@@ -42,6 +42,9 @@ public class MysqlSupport {
     public static final String STATION_NAME_KEY = STATION_TABLE_NAME + ".name";
     public static final String STATION_ID_KEY = STATION_TABLE_NAME + ".id";
 
+
+    private static final int RADIAL_STATION_LIMIT = 5;
+
     /**
      * Constants for Database Math
      **/
@@ -60,7 +63,7 @@ public class MysqlSupport {
             whereclause.add(String.format("%s=%f", STATION_LAT_KEY, center[0]));
             whereclause.add(String.format("%s=%f", STATION_LONG_KEY, center[1]));
         } else if (center != null && range > 0) {
-            whereclause.add(stationCenterRangeBoxWhere(center, range));
+            whereclause.add(stationCenterRangeBoxWhere(center, range) + " LIMIT " + RADIAL_STATION_LIMIT);
         }
 
         String query = "SELECT * FROM " + STATION_CHAIN_COST_TABLE_NAME
@@ -93,9 +96,9 @@ public class MysqlSupport {
     }
 
     private static String stationCenterRangeBoxWhere(double[] center, double range) {
-        return String.format(" %s > %f AND %s < %f AND %s > %f AND %s < %f",
-                STATION_LAT_KEY, center[0] - range * MILES_TO_LAT, STATION_LAT_KEY, center[0] + range * MILES_TO_LAT,
-                STATION_LONG_KEY, center[1] - range * MILES_TO_LONG, STATION_LONG_KEY, center[1] + range*MILES_TO_LONG);
+        return String.format(" %s BETWEEN %f AND %f AND %s BETWEEN %f AND %f",
+                STATION_LAT_KEY, center[0] - range * MILES_TO_LAT, center[0] + range * MILES_TO_LAT,
+                STATION_LONG_KEY, center[1] - range * MILES_TO_LONG, center[1] + range * MILES_TO_LONG);
     }
 
     public static TransStation getStationFromRow(ResultSet currentRow, Map<String, TransChain> availableChains) throws SQLException {

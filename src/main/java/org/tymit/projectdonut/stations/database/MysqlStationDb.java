@@ -20,7 +20,7 @@ import java.util.Map;
  */
 public class MysqlStationDb implements StationDbInstance {
 
-    public static final String[] DB_URLS = new String[]{"jdbc:mysql://192.168.1.71:3306/Donut"};
+    public static final String[] DB_URLS = new String[] { "jdbc:mysql://127.0.0.1:3306/Donut" };
     private static final String USER = "donut";
     private static final String PASS = "donutpass";
 
