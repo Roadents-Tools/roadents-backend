@@ -2,6 +2,7 @@ package org.tymit.projectdonut.utils;
 
 import com.google.common.collect.Sets;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,9 +13,42 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ProfilingUtils {
 
     private static final Map<String, Set<MethodTimer>> times = new ConcurrentHashMap<>();
+    private static Thread profilerThread = null;
 
-    public static MethodTimer startTimer(String tag) {
-        return new MethodTimer(tag, System.currentTimeMillis());
+    public static void printDataEvery(long millis) {
+        if (profilerThread != null) {
+            profilerThread.interrupt();
+            profilerThread = null;
+        }
+        profilerThread = new Thread(() -> {
+            while (profilerThread != null) {
+                LoggingUtils.logMessage("Profilter", printData());
+                try {
+                    Thread.sleep(millis);
+                } catch (InterruptedException e) {
+                    return;
+                }
+            }
+        });
+        profilerThread.start();
+    }
+
+    public static String printData() {
+        StringBuilder builder = new StringBuilder();
+
+        for (String methodTag : getMethodTags()) {
+            String formatted = String.format("Method: %s    Time: %d    Percent: %f\n", methodTag, getTotalTime(methodTag), getTimeAsPercent(methodTag));
+            builder.append(formatted);
+        }
+        long timeTotal = times.keySet().parallelStream().mapToLong(ProfilingUtils::getTotalTime).sum();
+        builder.append("Total Time: " + timeTotal + " Total Percent: 100\n");
+
+        times.values().stream()
+                .flatMap(Collection::stream)
+                .filter(timer -> timer.endTime == -1)
+                .forEach(timer -> LoggingUtils.logMessage("Profiler", timer.toString() + "\n"));
+
+        return builder.toString();
     }
 
     public static Set<String> getMethodTags() {
@@ -37,6 +71,17 @@ public class ProfilingUtils {
                 .sum();
     }
 
+    public static void stopPrinting() {
+        if (profilerThread != null) {
+            profilerThread.interrupt();
+        }
+        profilerThread = null;
+    }
+
+    public static MethodTimer startTimer(String tag) {
+        return new MethodTimer(tag, System.currentTimeMillis());
+    }
+
     public static class MethodTimer {
         private long startTime;
         private long endTime = -1;
@@ -45,13 +90,13 @@ public class ProfilingUtils {
         private MethodTimer(String tag, long start) {
             startTime = start;
             methodTag = tag;
+            times.putIfAbsent(methodTag, Sets.newConcurrentHashSet());
+            times.get(methodTag).add(this);
         }
 
         public void stop() {
             if (endTime > 0) return;
             endTime = System.currentTimeMillis();
-            times.putIfAbsent(methodTag, Sets.newConcurrentHashSet());
-            times.get(methodTag).add(this);
         }
 
         private long getStartTime() {
@@ -67,6 +112,7 @@ public class ProfilingUtils {
         }
 
         private long getTimeDelta() {
+            if (endTime < 0) return System.currentTimeMillis() - startTime;
             return endTime - startTime;
         }
 
@@ -89,6 +135,15 @@ public class ProfilingUtils {
             if (endTime != that.endTime) return false;
             return methodTag.equals(that.methodTag);
 
+        }
+
+        @Override
+        public String toString() {
+            if (endTime > 0) {
+                return "Method tag: " + methodTag + ", Started: " + startTime + ", Ended: " + endTime + ", Delta: " + (endTime - startTime);
+            } else {
+                return "Method tag: " + methodTag + ", Started: " + startTime + ". Ongoing delta: " + (System.currentTimeMillis() - startTime);
+            }
         }
     }
 }
