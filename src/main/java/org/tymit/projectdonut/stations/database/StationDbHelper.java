@@ -2,6 +2,7 @@ package org.tymit.projectdonut.stations.database;
 
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
+import org.tymit.projectdonut.stations.caches.StationCacheHelper;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -55,11 +56,21 @@ public class StationDbHelper {
     }
 
     public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
+        if (!isTest && chain == null) {
+            List<TransStation> cached = StationCacheHelper.getHelper().getCachedStations(center, range);
+            if (cached != null && cached.size() > 0) {
+                return cached;
+            }
+        }
+
         Set<TransStation> allStations = new HashSet<>();
         for (StationDbInstance dbInstance : allDatabases) {
             if (dbInstance.isUp()) allStations.addAll(dbInstance.queryStations(center, range, chain));
         }
-        return new ArrayList<>(allStations);
+
+        List<TransStation> rval = new ArrayList<>(allStations);
+        if (!isTest && chain == null) StationCacheHelper.getHelper().cacheStations(center, range, rval);
+        return rval;
     }
 
     public boolean putStations(List<TransStation> stations) {
