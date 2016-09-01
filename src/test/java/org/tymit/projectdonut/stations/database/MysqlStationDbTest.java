@@ -83,11 +83,11 @@ public class MysqlStationDbTest {
     @After
     public void cleanupDb() {
         instance.removeItems(
-                MysqlSupport.CHAIN_NAME_KEY + " LIKE '%TESTCHAIN%'",
+                MysqlSupport.CHAIN_NAME_KEY + " LIKE '%TEST%'",
                 new String[] { MysqlSupport.CHAIN_TABLE_NAME }
         );
         instance.removeItems(
-                MysqlSupport.STATION_NAME_KEY + " LIKE '%TEST STATION:%'",
+                MysqlSupport.STATION_NAME_KEY + " LIKE '%TEST%'",
                 new String[] { MysqlSupport.STATION_TABLE_NAME }
         );
     }
