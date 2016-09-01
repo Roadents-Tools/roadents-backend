@@ -30,12 +30,6 @@ public class MemoryMapLocationCache implements LocationCacheInstance {
         String tag = generateTag(center, type);
         if (ranges.getOrDefault(tag, 0.0) >= range) return; //Already cached
         locations = new ArrayList<>(locations); //To not modify the old list
-
-        //We sort the locations by distance to the center so that we can retrieve them quicker.
-        locations.sort((destinationLocation, t1) ->
-                (int) Math.round(LocationUtils.distanceBetween(t1.getCoordinates(), center, true) - LocationUtils.distanceBetween(destinationLocation.getCoordinates(), center, true))
-        );
-
         cache.put(tag, locations);
         ranges.put(tag, range);
     }
@@ -50,7 +44,7 @@ public class MemoryMapLocationCache implements LocationCacheInstance {
         int cacheSize = cache.get(tag).size();
         for (int i = 0; i < cacheSize; i++) {
             DestinationLocation toCheck = cache.get(tag).get(i);
-            if (LocationUtils.distanceBetween(toCheck.getCoordinates(), center, true) > range + ERROR_MARGIN) break;
+            if (LocationUtils.distanceBetween(toCheck.getCoordinates(), center, true) > range + ERROR_MARGIN) continue;
             toReturn.add(toCheck);
         }
         return toReturn;

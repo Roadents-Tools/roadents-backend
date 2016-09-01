@@ -2,6 +2,7 @@ package org.tymit.projectdonut.locations;
 
 import org.tymit.projectdonut.costs.CostArgs;
 import org.tymit.projectdonut.costs.CostCalculator;
+import org.tymit.projectdonut.locations.caches.LocationCacheHelper;
 import org.tymit.projectdonut.locations.providers.LocationProviderHelper;
 import org.tymit.projectdonut.model.DestinationLocation;
 import org.tymit.projectdonut.model.LocationType;
@@ -18,10 +19,10 @@ public class LocationRetriever {
     private static boolean isTest = false;
     public static List<DestinationLocation> getLocations(double[] center, double range, LocationType type, List<CostArgs> args) {
         List<DestinationLocation> locations = null;
-        //if (!isTest) locations = LocationCacheHelper.getHelper().getCachedLocations(center, range, type);
+        if (!isTest) locations = LocationCacheHelper.getHelper().getCachedLocations(center, range, type);
         if (locations == null) {
             locations = LocationProviderHelper.getHelper().getLocations(center, range, type);
-            //if (!isTest) LocationCacheHelper.getHelper().cacheLocations(center, range, type, locations);
+            if (!isTest) LocationCacheHelper.getHelper().cacheLocations(center, range, type, locations);
         }
         if (locations == null || locations.size() == 0) return new ArrayList<>(0);
 
