@@ -43,7 +43,7 @@ public class MysqlSupport {
     public static final String STATION_ID_KEY = STATION_TABLE_NAME + ".id";
 
 
-    private static final int RADIAL_STATION_LIMIT = 5;
+    private static final int RADIAL_STATION_LIMIT = 100;
 
     /**
      * Constants for Database Math
@@ -96,9 +96,16 @@ public class MysqlSupport {
     }
 
     private static String stationCenterRangeBoxWhere(double[] center, double range) {
+
+        double latVal1 = center[0] - range * MILES_TO_LAT;
+        double latVal2 = center[0] + range * MILES_TO_LAT;
+
+        double lngVal1 = center[1] - range * MILES_TO_LONG;
+        double lngVal2 = center[1] + range * MILES_TO_LONG;
+
         return String.format(" %s BETWEEN %f AND %f AND %s BETWEEN %f AND %f",
-                STATION_LAT_KEY, center[0] - range * MILES_TO_LAT, center[0] + range * MILES_TO_LAT,
-                STATION_LONG_KEY, center[1] - range * MILES_TO_LONG, center[1] + range * MILES_TO_LONG);
+                STATION_LAT_KEY, Math.min(latVal1, latVal2), Math.max(latVal1, latVal2),
+                STATION_LONG_KEY, Math.min(lngVal1, lngVal2), Math.max(lngVal1, lngVal2));
     }
 
     public static TransStation getStationFromRow(ResultSet currentRow, Map<String, TransChain> availableChains) throws SQLException {
