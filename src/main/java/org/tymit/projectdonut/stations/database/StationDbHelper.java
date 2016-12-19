@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  */
 public class StationDbHelper {
 
-    private static StationDbHelper instance = new StationDbHelper();
+    private static StationDbHelper instance;
     private static boolean isTest = false;
     private StationDbInstance[] allDatabases = null;
 
@@ -45,13 +45,14 @@ public class StationDbHelper {
     }
 
     public static StationDbHelper getHelper() {
+        if (instance == null) instance = new StationDbHelper();
         return instance;
     }
 
     public static void setTestMode(boolean testMode) {
         if (isTest == testMode) return;
         isTest = testMode;
-        instance = new StationDbHelper();
+        instance = null;
         TestStationDb.setTestStations(null);
     }
 
