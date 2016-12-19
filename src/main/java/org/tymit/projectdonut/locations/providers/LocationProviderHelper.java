@@ -31,7 +31,7 @@ public class LocationProviderHelper {
             allProviders = new LocationProvider[]{new TestLocationProvider()};
             return;
         }
-        allProviders = new LocationProvider[]{new GoogleLocationsProvider()};
+        allProviders = new LocationProvider[]{new FoursquareLocationsProvider()};
     }
 
     public static LocationProviderHelper getHelper() {

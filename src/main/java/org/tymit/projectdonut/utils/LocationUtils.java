@@ -39,4 +39,8 @@ public class LocationUtils {
         double timeHours = time / 1000.0 / 60.0 / 60.0;
         return (miles) ? AVG_WALKING_SPEED_MPH * timeHours / SAFETY_FACTOR : AVG_WALKING_SPEED_KPH * timeHours / SAFETY_FACTOR;
     }
+
+    public static double milesToMeters(double miles){
+        return miles * 1000 * AVG_WALKING_SPEED_KPH/AVG_WALKING_SPEED_MPH;
+    }
 }

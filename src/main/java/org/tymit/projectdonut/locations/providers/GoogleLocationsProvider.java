@@ -30,16 +30,11 @@ public class GoogleLocationsProvider implements LocationProvider {
     };
 
     private static final String BASE_URL = "https://maps.googleapis.com/";
-    private static double MILES_TO_METERS = 1609.344;
 
-
-    String key;
-    boolean isWorking;
-    RestInterface rest;
+    private int apiInd = 0;
+    private RestInterface rest;
 
     public GoogleLocationsProvider() {
-        key = API_KEYS[0];
-        isWorking = true;
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(BASE_URL)
                 .build();
@@ -48,7 +43,7 @@ public class GoogleLocationsProvider implements LocationProvider {
 
     @Override
     public boolean isUsable() {
-        return isWorking;
+        return apiInd < API_KEYS.length;
     }
 
     @Override
@@ -58,20 +53,20 @@ public class GoogleLocationsProvider implements LocationProvider {
 
     @Override
     public List<DestinationLocation> queryLocations(double[] center, double range, LocationType type) {
-        Call<ResponseBody> result = rest.getLocations(center[0] + "," + center[1], type.getEncodedname(), "distance", key);
+        Call<ResponseBody> result = rest.getLocations(center[0] + "," + center[1], type.getEncodedname(), "distance", API_KEYS[apiInd]);
 
         Response<ResponseBody> response;
         try {
             response = result.execute();
         } catch (IOException e) {
             LoggingUtils.logError(e);
-            isWorking = false;
+            apiInd++;
             return Collections.EMPTY_LIST;
         }
 
         if (!response.isSuccessful()) {
             LoggingUtils.logError("GoogleRetrofitProvider", "Response failed.\nResponse: " + response.raw().toString());
-            isWorking = false;
+            apiInd++;
         }
 
 
@@ -111,7 +106,7 @@ public class GoogleLocationsProvider implements LocationProvider {
 
     }
 
-    private static interface RestInterface {
+    private interface RestInterface {
 
         @GET("maps/api/place/nearbysearch/json")
         Call<ResponseBody> getLocations(@Query("location") String latLong, @Query("keyword") String keyword,
