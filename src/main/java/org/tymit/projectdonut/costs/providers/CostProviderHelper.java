@@ -41,7 +41,10 @@ public class CostProviderHelper {
     }
 
     public Object getCostValue(CostArgs args) {
-        return null;
+        //Default to 0 cost so that an invalid cost calc does not affect any cost calcs
+        if (args == null || args.getCostTag() == null || tagToProvider.get(args.getCostTag()) == null) return 0;
+
+        return tagToProvider.get(args.getCostTag()).getCostValue(args);
     }
 
 }
