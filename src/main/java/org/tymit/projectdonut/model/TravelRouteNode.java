@@ -78,8 +78,7 @@ public class TravelRouteNode {
 
         if (walkTimeFromPrev != that.walkTimeFromPrev) return false;
         if (waitTimeFromPrev != that.waitTimeFromPrev) return false;
-        if (travelTimeFromPrev != that.travelTimeFromPrev) return false;
-        return pt.equals(that.pt);
+        return travelTimeFromPrev == that.travelTimeFromPrev && pt.equals(that.pt);
 
     }
 
@@ -94,7 +93,7 @@ public class TravelRouteNode {
     }
 
     public static class Builder {
-        private TravelRouteNode output;
+        private final TravelRouteNode output;
 
         public Builder() {
             output = new TravelRouteNode();

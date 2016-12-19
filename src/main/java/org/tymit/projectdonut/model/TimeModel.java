@@ -43,7 +43,7 @@ public class TimeModel implements Comparable {
             Calendar.DAY_OF_WEEK
     };
 
-    private Map<Integer, Integer> attributeMap;
+    private final Map<Integer, Integer> attributeMap;
     private boolean recalculateUnixTime; //if we set stuff after unix time
     private long unixTime = -1; //Separate long because it encompasses all data.
 
@@ -77,7 +77,7 @@ public class TimeModel implements Comparable {
 
     public static TimeModel fromUnixTimeDelta(long time) {
         TimeModel rval = new TimeModel();
-        int total = (int) (time / 1000l);
+        int total = (int) (time / 1000L);
 
         int seconds = total % 60;
         rval.attributeMap.put(SECOND, seconds);
@@ -143,11 +143,11 @@ public class TimeModel implements Comparable {
     public long getUnixTimeDelta() {
         if (getUnixTime() > 0) return getUnixTime();
 
-        long unixDelta = 0l;
-        unixDelta += (get(SECOND) > 0) ? get(SECOND) * 1000l : 0;
-        unixDelta += (get(MINUTE) > 0) ? get(MINUTE) * 1000l * 60l : 0;
-        unixDelta += (get(HOUR) > 0) ? get(HOUR) * 1000l * 60l * 60l : 0;
-        unixDelta += (get(DAY_OF_MONTH) > 0) ? get(DAY_OF_MONTH) * 1000l * 60l * 60l * 24l : 0;
+        long unixDelta = 0L;
+        unixDelta += (get(SECOND) > 0) ? get(SECOND) * 1000L : 0;
+        unixDelta += (get(MINUTE) > 0) ? get(MINUTE) * 1000L * 60L : 0;
+        unixDelta += (get(HOUR) > 0) ? get(HOUR) * 1000L * 60L * 60L : 0;
+        unixDelta += (get(DAY_OF_MONTH) > 0) ? get(DAY_OF_MONTH) * 1000L * 60L * 60L * 24L : 0;
         return unixDelta;
     }
 

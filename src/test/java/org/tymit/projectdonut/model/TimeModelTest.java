@@ -8,7 +8,7 @@ import org.junit.Test;
  */
 public class TimeModelTest {
 
-    private static final long TEST_TIME = 1469678207308l;
+    private static final long TEST_TIME = 1469678207308L;
 
     @Test
     public void testUnixConversion() {
@@ -28,7 +28,7 @@ public class TimeModelTest {
         long aCb = a.compareTo(b);
         Assert.assertTrue(aCb < 0);
 
-        a = TimeModel.fromUnixTime(915192000l * 1000l); //Friday, January 1st, 1999, at exactly noon
+        a = TimeModel.fromUnixTime(915192000L * 1000L); //Friday, January 1st, 1999, at exactly noon
         Assert.assertEquals(6, a.get(TimeModel.DAY_OF_WEEK));
 
         b = b.set(TimeModel.DAY_OF_WEEK, 7);
@@ -47,10 +47,10 @@ public class TimeModelTest {
 
     @Test
     public void testTimeAddition() {
-        long startTime = 1469678207308l;
+        long startTime = 1469678207308L;
         TimeModel a = TimeModel.fromUnixTime(startTime);
-        TimeModel b = a.addUnixTime(1000l);
-        Assert.assertEquals(startTime + 1000l, b.getUnixTime());
+        TimeModel b = a.addUnixTime(1000L);
+        Assert.assertEquals(startTime + 1000L, b.getUnixTime());
     }
 
 }

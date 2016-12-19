@@ -79,7 +79,7 @@ public class GtfsSupport {
      */
     public static Map<String, TransStation> getBaseStops(GtfsDaoImpl store) {
         Map<String, TransStation> rval = new ConcurrentHashMap<>();
-        store.getAllStops().stream().forEach(stop -> {
+        store.getAllStops().forEach(stop -> {
             String name = stop.getName().trim();
             double[] coords = new double[] { stop.getLat(), stop.getLon() };
             TransStation station = new TransStation(name, coords);
@@ -102,7 +102,7 @@ public class GtfsSupport {
         Map<String, TransChain> rval = new ConcurrentHashMap<>();
 
         Map<AgencyAndId, List<AgencyAndId>> routesToTrips = getTripsForRoutes(store);
-        routesToTrips.keySet().stream().forEach(routeId -> {
+        routesToTrips.keySet().forEach(routeId -> {
             Route route = store.getRouteForId(routeId);
             List<AgencyAndId> trips = routesToTrips.get(routeId);
             int numTrips = trips.size();
@@ -130,7 +130,7 @@ public class GtfsSupport {
      */
     public static Map<AgencyAndId, List<AgencyAndId>> getTripsForRoutes(GtfsDaoImpl store) {
         Map<AgencyAndId, List<AgencyAndId>> rval = new ConcurrentHashMap<>();
-        store.getAllTrips().stream().forEach(trip -> {
+        store.getAllTrips().forEach(trip -> {
             AgencyAndId routeId = trip.getRoute().getId();
             rval.putIfAbsent(routeId, new ArrayList<>());
             rval.get(routeId).add(trip.getId());

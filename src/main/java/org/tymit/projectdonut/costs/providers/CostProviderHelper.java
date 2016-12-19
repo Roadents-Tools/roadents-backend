@@ -11,9 +11,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CostProviderHelper {
 
     private static final CostProvider[] allProviders = initializeProvidersList();
-    private static CostProviderHelper instance = new CostProviderHelper();
+    private static final CostProviderHelper instance = new CostProviderHelper();
 
-    private Map<String, CostProvider> tagToProvider = new ConcurrentHashMap<>(allProviders.length);
+    private final Map<String, CostProvider> tagToProvider = new ConcurrentHashMap<>(allProviders.length);
 
     private CostProviderHelper() {
         initializeProviderMap();

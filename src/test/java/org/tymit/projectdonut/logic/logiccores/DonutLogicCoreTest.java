@@ -34,10 +34,10 @@ public class DonutLogicCoreTest {
     private static final double[] CENTER = new double[]{37.358658, -122.008763};
 
     //Thu Jul 28 03:56:47 2016 UTC
-    private static final TimeModel STARTTIME = TimeModel.fromUnixTime(1469678207308l);
+    private static final TimeModel STARTTIME = TimeModel.fromUnixTime(1469678207308L);
 
     //Standard test max delta of 1 hour.
-    private static final TimeModel MAXDELTA = TimeModel.fromUnixTimeDelta(1000l * 60l * 60l);
+    private static final TimeModel MAXDELTA = TimeModel.fromUnixTimeDelta(1000L * 60L * 60L);
 
     //All of these points are within MAXDELTA of CENTER
     private static final double[][] WALKABLEPTS = new double[][]{
@@ -48,7 +48,7 @@ public class DonutLogicCoreTest {
     };
 
     //We allow an error of up to 10 seconds due to rounding errors.
-    private static final long MAX_ERROR = 10 * 1000l;
+    private static final long MAX_ERROR = 10 * 1000L;
 
     @Before
     public void setupTest() {

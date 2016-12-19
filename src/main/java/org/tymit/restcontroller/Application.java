@@ -13,7 +13,7 @@ import org.tymit.projectdonut.utils.LoggingUtils;
 public class Application {
 
     //How often to updatae the station database; currently 15 minutes.
-    private static final long DB_UPDATE_INTERVAL = 1000l * 60l * 15l;
+    private static final long DB_UPDATE_INTERVAL = 1000L * 60L * 15L;
 
     public static void main(String[] args) {
         LoggingUtils.setPrintImmediate(true);

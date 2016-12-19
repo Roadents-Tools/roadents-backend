@@ -10,7 +10,7 @@ import java.util.List;
 public class StationCacheHelper {
 
     private static final StationCacheInstance[] allInstances = initializeCacheInstanceList();
-    private static StationCacheHelper instance = new StationCacheHelper();
+    private static final StationCacheHelper instance = new StationCacheHelper();
 
     private StationCacheHelper() {
 

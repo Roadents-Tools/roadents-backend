@@ -12,7 +12,7 @@ import java.util.Map;
 
 public class ApplicationRunner {
 
-    private static String TEST_KEY = "test";
+    private static final String TEST_KEY = "test";
 
     public static Map<String, List<Object>> runApplication(String tag, Map<String, Object> args) {
         if ((boolean) args.getOrDefault(TEST_KEY, false)) {

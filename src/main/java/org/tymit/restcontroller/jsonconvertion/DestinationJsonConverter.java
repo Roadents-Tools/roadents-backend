@@ -8,7 +8,7 @@ import org.tymit.projectdonut.model.DestinationLocation;
  */
 public class DestinationJsonConverter implements JsonConverter<DestinationLocation> {
 
-    Gson gson = new Gson();
+    final Gson gson = new Gson();
 
     @Override
     public String toJson(DestinationLocation input) {

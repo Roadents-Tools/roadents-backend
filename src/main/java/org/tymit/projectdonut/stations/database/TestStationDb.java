@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 public class TestStationDb implements StationDbInstance {
 
     private static final TransChain NULL_CHAIN = new TransChain("NULLCHAINNAME");
-    private static Map<TransChain, List<TransStation>> chainsToStations = new ConcurrentHashMap<>();
+    private static final Map<TransChain, List<TransStation>> chainsToStations = new ConcurrentHashMap<>();
 
     public static void setTestStations(Collection<TransStation> testStations) {
         chainsToStations.clear();
@@ -44,7 +44,7 @@ public class TestStationDb implements StationDbInstance {
 
     @Override
     public boolean putStations(List<TransStation> stations) {
-        stations.stream().forEach(station -> {
+        stations.forEach(station -> {
             chainsToStations.putIfAbsent(station.getChain(), new ArrayList<>());
             if (!chainsToStations.get(station.getChain()).contains(station)) {
                 chainsToStations.get(station.getChain()).add(station);

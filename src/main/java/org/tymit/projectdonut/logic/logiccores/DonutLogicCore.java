@@ -27,11 +27,11 @@ import static org.tymit.projectdonut.logic.logiccores.DonutLogicSupport.TIME_DEL
  */
 public class DonutLogicCore implements LogicCore {
 
-    private static String TAG = "DONUT";
-    private static String START_TIME_TAG = "starttime";
-    private static String LAT_TAG = "latitude";
-    private static String LONG_TAG = "longitude";
-    private static String TYPE_TAG = "type";
+    private static final String TAG = "DONUT";
+    private static final String START_TIME_TAG = "starttime";
+    private static final String LAT_TAG = "latitude";
+    private static final String LONG_TAG = "longitude";
+    private static final String TYPE_TAG = "type";
 
     @Override
     public Map<String, List<Object>> performLogic(Map<String, Object> args) {

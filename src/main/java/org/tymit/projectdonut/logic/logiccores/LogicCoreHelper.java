@@ -12,7 +12,7 @@ public class LogicCoreHelper {
     private static final LogicCore[] allCores = initializeCoresList();
     private static final Map<String, List<Object>> NO_CORE_FOUND = ImmutableMap.of("ERROR", ImmutableList.of("No logic core found."));
 
-    private static LogicCoreHelper instance = new LogicCoreHelper();
+    private static final LogicCoreHelper instance = new LogicCoreHelper();
 
     private Map<String, LogicCore> coreMap;
 

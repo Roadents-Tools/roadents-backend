@@ -24,9 +24,7 @@ public class LocationUtils {
         double a = Math.pow(sindLat, 2) + Math.pow(sindLng, 2)
                 * Math.cos(Math.toRadians(l1[0]) * Math.cos(Math.toRadians(l2[0])));
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        double dist = c * ((miles) ? EARTH_RADIUS_MI : EARTH_RADIUS_KM);
-
-        return dist;
+        return c * ((miles) ? EARTH_RADIUS_MI : EARTH_RADIUS_KM);
     }
 
     public static long distanceToWalkTime(double distance, boolean miles) {

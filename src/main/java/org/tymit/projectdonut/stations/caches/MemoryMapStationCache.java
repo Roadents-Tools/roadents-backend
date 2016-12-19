@@ -17,12 +17,12 @@ import java.util.stream.Collectors;
  */
 public class MemoryMapStationCache implements StationCacheInstance {
 
-    private static final long ENTRY_EXPIRE_TIME = 15l * 60l * 1000l;
+    private static final long ENTRY_EXPIRE_TIME = 15L * 60L * 1000L;
     private static final int MAX_TOTAL_SIZE = 100000;
     private static final double ERROR_MARGIN = .000001;
 
 
-    private Map<String, MapEntry> cache = new ConcurrentHashMap<>();
+    private final Map<String, MapEntry> cache = new ConcurrentHashMap<>();
     private int size = 0;
 
     @Override
@@ -64,7 +64,7 @@ public class MemoryMapStationCache implements StationCacheInstance {
         Set<String> keyClone = new HashSet<>(cache.keySet());
         keyClone.stream()
                 .filter(key -> cache.get(key) != null && cache.get(key).createdTime < System.currentTimeMillis() - ENTRY_EXPIRE_TIME)
-                .forEach(key -> cache.remove(key));
+                .forEach(cache::remove);
     }
 
     private void trimToSize() {
@@ -90,10 +90,10 @@ public class MemoryMapStationCache implements StationCacheInstance {
 
 
     private static class MapEntry {
-        public List<TransStation> stations;
-        public double[] center;
-        public double range;
-        public long createdTime;
+        public final List<TransStation> stations;
+        public final double[] center;
+        public final double range;
+        public final long createdTime;
 
         public MapEntry(List<TransStation> stations, double[] center, double range) {
             this.stations = stations;

@@ -33,16 +33,20 @@ public class FoursquareLocationsProvider implements LocationProvider{
     private static final String BASE_URL = "https://api.foursquare.com/";
     private static final String VERSION_DATE = "20161219";
 
-    private static Map<String, String> categories = new ConcurrentHashMap<>();
-
+    private static final Map<String, String> categories = new ConcurrentHashMap<>();
+    private final RestInterface rest;
     private int apiInd = 0;
-    private RestInterface rest;
 
     public FoursquareLocationsProvider() {
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(BASE_URL)
                 .build();
         rest = retrofit.create(RestInterface.class);
+    }
+
+    private static DestinationLocation mapJsonToDest(JSONObject jsonObject, LocationType type) {
+        JSONObject locationObj = jsonObject.getJSONObject("location");
+        return new DestinationLocation(jsonObject.getString("name"), type, new double[] { locationObj.getDouble("lat"), locationObj.getDouble("lng") });
     }
 
     @Override
@@ -152,11 +156,6 @@ public class FoursquareLocationsProvider implements LocationProvider{
                         addCategoriesFromArray(jsonObject.getJSONArray("categories"));
                     }
                 });
-    }
-
-    private static DestinationLocation mapJsonToDest(JSONObject jsonObject, LocationType type){
-        JSONObject locationObj = jsonObject.getJSONObject("location");
-        return new DestinationLocation(jsonObject.getString("name"), type, new double[]{locationObj.getDouble("lat"), locationObj.getDouble("lng")});
     }
 
     private interface RestInterface {

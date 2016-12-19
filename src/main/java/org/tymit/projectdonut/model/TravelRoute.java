@@ -13,11 +13,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class TravelRoute {
 
-    private List<TravelRouteNode> stationNodes;
-    private TravelRouteNode start;
+    private final List<TravelRouteNode> stationNodes;
+    private final TravelRouteNode start;
+    private final Map<String, Object> ascCosts;
+    private final TimeModel startTime;
     private TravelRouteNode end;
-    private Map<String, Object> ascCosts;
-    private TimeModel startTime;
 
     public TravelRoute(StartPoint start, TimeModel startTime) {
         this.start = new TravelRouteNode.Builder().setPoint(start).build();

@@ -125,8 +125,7 @@ public class MysqlSupport {
         String scheduleJson = currentRow.getString(COST_SCHEDULE_KEY);
         List<TimeModel> schedule = decodeSchedule(scheduleJson);
 
-        TransStation rval = new TransStation(name, latlong, schedule, chain);
-        return rval;
+        return new TransStation(name, latlong, schedule, chain);
 
     }
 
@@ -155,8 +154,7 @@ public class MysqlSupport {
         Statement stm = connection.createStatement();
         ResultSet rs = stm.executeQuery(idQuery);
         if (rs.next()) {
-            int id = rs.getInt(CHAIN_ID_KEY);
-            return id;
+            return rs.getInt(CHAIN_ID_KEY);
         }
         rs.close();
         stm.close();

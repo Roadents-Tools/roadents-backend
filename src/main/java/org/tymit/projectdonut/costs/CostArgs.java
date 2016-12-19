@@ -7,10 +7,10 @@ import java.util.Map;
  * Created by ilan on 7/7/16.
  */
 public class CostArgs {
+    private final Map<String, Object> args;
+    private final Map<String, Object> valueCache;
     private String costTag;
     private Object subject;
-    private Map<String, Object> args;
-    private Map<String, Object> valueCache;
 
     public CostArgs() {
         this.args = new HashMap<>();

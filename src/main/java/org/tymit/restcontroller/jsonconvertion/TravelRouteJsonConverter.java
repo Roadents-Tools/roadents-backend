@@ -28,8 +28,8 @@ public class TravelRouteJsonConverter implements JsonConverter<TravelRoute> {
     private static final String STATION_NAME_TAG = "stationName";
     private static final String STATION_CHAIN_TAG = "trainBusName";
 
-    private StartPointJsonConverter startConverter = new StartPointJsonConverter();
-    private DestinationJsonConverter destConverter = new DestinationJsonConverter();
+    private final StartPointJsonConverter startConverter = new StartPointJsonConverter();
+    private final DestinationJsonConverter destConverter = new DestinationJsonConverter();
 
     @Override
     public String toJson(TravelRoute input) {

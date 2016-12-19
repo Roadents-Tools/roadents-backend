@@ -11,7 +11,7 @@ import java.util.List;
 public class LocationCacheHelper {
 
     private static final LocationCacheInstance[] allInstances = initializeCacheInstanceList();
-    private static LocationCacheHelper instance = new LocationCacheHelper();
+    private static final LocationCacheHelper instance = new LocationCacheHelper();
 
     private LocationCacheHelper() {
 

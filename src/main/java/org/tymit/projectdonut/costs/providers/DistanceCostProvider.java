@@ -95,14 +95,14 @@ public class DistanceCostProvider implements CostProvider {
         if (obj instanceof Double[]) {
             double[] out = new double[((Double[]) obj).length];
             for (int i = 0; i < ((Double[]) obj).length; i++) {
-                out[i] = ((Double[]) obj)[i].doubleValue();
+                out[i] = ((Double[]) obj)[i];
             }
             return out;
         }
 
         if (obj instanceof Collection<?>) {
             int argSize = ((Collection) obj).size();
-
+            //TODO: Finish this method I think?
         }
 
         return null;

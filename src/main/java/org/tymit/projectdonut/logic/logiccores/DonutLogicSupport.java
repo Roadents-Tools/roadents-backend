@@ -89,7 +89,7 @@ public class DonutLogicSupport {
     public static Set<TravelRouteNode> filterAllPossibleStations(Set<TravelRouteNode> raw) {
         Map<String, TravelRouteNode> newTags = new ConcurrentHashMap<>();
         Set<TravelRouteNode> rval = Sets.newConcurrentHashSet();
-        raw.stream().forEach(possible -> {
+        raw.forEach(possible -> {
             String tag = getLocationTag(possible.getPt());
 
             if (!newTags.containsKey(tag)) {
@@ -117,7 +117,7 @@ public class DonutLogicSupport {
 
     public static Set<TravelRouteNode> getWalkTimes(LocationPoint begin, Collection<? extends LocationPoint> points) {
         Set<TravelRouteNode> rval = Sets.newConcurrentHashSet();
-        points.stream().forEach(point -> {
+        points.forEach(point -> {
             double dist = LocationUtils.distanceBetween(begin.getCoordinates(), point.getCoordinates(), true);
             long time = LocationUtils.distanceToWalkTime(dist, true);
             TravelRouteNode node = new TravelRouteNode.Builder().setWalkTime(time).setPoint(point).build();
@@ -153,7 +153,7 @@ public class DonutLogicSupport {
 
         Map<TransStation, TravelRouteNode> rval = new ConcurrentHashMap<>(walkable);
 
-        arrivable.keySet().stream().forEach(keyStation -> {
+        arrivable.keySet().forEach(keyStation -> {
             if (walkable.containsKey(keyStation)) {
                 long walkableDelta = walkable.get(keyStation).getTotalTimeToArrive();
                 long arrivableDelta = arrivable.get(keyStation).getTotalTimeToArrive();
@@ -196,7 +196,7 @@ public class DonutLogicSupport {
 
         List<TransStation> inChain = StationRetriever.getStations(null, 0, stationWithSchedule.getChain(), null);
 
-        inChain.stream().forEach(fromChain -> {
+        inChain.forEach(fromChain -> {
 
             TravelRouteNode.Builder builder = new TravelRouteNode.Builder();
             builder.setWaitTime(waitTime);

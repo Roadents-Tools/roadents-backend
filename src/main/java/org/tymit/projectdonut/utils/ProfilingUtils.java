@@ -41,7 +41,7 @@ public class ProfilingUtils {
             builder.append(formatted);
         }
         long timeTotal = times.keySet().parallelStream().mapToLong(ProfilingUtils::getTotalTime).sum();
-        builder.append("Total Time: " + timeTotal + " Total Percent: 100\n");
+        builder.append("Total Time: ").append(timeTotal).append(" Total Percent: 100\n");
 
         times.values().stream()
                 .flatMap(Collection::stream)
@@ -83,9 +83,9 @@ public class ProfilingUtils {
     }
 
     public static class MethodTimer {
-        private long startTime;
+        private final long startTime;
+        private final String methodTag;
         private long endTime = -1;
-        private String methodTag;
 
         private MethodTimer(String tag, long start) {
             startTime = start;

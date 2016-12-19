@@ -7,8 +7,8 @@ import java.util.List;
  * Created by ilan on 7/8/16.
  */
 public class LoggingUtils {
-    private static List<String[]> log = new ArrayList<>();
-    private static List<Exception> errors = new ArrayList<>();
+    private static final List<String[]> log = new ArrayList<>();
+    private static final List<Exception> errors = new ArrayList<>();
 
     private static boolean printImmediate;
 
@@ -53,7 +53,7 @@ public class LoggingUtils {
         for (StackTraceElement elm : e.getStackTrace()) {
             if (!elm.getClassName().contains("tymit")) continue; //Only our classes
             msg.append("     ");
-            msg.append(elm.getClassName() + ":");
+            msg.append(elm.getClassName()).append(":");
             msg.append(elm.getLineNumber());
             msg.append("\n");
         }

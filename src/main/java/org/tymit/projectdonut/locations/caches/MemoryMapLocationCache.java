@@ -16,8 +16,8 @@ public class MemoryMapLocationCache implements LocationCacheInstance {
 
     private static final double ERROR_MARGIN = .000001;
 
-    private Map<String, List<DestinationLocation>> cache;
-    private Map<String, Double> ranges;
+    private final Map<String, List<DestinationLocation>> cache;
+    private final Map<String, Double> ranges;
 
     public MemoryMapLocationCache() {
         this.cache = new ConcurrentHashMap<>();

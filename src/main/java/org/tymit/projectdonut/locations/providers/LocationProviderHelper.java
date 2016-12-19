@@ -17,8 +17,8 @@ public class LocationProviderHelper {
 
     private static boolean isTest = false;
     private static LocationProviderHelper instance = new LocationProviderHelper();
+    private final ConcurrentMap<LocationType, Set<LocationProvider>> typeToProviders;
     private LocationProvider[] allProviders;
-    private ConcurrentMap<LocationType, Set<LocationProvider>> typeToProviders;
 
     private LocationProviderHelper() {
         initializeProvidersList();

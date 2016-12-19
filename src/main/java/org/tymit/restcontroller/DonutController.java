@@ -24,13 +24,13 @@ import java.util.Map;
 @RestController
 public class DonutController {
 
-    private static String TAG = "DONUT";
-    private static String START_TIME_TAG = "starttime";
-    private static String LAT_TAG = "latitude";
-    private static String LONG_TAG = "longitude";
-    private static String TYPE_TAG = "type";
-    private static String TIME_DELTA_TAG = "timedelta";
-    private static String TEST_TAG = "test";
+    private static final String TAG = "DONUT";
+    private static final String START_TIME_TAG = "starttime";
+    private static final String LAT_TAG = "latitude";
+    private static final String LONG_TAG = "longitude";
+    private static final String TYPE_TAG = "type";
+    private static final String TIME_DELTA_TAG = "timedelta";
+    private static final String TEST_TAG = "test";
 
     @RequestMapping("/routes")
     public String getRoutes(@RequestParam Map<String, String> urlArgs) {
@@ -43,13 +43,13 @@ public class DonutController {
         Map<String, Object> args = new HashMap<>();
 
         long startTime = (urlArgs.containsKey(START_TIME_TAG))
-                ? 1000l * Long.valueOf(urlArgs.get(START_TIME_TAG))
+                ? 1000L * Long.valueOf(urlArgs.get(START_TIME_TAG))
                 : System.currentTimeMillis();
         args.put(START_TIME_TAG, startTime);
 
         args.put(LAT_TAG, Double.valueOf(urlArgs.get(LAT_TAG)));
         args.put(LONG_TAG, Double.valueOf(urlArgs.get(LONG_TAG)));
-        args.put(TIME_DELTA_TAG, 1000l * Long.valueOf(urlArgs.get(TIME_DELTA_TAG)));
+        args.put(TIME_DELTA_TAG, 1000L * Long.valueOf(urlArgs.get(TIME_DELTA_TAG)));
         args.put(TYPE_TAG, urlArgs.get(TYPE_TAG));
         boolean test = Boolean.valueOf(urlArgs.get(TEST_TAG));
         args.put(TEST_TAG, test);
@@ -72,8 +72,8 @@ public class DonutController {
                 .get("ROUTES")
                 .parallelStream()
                 .map(routeObj -> (TravelRoute) routeObj)
-                .map(route -> converter.toJson(route))
-                .collect(() -> new JSONArray(), (r, s) -> r.put(new JSONObject(s)), (r, r2) -> {
+                .map(converter::toJson)
+                .collect(JSONArray::new, (r, s) -> r.put(new JSONObject(s)), (r, r2) -> {
                     for (int i = 0; i < r2.length(); i++) {
                         r.put(r2.getJSONObject(i));
                     }
@@ -97,13 +97,13 @@ public class DonutController {
         Map<String, Object> args = new HashMap<>();
 
         long startTime = (urlArgs.containsKey(START_TIME_TAG))
-                ? 1000l * Long.valueOf(urlArgs.get(START_TIME_TAG))
+                ? 1000L * Long.valueOf(urlArgs.get(START_TIME_TAG))
                 : System.currentTimeMillis();
         args.put(START_TIME_TAG, startTime);
 
         args.put(LAT_TAG, Double.valueOf(urlArgs.get(LAT_TAG)));
         args.put(LONG_TAG, Double.valueOf(urlArgs.get(LONG_TAG)));
-        args.put(TIME_DELTA_TAG, 1000l * Long.valueOf(urlArgs.get(TIME_DELTA_TAG)));
+        args.put(TIME_DELTA_TAG, 1000L * Long.valueOf(urlArgs.get(TIME_DELTA_TAG)));
         args.put(TYPE_TAG, urlArgs.get(TYPE_TAG));
         boolean test = Boolean.valueOf(urlArgs.get(TEST_TAG));
         args.put(TEST_TAG, test);
@@ -113,7 +113,7 @@ public class DonutController {
                 .parallelStream()
                 .map(destObj -> (DestinationLocation) destObj)
                 .map(dest -> new JSONObject(converter.toJson(dest)))
-                .collect(() -> new JSONArray(), (r, s) -> r.put(s), (r, r2) -> {
+                .collect(JSONArray::new, JSONArray::put, (r, r2) -> {
                     for (int i = 0; i < r2.length(); i++) {
                         r.put(r2.getJSONObject(i));
                     }

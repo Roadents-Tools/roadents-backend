@@ -30,9 +30,8 @@ public class GoogleLocationsProvider implements LocationProvider {
     };
 
     private static final String BASE_URL = "https://maps.googleapis.com/";
-
+    private final RestInterface rest;
     private int apiInd = 0;
-    private RestInterface rest;
 
     public GoogleLocationsProvider() {
         Retrofit retrofit = new Retrofit.Builder()

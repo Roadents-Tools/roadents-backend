@@ -8,8 +8,8 @@ import java.util.List;
  */
 public class TransChain {
 
-    private String name;
-    private List<TransStation> stations;
+    private final String name;
+    private final List<TransStation> stations;
 
     public TransChain(String name) {
         this.name = name;

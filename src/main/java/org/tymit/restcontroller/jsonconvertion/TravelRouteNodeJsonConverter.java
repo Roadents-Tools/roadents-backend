@@ -34,7 +34,7 @@ public class TravelRouteNodeJsonConverter implements JsonConverter<TravelRouteNo
     private static final JSONObject ERROR = new JSONObject().put("ERROR", "Unknown error occured.");
 
 
-    private Map<String, TransChain> chainBucket;
+    private final Map<String, TransChain> chainBucket;
     private StartPointJsonConverter startConv;
     private DestinationJsonConverter destConv;
 

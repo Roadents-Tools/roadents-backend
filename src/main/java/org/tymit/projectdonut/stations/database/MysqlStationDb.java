@@ -23,13 +23,10 @@ public class MysqlStationDb implements StationDbInstance {
     public static final String[] DB_URLS = new String[] { "jdbc:mysql://127.0.0.1:3306/Donut" };
     private static final String USER = "donut";
     private static final String PASS = "donutpass";
-
-    private String url;
+    private final HikariDataSource connSource;
     private boolean isUp;
-    private HikariDataSource connSource;
 
     public MysqlStationDb(String url) {
-        this.url = url;
         isUp = true;
         connSource = new HikariDataSource(initSource(url));
     }

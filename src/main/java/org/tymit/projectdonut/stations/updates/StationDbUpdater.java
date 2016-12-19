@@ -17,10 +17,10 @@ public class StationDbUpdater {
 
     private static StationDbUpdater instance = new StationDbUpdater();
     private static boolean isTest = false;
+    private final AtomicLong lastUpdated = new AtomicLong(-1);
+    private final AtomicLong backgroundUpdateMilli = new AtomicLong(-1);
     private StationProvider[] providers;
-    private AtomicLong lastUpdated = new AtomicLong(-1);
     private Thread backgroundUpdateThread;
-    private AtomicLong backgroundUpdateMilli = new AtomicLong(-1);
 
 
     private StationDbUpdater() {
@@ -30,7 +30,6 @@ public class StationDbUpdater {
     private void initializeProviders() {
         if (isTest) {
             providers = new StationProvider[]{new TestStationProvider()};
-            return;
         } else {
             providers = new StationProvider[GtfsProvider.GTFS_ZIPS.length];
             for (int i = 0; i < providers.length; i++) {
@@ -146,7 +145,7 @@ public class StationDbUpdater {
     }
 
     public CompletableFuture<Boolean> updateStationsAsync() {
-        return CompletableFuture.supplyAsync(() -> updateStations());
+        return CompletableFuture.supplyAsync(this::updateStations);
     }
 
 

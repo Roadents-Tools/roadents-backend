@@ -10,7 +10,7 @@ public class LocationUtilsTest {
 
     @Test
     public void walkTimeDistanceConversions() throws Exception {
-        long testTime = 1000l * 60 * 60; //1 hour
+        long testTime = 1000L * 60 * 60; //1 hour
 
         double calcedDistanceMiles = LocationUtils.timeToWalkDistance(testTime, true);
         double calcedDistanceKm = LocationUtils.timeToWalkDistance(testTime, false);

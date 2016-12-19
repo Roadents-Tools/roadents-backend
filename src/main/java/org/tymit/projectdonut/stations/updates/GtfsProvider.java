@@ -100,7 +100,7 @@ public class GtfsProvider implements StationProvider {
 
         Map<String, TransChain> chains = GtfsSupport.getChainsFromTrips(store);
         Map<String, Map<TransStation, List<TimeModel>>> stations = GtfsSupport.getSchedulesForTrips(store);
-        chains.keySet().stream().forEach(tripId -> {
+        chains.keySet().forEach(tripId -> {
             TransChain chain = chains.get(tripId);
             cache.putIfAbsent(chain, new ArrayList<>());
 

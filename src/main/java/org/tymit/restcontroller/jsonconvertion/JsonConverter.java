@@ -13,8 +13,8 @@ public interface JsonConverter<T> {
     default String toJson(Collection<? extends T> allObjs) {
         StringBuilder builder = new StringBuilder("[");
         StringJoiner objJoiner = new StringJoiner(",");
-        allObjs.stream().map(obj -> toJson(obj)).forEach(json -> objJoiner.add(json));
-        builder.append(objJoiner.toString() + "]");
+        allObjs.stream().map(this::toJson).forEach(objJoiner::add);
+        builder.append(objJoiner.toString()).append("]");
         return builder.toString();
     }
 

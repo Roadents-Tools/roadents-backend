@@ -9,9 +9,9 @@ public class DestinationLocation implements LocationPoint {
 
     private static final double ERROR_MARGIN = 0.001;
 
-    private String name;
-    private LocationType type;
-    private double[] latLong;
+    private final String name;
+    private final LocationType type;
+    private final double[] latLong;
 
     public DestinationLocation(String name, LocationType type, double[] latLong) {
         this.name = name;
