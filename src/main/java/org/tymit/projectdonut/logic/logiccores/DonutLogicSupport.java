@@ -47,7 +47,7 @@ public class DonutLogicSupport {
 
     private static List<TravelRoute> buildStationRouteListIterator(TravelRoute initial, TimeModel startTime, TimeModel maxDelta, Map<String, TravelRoute> collector) {
         long initialDelta = initial.getTotalTime();
-        if (initialDelta >= maxDelta.getUnixTimeDelta()) return Collections.EMPTY_LIST;
+        if (initialDelta >= maxDelta.getUnixTimeDelta()) return Collections.emptyList();
 
         TimeModel trueStart = startTime.addUnixTime(initialDelta);
         TimeModel deltaLeft = maxDelta.addUnixTime(-1 * initialDelta);

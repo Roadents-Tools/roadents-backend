@@ -80,13 +80,13 @@ public class FoursquareLocationsProvider implements LocationProvider{
         } catch (IOException e){
             LoggingUtils.logError(e);
             apiInd++;
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
 
         if (!response.isSuccessful()) {
             LoggingUtils.logError("FourSquareRetrofitProvider", "Response failed.\nResponse: " + response.raw().toString());
             apiInd++;
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
 
         try {
@@ -104,7 +104,7 @@ public class FoursquareLocationsProvider implements LocationProvider{
         } catch (JSONException | IOException e) {
             LoggingUtils.logError(e);
             LoggingUtils.logError("FourSquareRetrofitProvider", "JSON: " + response.toString());
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
     }
 

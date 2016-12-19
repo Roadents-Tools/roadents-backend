@@ -4,7 +4,6 @@ import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.utils.LocationUtils;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -70,7 +69,7 @@ public class MemoryMapStationCache implements StationCacheInstance {
     private void trimToSize() {
         if (size <= MAX_TOTAL_SIZE) return;
         List<String> keyClone = new ArrayList<>(cache.keySet());
-        Collections.sort(keyClone, (o1, o2) -> {
+        keyClone.sort((o1, o2) -> {
             long o1time = cache.get(o1).createdTime;
             long o2time = cache.get(o2).createdTime;
             if (o1time == o2time) return 0;

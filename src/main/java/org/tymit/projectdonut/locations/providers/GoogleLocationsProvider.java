@@ -60,7 +60,7 @@ public class GoogleLocationsProvider implements LocationProvider {
         } catch (IOException e) {
             LoggingUtils.logError(e);
             apiInd++;
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
 
         if (!response.isSuccessful()) {
@@ -76,14 +76,10 @@ public class GoogleLocationsProvider implements LocationProvider {
             return getLocationsFromGglJson(arr, type).stream()
                     .filter(location -> LocationUtils.distanceBetween(center, location.getCoordinates(), true) < range)
                     .collect(Collectors.toList());
-        } catch (JSONException e) {
+        } catch (JSONException | IOException e) {
             LoggingUtils.logError(e);
             LoggingUtils.logError("GoogleRetrofitProvider", "JSON: " + response.toString());
-            return Collections.EMPTY_LIST;
-        } catch (IOException e) {
-            LoggingUtils.logError(e);
-            LoggingUtils.logError("GoogleRetrofitProvider", "JSON: " + response.toString());
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
     }
 

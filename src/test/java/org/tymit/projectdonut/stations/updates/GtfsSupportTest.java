@@ -55,10 +55,7 @@ public class GtfsSupportTest {
         routesToTrips.keySet().forEach(id -> System.out.printf("%s\n", id.getId()));
         Assert.assertEquals(EXPECTED_TRIP_ROUTES, routesToTrips.size());
 
-        int totalTrips = 0;
-        for (List<AgencyAndId> tripList : routesToTrips.values()) {
-            totalTrips += tripList.size();
-        }
+        int totalTrips = routesToTrips.values().stream().mapToInt(List::size).sum();
 
         Assert.assertEquals(EXPECTED_TRIPS, totalTrips);
     }

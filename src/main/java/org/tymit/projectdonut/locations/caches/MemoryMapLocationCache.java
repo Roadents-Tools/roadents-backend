@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Created by ilan on 7/7/16.
@@ -40,21 +42,18 @@ public class MemoryMapLocationCache implements LocationCacheInstance {
         double cachedRange = ranges.getOrDefault(tag, 0.0);
         if (cachedRange < range) return null;
         if (Math.abs(cachedRange - range) < ERROR_MARGIN) return cache.get(tag);
-        List<DestinationLocation> toReturn = new ArrayList<>();
         int cacheSize = cache.get(tag).size();
-        for (int i = 0; i < cacheSize; i++) {
-            DestinationLocation toCheck = cache.get(tag).get(i);
-            if (LocationUtils.distanceBetween(toCheck.getCoordinates(), center, true) > range + ERROR_MARGIN) continue;
-            toReturn.add(toCheck);
-        }
-        return toReturn;
+        return IntStream.range(0, cacheSize)
+                .mapToObj(i -> cache.get(tag).get(i))
+                .filter(toCheck -> LocationUtils.distanceBetween(toCheck.getCoordinates(), center, true) <= range + ERROR_MARGIN)
+                .collect(Collectors.toList());
     }
 
     @Override
     public int getSize() {
-        int size = 0;
-        for (String tag : cache.keySet()) size += cache.get(tag).size();
-        return size;
+        return cache.values().stream()
+                .mapToInt(List::size)
+                .sum();
     }
 
     @Override

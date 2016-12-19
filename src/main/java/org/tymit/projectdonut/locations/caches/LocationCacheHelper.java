@@ -3,7 +3,9 @@ package org.tymit.projectdonut.locations.caches;
 import org.tymit.projectdonut.model.DestinationLocation;
 import org.tymit.projectdonut.model.LocationType;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Created by ilan on 7/7/16.
@@ -26,11 +28,11 @@ public class LocationCacheHelper {
     }
 
     public List<DestinationLocation> getCachedLocations(double[] center, double range, LocationType type) {
-        for (LocationCacheInstance instance : allInstances) {
-            List<DestinationLocation> cached = instance.getCachedLocations(center, range, type);
-            if (cached != null) return cached;
-        }
-        return null;
+        return Arrays.stream(allInstances)
+                .map(instance -> instance.getCachedLocations(center, range, type))
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
     }
 
     public void cacheLocations(double[] center, double range, LocationType type, List<DestinationLocation> locations) {

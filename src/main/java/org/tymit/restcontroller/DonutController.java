@@ -62,7 +62,7 @@ public class DonutController {
         }
         if (results == null) {
             results = new HashMap<>();
-            results.put("ERRORS", new ArrayList());
+            results.put("ERRORS", new ArrayList<Object>());
             results.get("ERRORS").add(new Exception("Null results set."));
         }
         if (results.containsKey("ERRORS")){

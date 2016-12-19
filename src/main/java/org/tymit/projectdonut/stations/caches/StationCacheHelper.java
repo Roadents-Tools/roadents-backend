@@ -2,7 +2,9 @@ package org.tymit.projectdonut.stations.caches;
 
 import org.tymit.projectdonut.model.TransStation;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Created by ilan on 8/31/16.
@@ -28,11 +30,11 @@ public class StationCacheHelper {
 
         if (center == null || range <= 0) return null;
 
-        for (StationCacheInstance instance : allInstances) {
-            List<TransStation> cached = instance.getCachedStations(center, range);
-            if (cached != null) return cached;
-        }
-        return null;
+        return Arrays.stream(allInstances)
+                .map(instance -> instance.getCachedStations(center, range))
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
     }
 
     public void cacheStations(double[] center, double range, List<TransStation> stations) {

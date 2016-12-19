@@ -49,14 +49,9 @@ public class TravelRoute {
             return true;
         }
 
-        for (TravelRouteNode stationNode : stationNodes) {
-            LocationPoint station = stationNode.getPt();
-            if (Arrays.equals(station.getCoordinates(), location.getCoordinates())) {
-                return true;
-            }
-        }
-
-        return false;
+        return stationNodes.stream()
+                .map(TravelRouteNode::getPt)
+                .anyMatch(station -> Arrays.equals(station.getCoordinates(), location.getCoordinates()));
     }
 
     public StartPoint getStart() {
