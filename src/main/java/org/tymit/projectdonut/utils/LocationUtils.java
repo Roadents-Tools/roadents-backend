@@ -14,6 +14,9 @@ public class LocationUtils {
     private static final double AVG_WALKING_SPEED_KPH = 5.0;
     private static final double SAFETY_FACTOR = 2;
 
+    public static long timeBetween(double[] l1, double[] l2) {
+        return distanceToWalkTime(distanceBetween(l1, l2, true), true);
+    }
 
     public static double distanceBetween(double[] l1, double[] l2, boolean miles) {
 
