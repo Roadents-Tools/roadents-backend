@@ -8,13 +8,11 @@ import java.util.Map;
  */
 public class CostArgs {
     private final Map<String, Object> args;
-    private final Map<String, Object> valueCache;
     private String costTag;
     private Object subject;
 
     public CostArgs() {
         this.args = new HashMap<>();
-        this.valueCache = new HashMap<>();
     }
 
     public String getCostTag() {
@@ -37,7 +35,4 @@ public class CostArgs {
         return args;
     }
 
-    public Map<String, Object> getValueCache() {
-        return valueCache;
-    }
 }

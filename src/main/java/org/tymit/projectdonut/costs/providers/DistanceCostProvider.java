@@ -1,13 +1,9 @@
 package org.tymit.projectdonut.costs.providers;
 
-import com.google.common.collect.Sets;
 import org.tymit.projectdonut.costs.CostArgs;
 import org.tymit.projectdonut.model.LocationPoint;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
-
-import java.util.Collection;
-import java.util.Set;
 
 public class DistanceCostProvider implements CostProvider {
 
@@ -20,17 +16,12 @@ public class DistanceCostProvider implements CostProvider {
     public static final String POINT_TWO_TAG = "p2";
 
     public static final String TAG = "distance";
-    private static final String[] CACHEABLE = new String[]{"latlong"};
 
     private static final double ERROR_MARGIN = 0.0001; //We use fuzzy equals
 
 
     public String getTag() {
         return TAG;
-    }
-
-    public Set<String> getCacheableValueTags() {
-        return Sets.newHashSet(CACHEABLE);
     }
 
     public boolean isWithinCosts(CostArgs arg) {
@@ -98,11 +89,6 @@ public class DistanceCostProvider implements CostProvider {
                 out[i] = ((Double[]) obj)[i];
             }
             return out;
-        }
-
-        if (obj instanceof Collection<?>) {
-            int argSize = ((Collection) obj).size();
-            //TODO: Finish this method I think?
         }
 
         return null;
