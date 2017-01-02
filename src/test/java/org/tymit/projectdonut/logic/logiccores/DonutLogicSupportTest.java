@@ -1,6 +1,5 @@
 package org.tymit.projectdonut.logic.logiccores;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.junit.After;
 import org.junit.Assert;
@@ -28,7 +27,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -105,15 +103,12 @@ public class DonutLogicSupportTest {
                 .collect(Collectors.toSet());
 
 
+        Set<TravelRoute> allRoutes = DonutLogicSupport.buildStationRouteList(new StartPoint(CENTER), STARTTIME, MAXDELTA);
 
-        TravelRoute initRoute = new TravelRoute(new StartPoint(CENTER), STARTTIME);
-        Map<String, TravelRoute> allRoutes = new ConcurrentHashMap<>();
-        allRoutes.put(DonutLogicSupport.getLocationTag(initRoute.getCurrentEnd()), initRoute);
-
-
-        DonutLogicSupport.buildStationRouteList(Lists.newArrayList(initRoute), STARTTIME, MAXDELTA, allRoutes);
-
-        Set<String> allRouteTags = allRoutes.keySet();
+        Set<String> allRouteTags = allRoutes.stream()
+                .map(TravelRoute::getCurrentEnd)
+                .map(DonutLogicSupport::getLocationTag)
+                .collect(Collectors.toSet());
         Set<String> missing = new HashSet<>(uniqueCoords).stream()
                 .filter(tag -> !allRouteTags.contains(tag))
                 .collect(Collectors.toSet());

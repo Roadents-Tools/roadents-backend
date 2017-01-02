@@ -1,6 +1,5 @@
 package org.tymit.projectdonut.logic.logiccores;
 
-import com.google.common.collect.Lists;
 import org.tymit.projectdonut.model.DestinationLocation;
 import org.tymit.projectdonut.model.LocationType;
 import org.tymit.projectdonut.model.StartPoint;
@@ -19,19 +18,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
-import static org.tymit.projectdonut.logic.logiccores.DonutLogicSupport.TIME_DELTA_TAG;
-
 
 /**
  * Created by ilan on 7/10/16.
  */
 public class DonutLogicCore implements LogicCore {
 
-    private static final String TAG = "DONUT";
-    private static final String START_TIME_TAG = "starttime";
-    private static final String LAT_TAG = "latitude";
-    private static final String LONG_TAG = "longitude";
-    private static final String TYPE_TAG = "type";
+    public static final String TAG = "DONUT";
+    public static final String START_TIME_TAG = "starttime";
+    public static final String LAT_TAG = "latitude";
+    public static final String LONG_TAG = "longitude";
+    public static final String TYPE_TAG = "type";
+    public static final String TIME_DELTA_TAG = "timedelta";
 
     @Override
     public Map<String, List<Object>> performLogic(Map<String, Object> args) {
@@ -73,16 +71,21 @@ public class DonutLogicCore implements LogicCore {
         return TAG;
     }
 
+    /**
+     * Runs the donut logic core.
+     *
+     * @param center       the starting central location to use
+     * @param startTime    the time to start at
+     * @param maxTimeDelta the maximum time for each route
+     * @param type         the type of destination to find
+     * @return all possible destinations mapped to the best route to get there
+     */
     private Map<DestinationLocation, TravelRoute> runDonut(StartPoint center, TimeModel startTime, TimeModel maxTimeDelta, LocationType type) {
-        TravelRoute startRoute = new TravelRoute(center, startTime);
 
-        Map<String, TravelRoute> stationRoutes = new ConcurrentHashMap<>();
-        stationRoutes.put(DonutLogicSupport.getLocationTag(center), startRoute);
-        DonutLogicSupport.buildStationRouteList(Lists.asList(startRoute, new TravelRoute[0]), startTime, maxTimeDelta, stationRoutes);
-
+        Set<TravelRoute> stationRoutes = DonutLogicSupport.buildStationRouteList(center, startTime, maxTimeDelta);
         LoggingUtils.logMessage(getClass().getName(), "Got %d station routes.", stationRoutes.size());
 
-        Set<TravelRoute> destRoutes = stationRoutes.values().stream()
+        Set<TravelRoute> destRoutes = stationRoutes.stream()
                 .filter(route -> maxTimeDelta.getUnixTimeDelta() >= route.getTotalTime())
                 .flatMap(route -> {
                     TimeModel trueDelta = maxTimeDelta.addUnixTime(-1 * route.getTotalTime());
@@ -90,35 +93,31 @@ public class DonutLogicCore implements LogicCore {
                     return DonutLogicSupport.addDestinationsToRoute(route, possibleDests).stream();
                 })
                 .collect(Collectors.toSet());
-
         LoggingUtils.logMessage(getClass().getName(), "Got %d dest routes.", destRoutes.size());
 
         ConcurrentMap<DestinationLocation, TravelRoute> destToShortest = new ConcurrentHashMap<>();
         destRoutes.stream()
+
                 //See server issue #48 to see more information of the middleman timing issue
                 .map(route -> {
                     if (route.getRoute().size() != 3) return route;
-                    long destWalkTime = LocationUtils.distanceToWalkTime(LocationUtils.distanceBetween(route.getStart().getCoordinates(), route.getDestination().getCoordinates(), true), true);
+                    long destWalkTime = LocationUtils.timeBetween(route.getStart()
+                            .getCoordinates(), route.getDestination().getCoordinates());
                     if (destWalkTime > maxTimeDelta.getUnixTimeDelta()) {
-                        LoggingUtils.logError(getTag(), "Failed to find or create valid route.\nWalk time: %d\nFake time: %d", destWalkTime, route.getTotalTime());
+                        LoggingUtils.logError(getTag(), "Failed to find or create valid route.\nWalk time: %d\nFake time: %d", destWalkTime, route
+                                .getTotalTime());
+                        return route;
                     }
-                    TravelRouteNode destNode = new TravelRouteNode.Builder().setPoint(route.getDestination()).setWalkTime(destWalkTime).build();
-                    route = new TravelRoute(route.getStart(), route.getStartTime());
-                    route.setDestinationNode(destNode);
-                    return route;
+                    TravelRouteNode destNode = new TravelRouteNode.Builder().setPoint(route.getDestination())
+                            .setWalkTime(destWalkTime)
+                            .build();
+                    return new TravelRoute(route.getStart(), route.getStartTime()).setDestinationNode(destNode);
                 })
                 .filter(travelRoute -> travelRoute.getRoute().size() != 3)
-                .forEach(route -> {
-                    DestinationLocation dest = route.getDestination();
-                    if (destToShortest.putIfAbsent(dest, route) == null) return;
-                    TravelRoute oldRoute = destToShortest.get(dest);
-                    long oldLong = oldRoute.getTotalTime();
-                    long thisLong = route.getTotalTime();
-                    if (oldLong > thisLong && !destToShortest.replace(dest, oldRoute, route)) {
-                        LoggingUtils.logError(getTag(), "Donut route filtering concurrency issue.");
-                    }
-                });
 
+                .filter(route -> destToShortest.putIfAbsent(route.getDestination(), route) != null)
+                .filter(route -> destToShortest.get(route.getDestination()).getTotalTime() > route.getTotalTime())
+                .forEach(route -> destToShortest.put(route.getDestination(), route));
         return destToShortest;
     }
 }
