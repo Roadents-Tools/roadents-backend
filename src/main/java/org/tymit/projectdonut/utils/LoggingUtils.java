@@ -69,7 +69,9 @@ public class LoggingUtils {
     }
 
     public static List<Exception> getErrors() {
-        return errors;
+        List<Exception> newErrs = new ArrayList<>(errors);
+        errors.clear();
+        return newErrs;
     }
 
     public static void setPrintImmediate(boolean printImmediate) {
