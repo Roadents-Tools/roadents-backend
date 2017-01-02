@@ -44,7 +44,9 @@ public class TravelRouteJsonConverterTest {
             List<TransStation> stationsInRange = StationRetriever.getStations(testRoute.getCurrentEnd().getCoordinates(), range, null, null);
             TransStation currentStation = stationsInRange.get(i % stationsInRange.size());
             TravelRouteNode stationNode = new TravelRouteNode.Builder().setPoint(currentStation).setTravelTime(1).setWaitTime(1).build();
-            if (!testRoute.addNode(stationNode)) continue;
+            if (testRoute.isInRoute(stationNode.getPt())) {
+                testRoute.addNode(stationNode);
+            } else continue;
             List<TransStation> stationsInChain = StationRetriever.getStations(null, 0, currentStation.getChain(), null);
             TransStation chainStation = stationsInChain.get(i % stationsInChain.size());
             TravelRouteNode chainStationNode = new TravelRouteNode.Builder().setPoint(chainStation).setTravelTime(1).setWaitTime(1).build();
