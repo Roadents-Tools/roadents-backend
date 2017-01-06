@@ -48,7 +48,8 @@ public class LoggingUtils {
 
     private static String[] errorToMessage(Exception e) {
         StringBuilder msg = new StringBuilder();
-        msg.append(e.getMessage().replaceAll("\n\n", "\n"));
+        if (e.getMessage() != null) msg.append(e.getMessage().replaceAll("\n\n", "\n"));
+        else msg.append(e.getClass().getName());
         msg.append("\n\n");
         for (StackTraceElement elm : e.getStackTrace()) {
             if (!elm.getClassName().contains("tymit")) continue; //Only our classes
