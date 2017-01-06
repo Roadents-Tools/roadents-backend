@@ -6,9 +6,11 @@ import org.tymit.projectdonut.stations.database.StationDbHelper;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
  * Created by ilan on 7/20/16.
@@ -105,37 +107,37 @@ public class StationDbUpdater {
         //Static data goes first, so that dynamic can override
         for (StationProvider non : nonUpdating) {
             LoggingUtils.logMessage(getClass().getName(), "Loading from " + non.toString());
-            List<TransStation> oldData = new ArrayList<>();
-            non.getUpdatedStations().values().forEach(oldData::addAll);
+            List<TransStation> oldData = non.getUpdatedStations()
+                    .values()
+                    .stream()
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.toList());
             LoggingUtils.logMessage(getClass().getName(), "Got %d stations", oldData.size());
             boolean nonSuccess = StationDbHelper.getHelper().putStations(oldData);
-            if (!nonSuccess) {
-                isSuccessful = false;
-            }
+            isSuccessful = nonSuccess && isSuccessful;
             non.close();
             oldData.clear();
             System.gc();
             LoggingUtils.logMessage(getClass().getName(), (nonSuccess) ? "Success!" : "Fail");
         }
 
-        for (StationProvider non : updating) {
-            LoggingUtils.logMessage(getClass().getName(), "Loading from " + non.toString());
-            List<TransStation> newData = new ArrayList<>();
-            non.getUpdatedStations().values().forEach(newData::addAll);
-            boolean nonSuccess = StationDbHelper.getHelper().putStations(newData);
-            if (!nonSuccess) {
-                isSuccessful = false;
-            }
-            non.close();
+        for (StationProvider upd : updating) {
+            LoggingUtils.logMessage(getClass().getName(), "Loading from " + upd.toString());
+            List<TransStation> newData = upd.getUpdatedStations()
+                    .values()
+                    .stream()
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.toList());
+            boolean updSuccess = StationDbHelper.getHelper().putStations(newData);
+            isSuccessful = updSuccess && isSuccessful;
+            upd.close();
             newData.clear();
             System.gc();
-            LoggingUtils.logMessage(getClass().getName(), (nonSuccess) ? "Success!" : "Fail");
+            LoggingUtils.logMessage(getClass().getName(), (updSuccess) ? "Success!" : "Fail");
         }
 
         if (isSuccessful) lastUpdated.set(TimeModel.now().getUnixTime());
-        if (!isSuccessful) {
-            LoggingUtils.logError(getClass().getName(), "Could not update database.");
-        }
+        else LoggingUtils.logError(getClass().getName(), "Could not update database.");
 
         return isSuccessful;
     }

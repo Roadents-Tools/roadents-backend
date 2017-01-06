@@ -34,8 +34,10 @@ public class TestStationDb implements StationDbInstance {
     public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
         List<TransStation> stationsToCheck = (chain != null) ? chainsToStations.get(chain) : null;
         if (stationsToCheck == null) {
-            stationsToCheck = new ArrayList<>();
-            chainsToStations.values().forEach(stationsToCheck::addAll);
+            stationsToCheck = chainsToStations.values()
+                    .stream()
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.toList());
         }
         return stationsToCheck.parallelStream()
                 .filter(station -> center == null || LocationUtils.distanceBetween(center, station.getCoordinates(), true) <= range + 0.001)

@@ -13,6 +13,7 @@ import org.tymit.projectdonut.model.TransStation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -51,10 +52,8 @@ public class GtfsSupport {
                     TransStation station = stations.get(stopTime.getStop().getId().getId());
                     rval.get(tripId).putIfAbsent(station, new ArrayList<>());
 
-
                     TimeModel model = TimeModel.empty();
                     int secondsSinceMidnight = (stopTime.getDepartureTime() > 0) ? stopTime.getDepartureTime() : stopTime.getArrivalTime();
-
 
                     int trueSeconds = secondsSinceMidnight % 60;
                     model = model.set(TimeModel.SECOND, trueSeconds);
@@ -105,18 +104,15 @@ public class GtfsSupport {
         routesToTrips.keySet().forEach(routeId -> {
             Route route = store.getRouteForId(routeId);
             List<AgencyAndId> trips = routesToTrips.get(routeId);
-            int numTrips = trips.size();
             String name = (route.getLongName() == null) ? route.getShortName() : route.getLongName();
-            if (numTrips == 1) {
+            if (trips.size() == 1) {
                 TransChain newChain = new TransChain(name);
                 rval.put(trips.get(0).getId(), newChain);
                 return;
             }
-            for (AgencyAndId tripId : trips) {
-                if (tripId == null) continue;
-                TransChain newChain = new TransChain(name + " TripID:" + tripId.getId());
-                rval.put(tripId.getId(), newChain);
-            }
+            trips.parallelStream()
+                    .filter(Objects::nonNull)
+                    .forEach(tripId -> rval.put(tripId.getId(), new TransChain(name + " TripID:" + tripId.getId())));
         });
 
         return rval;
