@@ -131,9 +131,20 @@ public class DonutLogicCoreTest {
             allDests.add(dest);
         }
 
-        //Test that our error margin is small enough
-        routes.stream()
-                .map(o -> (TravelRoute) o)
+
+        routes.stream().map(o -> (TravelRoute) o)
+
+                //Test for a middleman issue
+                .map(route -> {
+                    for (int i = 1; i < route.getRoute().size(); i++) {
+                        Assert.assertNotSame(route.getRoute().get(i).arrivesByFoot(), route.getRoute()
+                                .get(i - 1)
+                                .arrivesByFoot());
+                    }
+                    return route;
+                })
+
+                //Test that our error margin is small enough
                 .forEach(route -> {
                     long savedDelta = route.getTotalTime();
                     long calcDelta = 0;
