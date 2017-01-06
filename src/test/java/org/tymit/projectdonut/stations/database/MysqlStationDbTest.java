@@ -23,7 +23,10 @@ public class MysqlStationDbTest {
 
     @Before
     public void setupDb() {
-        instance = new MysqlStationDb(MysqlStationDb.DB_URLS[0]);
+        for (String url : MysqlStationDb.DB_URLS) {
+            instance = new MysqlStationDb(url);
+            if (instance.isUp()) break;
+        }
     }
 
     @Test

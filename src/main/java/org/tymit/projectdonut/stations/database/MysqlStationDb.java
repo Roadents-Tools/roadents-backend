@@ -5,6 +5,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.pool.HikariPool;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.utils.LoggingUtils;
@@ -23,12 +24,17 @@ public class MysqlStationDb implements StationDbInstance {
     public static final String[] DB_URLS = new String[] { "jdbc:mysql://127.0.0.1:3306/Donut" };
     private static final String USER = "donut";
     private static final String PASS = "donutpass";
-    private final HikariDataSource connSource;
+    private HikariDataSource connSource;
     private boolean isUp;
 
     public MysqlStationDb(String url) {
         isUp = true;
-        connSource = new HikariDataSource(initSource(url));
+        try {
+            connSource = new HikariDataSource(initSource(url));
+        } catch (HikariPool.PoolInitializationException e) {
+            LoggingUtils.logError(e);
+            isUp = false;
+        }
     }
 
     private HikariConfig initSource(String url) {
@@ -63,6 +69,7 @@ public class MysqlStationDb implements StationDbInstance {
 
     @Override
     public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
+
         Connection connection;
         try {
             connection = getConnection();
@@ -116,13 +123,11 @@ public class MysqlStationDb implements StationDbInstance {
                 );
 
             //Insert new schedules and costs
-        return stations.stream().map(station -> {
+        return stations.parallelStream().map(station -> {
             try {
-                int stationId = stationToId.get(convertToKey(station));
-                int chainId = chainToId.get(station.getChain());
                 String encodedSchedule = MysqlSupport.encodeSchedule(station.getSchedule());
                 Connection con = getConnection();
-                MysqlSupport.insertOrUpdateCosts(con, stationId, chainId, encodedSchedule);
+                MysqlSupport.insertOrUpdateCosts(con, stationToId.get(convertToKey(station)), chainToId.get(station.getChain()), encodedSchedule);
                 con.close();
                 return true;
             } catch (Exception e) {
