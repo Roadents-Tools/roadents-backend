@@ -2,13 +2,10 @@ package org.tymit.projectdonut.stations.database;
 
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
-import org.tymit.projectdonut.stations.caches.StationCacheHelper;
+import org.tymit.projectdonut.stations.caches.StationChainCacheHelper;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -58,26 +55,26 @@ public class StationDbHelper {
 
     public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
         if (!isTest && chain == null) {
-            List<TransStation> cached = StationCacheHelper.getHelper().getCachedStations(center, range);
+            List<TransStation> cached = StationChainCacheHelper.getHelper().getCachedStations(center, range, chain);
             if (cached != null && cached.size() > 0) {
                 return cached;
             }
         }
 
-        Set<TransStation> allStations = new HashSet<>();
-        for (StationDbInstance dbInstance : allDatabases) {
-            if (dbInstance.isUp()) allStations.addAll(dbInstance.queryStations(center, range, chain));
-        }
+        List<TransStation> rval = Arrays.stream(allDatabases)
+                .filter(StationDbInstance::isUp)
+                .flatMap(db -> db.queryStations(center, range, chain).stream())
+                .distinct()
+                .collect(Collectors.toList());
 
-        List<TransStation> rval = new ArrayList<>(allStations);
-        if (!isTest && chain == null) StationCacheHelper.getHelper().cacheStations(center, range, rval);
+        if (!isTest) StationChainCacheHelper.getHelper().cacheStations(center, range, chain, rval);
         return rval;
     }
 
     public boolean putStations(List<TransStation> stations) {
         //We create a boolean set and then check if any are true
         //to guarantee that all instances are attempted.
-        return Arrays.asList(allDatabases).parallelStream()
+        return Arrays.stream(allDatabases).parallel()
                 .map(db -> db.putStations(stations))
                 .collect(Collectors.toSet())
                 .contains(true);
