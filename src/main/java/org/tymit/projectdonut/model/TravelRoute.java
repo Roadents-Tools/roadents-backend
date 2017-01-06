@@ -38,12 +38,22 @@ public class TravelRoute {
         return route;
     }
 
-    public TimeModel getTimeAtNode(int nodeIndex) {
-        return startTime.addUnixTime(getTotalTimeAtNode(nodeIndex));
+    public long getTotalTimeAtNode(TravelRouteNode node) {
+        int nodeIndex = getRoute().indexOf(node);
+        return nodeIndex < 0 ? -1 : getTotalTimeAtNode(nodeIndex);
     }
 
     public long getTotalTimeAtNode(int nodeIndex) {
         return getRoute().stream().limit(nodeIndex + 1).mapToLong(TravelRouteNode::getTotalTimeToArrive).sum();
+    }
+
+    public TimeModel getTimeAtNode(TravelRouteNode node) {
+        int nodeIndex = getRoute().indexOf(node);
+        return nodeIndex < 0 ? TimeModel.empty() : getTimeAtNode(nodeIndex);
+    }
+
+    public TimeModel getTimeAtNode(int nodeIndex) {
+        return startTime.addUnixTime(getTotalTimeAtNode(nodeIndex));
     }
 
     public LocationPoint getCurrentEnd() {
@@ -65,9 +75,7 @@ public class TravelRoute {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         TravelRoute route = (TravelRoute) o;
-
         if (!stationNodes.equals(route.stationNodes)) return false;
         if (!start.equals(route.start)) return false;
         if (end != null ? !end.equals(route.end) : route.end != null) return false;
@@ -121,20 +129,13 @@ public class TravelRoute {
     }
 
     public boolean isInRoute(LocationPoint location) {
-
-        if (location == null) return false;
-
-        if (Arrays.equals(location.getCoordinates(), getStart().getCoordinates())) {
-            return true;
-        }
-
-        if (end != null && Arrays.equals(location.getCoordinates(), getDestination().getCoordinates())) {
-            return true;
-        }
-
-        return stationNodes.stream()
-                .map(TravelRouteNode::getPt)
-                .anyMatch(station -> Arrays.equals(station.getCoordinates(), location.getCoordinates()));
+        return location != null && (
+                Arrays.equals(location.getCoordinates(), getStart().getCoordinates())
+                        || end != null && Arrays.equals(location.getCoordinates(), getDestination().getCoordinates())
+                        || stationNodes.stream()
+                        .map(TravelRouteNode::getPt)
+                        .anyMatch(station -> Arrays.equals(station.getCoordinates(), location.getCoordinates()))
+        );
     }
 
     public StartPoint getStart() {
@@ -142,8 +143,7 @@ public class TravelRoute {
     }
 
     public DestinationLocation getDestination() {
-        if (end == null) return null;
-        return (DestinationLocation) end.getPt();
+        return end != null ? (DestinationLocation) end.getPt() : null;
     }
 
 }
