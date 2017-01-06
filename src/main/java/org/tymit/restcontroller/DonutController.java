@@ -11,11 +11,13 @@ import org.tymit.projectdonut.model.TravelRoute;
 import org.tymit.projectdonut.utils.LoggingUtils;
 import org.tymit.restcontroller.jsonconvertion.DestinationJsonConverter;
 import org.tymit.restcontroller.jsonconvertion.TravelRouteJsonConverter;
+import org.tymit.restcontroller.testdisplay.TestDisplayer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Created by ilan on 7/15/16.
@@ -31,6 +33,7 @@ public class DonutController {
     private static final String TYPE_TAG = "type";
     private static final String TIME_DELTA_TAG = "timedelta";
     private static final String TEST_TAG = "test";
+    private static final String HUMAN_READABLE_TAG = "display";
 
     @RequestMapping("/routes")
     public String getRoutes(@RequestParam Map<String, String> urlArgs) {
@@ -53,35 +56,49 @@ public class DonutController {
         args.put(TYPE_TAG, urlArgs.get(TYPE_TAG));
         boolean test = Boolean.valueOf(urlArgs.get(TEST_TAG));
         args.put(TEST_TAG, test);
+        boolean humanReadable = Boolean.valueOf(urlArgs.getOrDefault(HUMAN_READABLE_TAG, "false"));
         TravelRouteJsonConverter converter = new TravelRouteJsonConverter();
+
         Map<String, List<Object>> results = null;
         try {
             results = ApplicationRunner.runApplication(tag, args);
         } catch (Exception e){
             LoggingUtils.logError(e);
         }
+
         if (results == null) {
             results = new HashMap<>();
-            results.put("ERRORS", new ArrayList<Object>());
+            results.put("ERRORS", new ArrayList<>());
             results.get("ERRORS").add(new Exception("Null results set."));
         }
         if (results.containsKey("ERRORS")){
             results.get("ERRORS").forEach(errObj -> LoggingUtils.logError((Exception) errObj));
         }
-        JSONArray routes = results
-                .get("ROUTES")
-                .parallelStream()
-                .map(routeObj -> (TravelRoute) routeObj)
-                .map(converter::toJson)
-                .collect(JSONArray::new, (r, s) -> r.put(new JSONObject(s)), (r, r2) -> {
-                    for (int i = 0; i < r2.length(); i++) {
-                        r.put(r2.getJSONObject(i));
-                    }
-                });
+        String rval;
+        if (humanReadable) {
+            List<TravelRoute> routes = results.get("ROUTES")
+                    .parallelStream()
+                    .map(routeObj -> (TravelRoute) routeObj)
+                    .collect(Collectors.toList());
+            rval = TestDisplayer.buildDisplay(routes);
+        } else {
+            rval = results
+                    .get("ROUTES")
+                    .parallelStream()
+                    .map(routeObj -> (TravelRoute) routeObj)
+                    .map(converter::toJson)
+                    .collect(JSONArray::new, (r, s) -> r.put(new JSONObject(s)), (r, r2) -> {
+                        for (int i = 0; i < r2.length(); i++) {
+                            r.put(r2.getJSONObject(i));
+                        }
+                    })
+                    .toString();
+        }
         long endTime = System.currentTimeMillis();
         long diffTime = endTime - callTime;
-        LoggingUtils.logMessage("DonutController", "Got %d routes in %f seconds.", routes.length(), diffTime / 1000.0);
-        return routes.toString();
+        LoggingUtils.logMessage("DonutController", "Got %d routes in %f seconds.", results.get("ROUTES")
+                .size(), diffTime / 1000.0);
+        return rval;
 
     }
 
@@ -112,9 +129,10 @@ public class DonutController {
                 .get("DESTS")
                 .parallelStream()
                 .map(destObj -> (DestinationLocation) destObj)
-                .map(dest -> new JSONObject(converter.toJson(dest)))
+                .map(converter::toJson)
+                .map(JSONObject::new)
                 .collect(JSONArray::new, JSONArray::put, (r, r2) -> {
-                    for (int i = 0; i < r2.length(); i++) {
+                    for (int i = 0, r2len = r2.length(); i < r2len; i++) {
                         r.put(r2.getJSONObject(i));
                     }
                 });
