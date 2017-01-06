@@ -30,20 +30,21 @@ public class MysqlSupport {
     public static final String CHAIN_TABLE_NAME = "transchain";
     public static final String CHAIN_ID_KEY = CHAIN_TABLE_NAME + ".id";
     public static final String CHAIN_NAME_KEY = CHAIN_TABLE_NAME + ".name";
+
     public static final String STATION_CHAIN_COST_TABLE_NAME = "StationChainCosts";
     public static final String COST_SCHEDULE_KEY = STATION_CHAIN_COST_TABLE_NAME + ".scheduleJson";
     public static final String COST_CHAIN_KEY = STATION_CHAIN_COST_TABLE_NAME + ".chainId";
     public static final String COST_STATION_KEY = STATION_CHAIN_COST_TABLE_NAME + ".stationId";
     public static final String COST_ID_KEY = STATION_CHAIN_COST_TABLE_NAME + ".id";
-    public static final double ERROR_MARGIN = 0.0001;
+
     public static final String STATION_TABLE_NAME = "transstation";
     public static final String STATION_LONG_KEY = STATION_TABLE_NAME + ".longitude";
     public static final String STATION_LAT_KEY = STATION_TABLE_NAME + ".latitude";
     public static final String STATION_NAME_KEY = STATION_TABLE_NAME + ".name";
     public static final String STATION_ID_KEY = STATION_TABLE_NAME + ".id";
 
-
-    private static final int RADIAL_STATION_LIMIT = 100;
+    public static final double ERROR_MARGIN = 0.0001;
+    private static final int RADIAL_STATION_LIMIT = 1000;
 
     /**
      * Constants for Database Math
@@ -207,14 +208,43 @@ public class MysqlSupport {
     }
 
     public static void insertOrUpdateCosts(Connection connection, int stationId, int chainId, String encodedSchedule) throws SQLException {
-        delectCosts(connection, stationId, chainId);
-        insertNewCosts(connection, stationId, chainId, encodedSchedule);
+        String existingQuery = String.format("SELECT %s FROM %s WHERE %s=%d AND %s=%d",
+                COST_SCHEDULE_KEY, STATION_CHAIN_COST_TABLE_NAME, COST_STATION_KEY, stationId, COST_CHAIN_KEY, chainId
+        );
+        Statement stm = connection.createStatement();
+        ResultSet rs = stm.executeQuery(existingQuery);
+
+        boolean exists = false;
+        if (rs.next()) {
+            String existingSchedule = rs.getString(COST_SCHEDULE_KEY);
+            if (existingSchedule.equals(encodedSchedule)) {
+                rs.close();
+                stm.close();
+                return;
+            }
+            exists = true;
+        }
+        rs.close();
+        stm.close();
+        if (exists) updateCosts(connection, stationId, chainId, encodedSchedule);
+        else insertNewCosts(connection, stationId, chainId, encodedSchedule);
     }
 
     public static void insertNewCosts(Connection connection, int stationId, int chainId, String encodedSchedule) throws SQLException {
         String insertQuery = String.format("INSERT INTO %s (%s,%s,%s) VALUES (%d,%d,%s)",
                 STATION_CHAIN_COST_TABLE_NAME, COST_STATION_KEY, COST_CHAIN_KEY, COST_SCHEDULE_KEY,
                 stationId, chainId, "\'" + encodedSchedule + "\'");
+
+        Statement stm = connection.createStatement();
+        stm.executeUpdate(insertQuery);
+        stm.close();
+    }
+
+    public static void updateCosts(Connection connection, int stationId, int chainId, String encodedSchedule) throws SQLException {
+        String insertQuery = String.format("UPDATE %s SET %s = %s WHERE %s=%d AND %s=%d",
+                STATION_CHAIN_COST_TABLE_NAME, COST_SCHEDULE_KEY, "\"" + encodedSchedule.replaceAll("'", "\\'") + "\"",
+                COST_STATION_KEY, stationId, COST_CHAIN_KEY, chainId
+        );
 
         Statement stm = connection.createStatement();
         stm.executeUpdate(insertQuery);
@@ -228,17 +258,6 @@ public class MysqlSupport {
 
         Statement stm = connection.createStatement();
         stm.execute(deleteQuery);
-        stm.close();
-    }
-
-    public static void updateCosts(Connection connection, int stationId, int chainId, String encodedSchedule) throws SQLException {
-        String insertQuery = String.format("UPDATE %s SET %s = %s WHERE %s=%d AND %s=%d",
-                STATION_CHAIN_COST_TABLE_NAME, COST_SCHEDULE_KEY, "\"" + encodedSchedule.replaceAll("'", "\\'") + "\"",
-                COST_STATION_KEY, stationId, COST_CHAIN_KEY, chainId
-        );
-
-        Statement stm = connection.createStatement();
-        stm.executeUpdate(insertQuery);
         stm.close();
     }
 }
