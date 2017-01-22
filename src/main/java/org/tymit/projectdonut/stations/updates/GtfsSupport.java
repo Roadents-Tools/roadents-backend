@@ -52,17 +52,12 @@ public class GtfsSupport {
                     TransStation station = stations.get(stopTime.getStop().getId().getId());
                     rval.get(tripId).putIfAbsent(station, new ArrayList<>());
 
-                    TimeModel model = TimeModel.empty();
                     int secondsSinceMidnight = (stopTime.getDepartureTime() > 0) ? stopTime.getDepartureTime() : stopTime.getArrivalTime();
 
-                    int trueSeconds = secondsSinceMidnight % 60;
-                    model = model.set(TimeModel.SECOND, trueSeconds);
-
-                    int trueMins = (secondsSinceMidnight / 60) % 60;
-                    model = model.set(TimeModel.MINUTE, trueMins);
-
-                    int trueHours = secondsSinceMidnight / 60 / 60;
-                    model = model.set(TimeModel.HOUR, trueHours);
+                    TimeModel model = TimeModel.empty()
+                            .set(TimeModel.SECOND, secondsSinceMidnight % 60)
+                            .set(TimeModel.MINUTE, (secondsSinceMidnight / 60) % 60)
+                            .set(TimeModel.HOUR, secondsSinceMidnight / 60 / 60);
                     rval.get(tripId).get(station).add(model);
                 });
         return rval;
@@ -77,16 +72,14 @@ public class GtfsSupport {
      * @return a map from ID to converted TransStation
      */
     public static Map<String, TransStation> getBaseStops(GtfsDaoImpl store) {
-        Map<String, TransStation> rval = new ConcurrentHashMap<>();
-        store.getAllStops().forEach(stop -> {
-            String name = stop.getName().trim();
-            double[] coords = new double[] { stop.getLat(), stop.getLon() };
-            TransStation station = new TransStation(name, coords);
-
-            String idString = stop.getId().getId();
-            rval.put(idString, station);
-        });
-        return rval;
+        return store.getAllStops().parallelStream()
+                .collect(ConcurrentHashMap::new,
+                        (rval1, stop) -> rval1.put(stop.getId().getId(),
+                                new TransStation(stop.getName()
+                                        .trim(), new double[] { stop.getLat(), stop.getLon() })
+                        ),
+                        ConcurrentHashMap::putAll
+                );
     }
 
     /**
@@ -106,8 +99,7 @@ public class GtfsSupport {
             List<AgencyAndId> trips = routesToTrips.get(routeId);
             String name = (route.getLongName() == null) ? route.getShortName() : route.getLongName();
             if (trips.size() == 1) {
-                TransChain newChain = new TransChain(name);
-                rval.put(trips.get(0).getId(), newChain);
+                rval.put(trips.get(0).getId(), new TransChain(name));
                 return;
             }
             trips.parallelStream()

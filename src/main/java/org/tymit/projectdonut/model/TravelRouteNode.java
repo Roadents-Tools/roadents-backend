@@ -76,9 +76,10 @@ public class TravelRouteNode {
 
         TravelRouteNode that = (TravelRouteNode) o;
 
-        if (walkTimeFromPrev != that.walkTimeFromPrev) return false;
-        if (waitTimeFromPrev != that.waitTimeFromPrev) return false;
-        return travelTimeFromPrev == that.travelTimeFromPrev && pt.equals(that.pt);
+        return walkTimeFromPrev == that.walkTimeFromPrev
+                && waitTimeFromPrev == that.waitTimeFromPrev
+                && travelTimeFromPrev == that.travelTimeFromPrev
+                && pt.equals(that.pt);
 
     }
 
