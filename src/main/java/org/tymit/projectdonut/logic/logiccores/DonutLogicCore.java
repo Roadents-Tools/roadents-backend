@@ -8,6 +8,7 @@ import org.tymit.projectdonut.model.TravelRoute;
 import org.tymit.projectdonut.model.TravelRouteNode;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
+import org.tymit.restcontroller.jsonconvertion.TravelRouteJsonConverter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -80,27 +81,39 @@ public class DonutLogicCore implements LogicCore {
      * @param type         the type of destination to find
      * @return all possible destinations mapped to the best route to get there
      */
-    private Map<DestinationLocation, TravelRoute> runDonut(StartPoint center, TimeModel startTime, TimeModel maxTimeDelta, LocationType type) {
+    public Map<DestinationLocation, TravelRoute> runDonut(StartPoint center, TimeModel startTime, TimeModel maxTimeDelta, LocationType type) {
 
+        //Get the station routes
         Set<TravelRoute> stationRoutes = DonutLogicSupport.buildStationRouteList(center, startTime, maxTimeDelta);
         LoggingUtils.logMessage(getClass().getName(), "Got %d station routes.", stationRoutes.size());
 
+
+        //Get the raw dest routes
         Set<TravelRoute> destRoutes = stationRoutes.stream()
                 .filter(route -> maxTimeDelta.getUnixTimeDelta() >= route.getTotalTime())
-                .flatMap(route -> {
-                    TimeModel trueDelta = maxTimeDelta.addUnixTime(-1 * route.getTotalTime());
-                    Set<TravelRouteNode> possibleDests = DonutLogicSupport.getWalkableDestinations(route.getCurrentEnd(), trueDelta, type);
-                    return DonutLogicSupport.addDestinationsToRoute(route, possibleDests).stream();
-                })
+                .flatMap(route -> DonutLogicSupport.getWalkableDestinations(route
+                        .getCurrentEnd(), maxTimeDelta.addUnixTime(-1 * route.getTotalTime()), type)
+                        .stream()
+                        .map(node -> route.clone().setDestinationNode(node))
+                        .peek(route1 -> {
+                            if (route.getRoute().size() > 2)
+                                LoggingUtils.logMessage(getTag(), "High degree hit!");
+                        })
+                )
                 .collect(Collectors.toSet());
-        LoggingUtils.logMessage(getClass().getName(), "Got %d dest routes.", destRoutes.size());
+        LoggingUtils.logMessage(getClass().getName(), "Got %d, %d -> %d dest routes.", stationRoutes
+                .size(), destRoutes.size());
 
+
+        //Filter and correct the dest routes
         ConcurrentMap<DestinationLocation, TravelRoute> destToShortest = new ConcurrentHashMap<>();
         destRoutes.stream()
 
                 //See server issue #48 to see more information of the middleman timing issue
                 .map(route -> {
                     if (route.getRoute().size() != 3) return route;
+                    LoggingUtils.logMessage(getTag(), "MIDDLEMAN:\n%s", new TravelRouteJsonConverter()
+                            .toJson(route));
                     long destWalkTime = LocationUtils.timeBetween(route.getStart()
                             .getCoordinates(), route.getDestination().getCoordinates());
                     if (destWalkTime > maxTimeDelta.getUnixTimeDelta()) {
@@ -115,6 +128,7 @@ public class DonutLogicCore implements LogicCore {
                 })
                 .filter(travelRoute -> travelRoute.getRoute().size() != 3)
 
+                //Only save the optimal route
                 .filter(route -> destToShortest.putIfAbsent(route.getDestination(), route) != null)
                 .filter(route -> destToShortest.get(route.getDestination()).getTotalTime() > route.getTotalTime())
                 .forEach(route -> destToShortest.put(route.getDestination(), route));
