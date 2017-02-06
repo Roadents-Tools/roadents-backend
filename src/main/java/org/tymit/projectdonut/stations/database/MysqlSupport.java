@@ -44,7 +44,7 @@ public class MysqlSupport {
     public static final String STATION_ID_KEY = STATION_TABLE_NAME + ".id";
 
     public static final double ERROR_MARGIN = 0.0001;
-    private static final int RADIAL_STATION_LIMIT = 1000;
+    private static final int QUERY_LIMIT = 300;
 
     /**
      * Constants for Database Math
@@ -64,7 +64,7 @@ public class MysqlSupport {
             whereclause.add(String.format("%s=%f", STATION_LAT_KEY, center[0]));
             whereclause.add(String.format("%s=%f", STATION_LONG_KEY, center[1]));
         } else if (center != null && range > 0) {
-            whereclause.add(stationCenterRangeBoxWhere(center, range) + " LIMIT " + RADIAL_STATION_LIMIT);
+            whereclause.add(stationCenterRangeBoxWhere(center, range) + " LIMIT " + QUERY_LIMIT);
         }
 
         String query = "SELECT * FROM " + STATION_CHAIN_COST_TABLE_NAME
@@ -73,6 +73,7 @@ public class MysqlSupport {
                 + ((whereclause.length() > 0) ? " WHERE " + whereclause.toString() : "");
 
         Statement stm = connection.createStatement();
+
         ResultSet rawOut = stm.executeQuery(query);
 
         Map<String, TransChain> allChains = new HashMap<>();
@@ -89,8 +90,6 @@ public class MysqlSupport {
             double dist = LocationUtils.distanceBetween(center, fromRow.getCoordinates(), true);
             if (dist <= range + ERROR_MARGIN) outMap.put(fromRow, id);
         }
-
-
         stm.close();
         rawOut.close();
         return outMap;

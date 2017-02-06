@@ -1,7 +1,8 @@
 package org.tymit.projectdonut.model;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.google.common.collect.Sets;
+
+import java.util.Set;
 
 /**
  * Created by ilan on 7/7/16.
@@ -9,34 +10,32 @@ import java.util.List;
 public class TransChain {
 
     private final String name;
-    private final List<TransStation> stations;
+    private final Set<TransStation> stations;
 
     public TransChain(String name) {
         this.name = name;
-        this.stations = new ArrayList<>();
+        this.stations = Sets.newConcurrentHashSet();
     }
 
     public String getName() {
         return name;
     }
 
-    public List<TransStation> getStations() {
+    public Set<TransStation> getStations() {
         return stations;
     }
 
     public void addStation(TransStation station) {
-        int oldIndex = stations.indexOf(station);
-        if (oldIndex < 0) {
+        if (station != null && (!stations.contains(station) || (station.getSchedule() != null && station
+                .getSchedule()
+                .size() != 0))) {
             stations.add(station);
-            return;
         }
-        TransStation oldStation = stations.get(oldIndex);
-        if (oldStation.getSchedule() == null) stations.set(oldIndex, station);
     }
 
     @Override
     public int hashCode() {
-        return name != null ? name.hashCode() : 0;
+        return name != null ? name.hashCode() : -1;
     }
 
     @Override
