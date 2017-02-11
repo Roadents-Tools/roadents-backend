@@ -10,6 +10,13 @@ public class LocationType {
     }
 
     @Override
+    public int hashCode() {
+        int result = getVisibleName().hashCode();
+        result = 31 * result + encodedName.hashCode();
+        return result;
+    }
+
+    @Override
     public boolean equals(Object o) {
         return o instanceof LocationType
                 && ((LocationType) o).getVisibleName().equals(this.getVisibleName())
