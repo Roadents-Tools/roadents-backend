@@ -8,7 +8,7 @@ import org.tymit.projectdonut.locations.LocationRetriever;
 import org.tymit.projectdonut.model.DestinationLocation;
 import org.tymit.projectdonut.model.LocationType;
 import org.tymit.projectdonut.model.StartPoint;
-import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.TimePoint;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.model.TravelRoute;
 import org.tymit.projectdonut.model.TravelRouteNode;
@@ -36,7 +36,7 @@ public class TravelRouteJsonConverterTest {
         final double latitude = 37.358658;
         final double longitude = -122.008763;
         StartPoint startPoint = new StartPoint(new double[]{latitude, longitude});
-        TimeModel startTime = TimeModel.now();
+        TimePoint startTime = new TimePoint(System.currentTimeMillis(), "America/Los_Angeles");
         testRoute = new TravelRoute(startPoint, startTime);
 
         final double range = 50;

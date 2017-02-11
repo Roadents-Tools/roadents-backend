@@ -1,6 +1,7 @@
 package org.tymit.projectdonut.stations.updates;
 
-import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.SchedulePoint;
+import org.tymit.projectdonut.model.TimePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 
@@ -47,8 +48,9 @@ public class TestStationProvider implements StationProvider {
 
     @Override
     public Map<TransChain, List<TransStation>> getUpdatedStations() {
-        TimeModel currentTime = TimeModel.now();
-        String calledTime = String.format("%d:%d:%d", currentTime.get(TimeModel.HOUR), currentTime.get(TimeModel.MINUTE), currentTime.get(TimeModel.SECOND));
+        TimePoint currentTime = new TimePoint(System.currentTimeMillis(), "America/Los_Angeles");
+        String calledTime = String.format("%d:%d:%d", currentTime.getHour(), currentTime
+                .getMinute(), currentTime.getSecond());
         return initStations(calledTime);
     }
 
@@ -59,10 +61,10 @@ public class TestStationProvider implements StationProvider {
 
     private Map<TransChain, List<TransStation>> initStations(String timeCalled) {
         Map<TransChain, List<TransStation>> allStations = new HashMap<>(CHAINS);
-        List<TimeModel> schedule = new ArrayList<>();
+        List<SchedulePoint> schedule = new ArrayList<>();
         for (int h : HOURS) {
             for (int m : MINUTES) {
-                schedule.add(TimeModel.empty().set(TimeModel.HOUR, h).set(TimeModel.MINUTE, m));
+                schedule.add(new SchedulePoint(h, m, 0, null, 60));
             }
         }
         for (int i = 0; i < CHAINS; i++) {

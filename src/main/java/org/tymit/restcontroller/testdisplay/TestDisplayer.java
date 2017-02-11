@@ -1,6 +1,5 @@
 package org.tymit.restcontroller.testdisplay;
 
-import org.tymit.projectdonut.model.TimeModel;
 import org.tymit.projectdonut.model.TravelRoute;
 import org.tymit.projectdonut.utils.LocationUtils;
 
@@ -26,7 +25,7 @@ public class TestDisplayer {
     }
 
     public static String routeToList(TravelRoute route) {
-        long totalMillis = route.getTotalTime();
+        long totalMillis = route.getTotalTime().getDeltaLong();
         long hours = totalMillis / 3600000L;
         long mins = totalMillis / 60000L % 60;
         StringBuilder builder = new StringBuilder();
@@ -39,9 +38,16 @@ public class TestDisplayer {
 
         route.getRoute().stream()
                 .map(node -> String.format(TestDisplayConstants.ROUTE_ELEMENT_FORMAT,
-                        node.getWalkTimeFromPrev(), node.getWaitTimeFromPrev(), node.getTravelTimeFromPrev(),
-                        node.getPt().getName(), route.getTimeAtNode(node).get(TimeModel.HOUR), route.getTimeAtNode(node)
-                                .get(TimeModel.MINUTE))
+                        node.getWalkTimeFromPrev()
+                                .getDeltaLong(), node.getWaitTimeFromPrev()
+                                .getDeltaLong(), node.getTravelTimeFromPrev()
+                                .getDeltaLong(),
+                        node.getPt().getName(), node.getPt()
+                                .getCoordinates()[0], node.getPt()
+                                .getCoordinates()[1],
+                        route.getTimeAtNode(node)
+                                .getHour(), route.getTimeAtNode(node)
+                                .getMinute())
                 )
                 .forEach(builder::append);
 

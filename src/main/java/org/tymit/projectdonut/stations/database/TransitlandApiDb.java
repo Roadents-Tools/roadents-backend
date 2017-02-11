@@ -5,7 +5,9 @@ import okhttp3.Request;
 import okhttp3.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.SchedulePoint;
+import org.tymit.projectdonut.model.TimeDelta;
+import org.tymit.projectdonut.model.TimePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.utils.LoggingUtils;
@@ -32,10 +34,12 @@ public class TransitlandApiDb implements StationDbInstance {
     private static final String AREA_FORMAT = "bbox=%f,%f,%f,%f";
     private static final String ROUTE_FORMAT = "route_onestop_id=%s";
     private static final String TRIP_FORMAT = "trip=%s";
+    private static final String SCHEDULE_FORMAT = "origin_departure_between=%d:%d,%d:%d";
     private static final String STOP_ID_URL = "http://transit.land/api/v1/stops?per_page=" + MAX_QUERY_SIZE + "&onestop_id=%s";
 
     private static final double MILES_TO_LAT = 1.0 / 69.5;
     private static final double MILES_TO_LONG = 1 / 69.5;
+    private static final int MAX_CACHE_SIZE = 1000;
 
     private OkHttpClient client;
     private boolean isUp;
@@ -48,10 +52,14 @@ public class TransitlandApiDb implements StationDbInstance {
 
     @Override
     public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
+        return queryStations(center, range, null, null, chain);
+    }
+
+    public List<TransStation> queryStations(double[] center, double range, TimePoint start, TimeDelta maxDelta, TransChain chain) {
 
         //Get scheduling info
         Request request = new Request.Builder()
-                .url(buildScheduleUrl(center, range, chain))
+                .url(buildScheduleUrl(center, range, start, maxDelta, chain))
                 .build();
 
         Response response;
@@ -63,7 +71,7 @@ public class TransitlandApiDb implements StationDbInstance {
                 return Collections.emptyList();
             }
             rawobj = new JSONObject(response.body().string());
-        } catch (IOException e) {
+        } catch (Exception e) {
             LoggingUtils.logError(e);
             isUp = false;
             return Collections.emptyList();
@@ -71,6 +79,7 @@ public class TransitlandApiDb implements StationDbInstance {
 
         JSONArray schedStopArr = rawobj.getJSONArray("schedule_stop_pairs");
         int size = schedStopArr.length();
+        if (size <= 0) return Collections.emptyList();
 
         //Get stop information
         AtomicInteger numOfStops = new AtomicInteger(0);
@@ -82,7 +91,6 @@ public class TransitlandApiDb implements StationDbInstance {
                 .peek(obj -> numOfStops.getAndIncrement())
                 .collect(() -> new StringJoiner(","), StringJoiner::add, StringJoiner::merge);
         String stopQuery = String.format(STOP_ID_URL, ids.toString());
-
         Request stopRequest = new Request.Builder().url(stopQuery).build();
         Response stopResponse;
         JSONObject rawStopObj;
@@ -128,7 +136,7 @@ public class TransitlandApiDb implements StationDbInstance {
         return rval;
     }
 
-    private static String buildScheduleUrl(double[] center, double range, TransChain chain) {
+    private static String buildScheduleUrl(double[] center, double range, TimePoint start, TimeDelta maxDelta, TransChain chain) {
         StringBuilder builder = new StringBuilder("?per_page=").append(MAX_QUERY_SIZE)
                 .append("&");
         if (center != null && range >= 0) {
@@ -151,6 +159,12 @@ public class TransitlandApiDb implements StationDbInstance {
                     .append("&")
                     .append(String.format(TRIP_FORMAT, routeTrip[1]));
         }
+        if (start != null && maxDelta != null && maxDelta != TimeDelta.NULL) {
+            TimePoint maxTime = start.plus(maxDelta);
+            builder.append(String.format(SCHEDULE_FORMAT, start.getHour(), start
+                    .getMinute(), maxTime.getHour(), maxTime.getMinute()))
+                    .append("&");
+        }
         return BASE_SCHEDULE_URL + builder.toString();
     }
 
@@ -167,14 +181,17 @@ public class TransitlandApiDb implements StationDbInstance {
 
         String[] timeSchedule = obj.getString("origin_departure_time")
                 .split(":");
-        TimeModel departTime = TimeModel.empty()
-                .set(TimeModel.HOUR, Integer.valueOf(timeSchedule[0]))
-                .set(TimeModel.MINUTE, Integer.valueOf(timeSchedule[1]))
-                .set(TimeModel.SECOND, (timeSchedule.length > 2) ? Integer.valueOf(timeSchedule[2]) : 0);
+
+        SchedulePoint departTime = new SchedulePoint(
+                Integer.valueOf(timeSchedule[0]) % 24,
+                Integer.valueOf(timeSchedule[1]),
+                ((timeSchedule.length > 2) ? Integer.valueOf(timeSchedule[2]) : 0),
+                null,
+                60
+        );
 
         return new TransStation(name, coords, Collections.singletonList(departTime), chain);
     }
-
 
     @Override
     public boolean putStations(List<TransStation> stations) {
@@ -183,7 +200,7 @@ public class TransitlandApiDb implements StationDbInstance {
 
     @Override
     public boolean isUp() {
-        return isUp;
+        return true;
     }
 
     @Override

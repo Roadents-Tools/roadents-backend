@@ -6,7 +6,7 @@ import org.junit.Test;
 import org.onebusaway.gtfs.impl.GtfsDaoImpl;
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.serialization.GtfsReader;
-import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.SchedulePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 
@@ -62,7 +62,8 @@ public class GtfsSupportTest {
 
     @Test
     public void getSchedulesForTrips() throws Exception {
-        Map<String, Map<TransStation, List<TimeModel>>> tripMaps = GtfsSupport.getSchedulesForTrips(store);
+        Map<String, Map<TransStation, List<SchedulePoint>>> tripMaps = GtfsSupport
+                .getSchedulesForTrips(store);
         Assert.assertEquals(EXPECTED_TRIPS, tripMaps.size());
 
         Set<TransStation> allStations = tripMaps.values().stream()

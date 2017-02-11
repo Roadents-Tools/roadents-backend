@@ -9,7 +9,9 @@ import org.tymit.projectdonut.locations.providers.TestLocationProvider;
 import org.tymit.projectdonut.logic.ApplicationRunner;
 import org.tymit.projectdonut.model.DestinationLocation;
 import org.tymit.projectdonut.model.LocationPoint;
-import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.SchedulePoint;
+import org.tymit.projectdonut.model.TimeDelta;
+import org.tymit.projectdonut.model.TimePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.model.TravelRoute;
@@ -34,10 +36,10 @@ public class DonutLogicCoreTest {
     private static final double[] CENTER = new double[]{37.358658, -122.008763};
 
     //Thu Jul 28 03:56:47 2016 UTC
-    private static final TimeModel STARTTIME = TimeModel.fromUnixTime(1469678207308L);
+    private static final TimePoint STARTTIME = new TimePoint(1469678207308L, "America/Los_Angeles");
 
     //Standard test max delta of 1 hour.
-    private static final TimeModel MAXDELTA = TimeModel.fromUnixTimeDelta(1000L * 60L * 60L);
+    private static final TimeDelta MAXDELTA = new TimeDelta(1000L * 60L * 60L);
 
     //All of these points are within MAXDELTA of CENTER
     private static final double[][] WALKABLEPTS = new double[][]{
@@ -61,12 +63,11 @@ public class DonutLogicCoreTest {
     public void testDonut() {
         //Constants
         final int STATIONS = 5;
-        final int[] EVERY_TEN_MINS = new int[]{0, 10, 20, 30, 40, 50};
 
         long startTime = STARTTIME.getUnixTime();
         double latitude = CENTER[0];
         double longitude = CENTER[1];
-        long timeDelta = MAXDELTA.getUnixTimeDelta();
+        long timeDelta = MAXDELTA.getDeltaLong();
 
         //Build test data
         Set<TransStation> allStations = new HashSet<>();
@@ -74,10 +75,11 @@ public class DonutLogicCoreTest {
         for (int walkableIndex = 0; walkableIndex < WALKABLEPTS.length; walkableIndex++) {
             TransChain testChain = new TransChain("TEST CHAIN: " + walkableIndex);
 
-            List<TimeModel> walkableSchedule = new ArrayList<>(EVERY_TEN_MINS.length);
-            for (int min : EVERY_TEN_MINS) {
-                TimeModel item = TimeModel.empty().set(TimeModel.MINUTE, min);
-                walkableSchedule.add(item);
+            List<SchedulePoint> walkableSchedule = new ArrayList<>();
+            for (int h = 0; h < 23; h++) {
+                for (int min = 0; min < 60; min += 10) {
+                    walkableSchedule.add(new SchedulePoint(h, min, 0, null, 60));
+                }
             }
             String walkableName = String.format("TEST STATION: %d,W", walkableIndex);
             double[] walkableCoords = WALKABLEPTS[walkableIndex];
@@ -86,10 +88,11 @@ public class DonutLogicCoreTest {
             testStations.add(walkable);
 
             for (int stationNum = 1; stationNum < STATIONS; stationNum++) {
-                List<TimeModel> arrivableSchedule = new ArrayList<>(EVERY_TEN_MINS.length);
-                for (int min : EVERY_TEN_MINS) {
-                    TimeModel item = TimeModel.empty().set(TimeModel.MINUTE, min + stationNum);
-                    arrivableSchedule.add(item);
+                List<SchedulePoint> arrivableSchedule = new ArrayList<>();
+                for (int h = 0; h < 23; h++) {
+                    for (int min = 0; min < 60; min += 10) {
+                        arrivableSchedule.add(new SchedulePoint(h, min + stationNum, 0, null, 60));
+                    }
                 }
                 String arrivableName = String.format("TEST STATION: %d, %d", walkableIndex, stationNum);
                 double[] coords = new double[]{((stationNum + 1) * CENTER[0]) % 90 + walkableIndex, ((stationNum + 1) * CENTER[1]) % 180 + walkableIndex};
@@ -137,7 +140,9 @@ public class DonutLogicCoreTest {
                 //Test for a middleman issue
                 .map(route -> {
                     for (int i = 1; i < route.getRoute().size(); i++) {
-                        Assert.assertNotSame(route.getRoute().get(i).arrivesByFoot(), route.getRoute()
+                        Assert.assertNotSame(route.getRoute()
+                                .get(i)
+                                .arrivesByFoot(), route.getRoute()
                                 .get(i - 1)
                                 .arrivesByFoot());
                     }
@@ -146,7 +151,7 @@ public class DonutLogicCoreTest {
 
                 //Test that our error margin is small enough
                 .forEach(route -> {
-                    long savedDelta = route.getTotalTime();
+                    long savedDelta = route.getTotalTime().getDeltaLong();
                     long calcDelta = 0;
                     int routeSize = route.getRoute().size();
                     for (int i = 1; i < routeSize; i++) {
@@ -163,8 +168,8 @@ public class DonutLogicCoreTest {
                         }
                         TransStation cStation = (TransStation) current;
                         TransStation pStation = (TransStation) prev;
-                        TimeModel pArrival = pStation.getNextArrival(TimeModel.fromUnixTime(startTime + calcDelta));
-                        TimeModel cArrival = cStation.getNextArrival(pArrival);
+                        TimePoint pArrival = pStation.getNextArrival(new TimePoint(startTime + calcDelta, "America/Los_Angeles"));
+                        TimePoint cArrival = cStation.getNextArrival(pArrival);
                         calcDelta += (cArrival.getUnixTime() - calcDelta - startTime);
                     }
                     Assert.assertTrue(calcDelta - savedDelta < MAX_ERROR);

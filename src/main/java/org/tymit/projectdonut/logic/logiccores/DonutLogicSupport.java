@@ -5,7 +5,8 @@ import org.tymit.projectdonut.locations.LocationRetriever;
 import org.tymit.projectdonut.model.LocationPoint;
 import org.tymit.projectdonut.model.LocationType;
 import org.tymit.projectdonut.model.StartPoint;
-import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.TimeDelta;
+import org.tymit.projectdonut.model.TimePoint;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.model.TravelRoute;
 import org.tymit.projectdonut.model.TravelRouteNode;
@@ -28,8 +29,6 @@ import java.util.stream.Collectors;
  */
 public final class DonutLogicSupport {
 
-    //private static final long CHAIN_LIMIT_FACTOR = 360000000L;
-
     /**
      * Utility classes cannot be initialized.
      */
@@ -45,7 +44,7 @@ public final class DonutLogicSupport {
      * @param maxDelta     the maximum time from start we are allowed to travel to get to the stations
      * @return the possible routes
      */
-    public static Set<TravelRoute> buildStationRouteList(StartPoint initialPoint, TimeModel startTime, TimeModel maxDelta) {
+    public static Set<TravelRoute> buildStationRouteList(StartPoint initialPoint, TimePoint startTime, TimeDelta maxDelta) {
         Map<String, TravelRoute> rval = new ConcurrentHashMap<>();
         TravelRoute startRoute = new TravelRoute(initialPoint, startTime);
         rval.put(getLocationTag(initialPoint), startRoute);
@@ -55,17 +54,15 @@ public final class DonutLogicSupport {
             List<TravelRoute> nextLayer = currentLayer.stream()
 
                     //For each current end in the previous layer, check for all possible next nodes
-                    .flatMap(route -> getAllPossibleStations(
-                            route.getCurrentEnd(),
-                            startTime.addUnixTime(route.getTotalTime()),
-                            maxDelta.addUnixTime(-1 * route.getTotalTime())
-                            )
-                                    .stream()
-                                    .map(node -> route.clone().addNode(node))
+                    .flatMap(route -> getAllPossibleStations(route.getCurrentEnd(), startTime
+                                    .plus(route.getTotalTime()),
+                            maxDelta.minus(route.getTotalTime()))
+                            .stream().map(node -> route.clone().addNode(node))
                     )
 
                     //Filter those passed our max time delta
-                    .filter(newRoute -> newRoute.getTotalTime() < maxDelta.getUnixTimeDelta())
+                    .filter(newRoute -> newRoute.getTotalTime()
+                            .getDeltaLong() <= maxDelta.getDeltaLong())
 
                     //Check if the new nodes that go to previously visited locations
                     //are better than what we have already
@@ -73,10 +70,9 @@ public final class DonutLogicSupport {
                         String currentEndTag = getLocationTag(newRoute.getCurrentEnd());
                         TravelRoute currentMap = rval.getOrDefault(currentEndTag, null);
                         return currentMap == null
-                                || currentMap.getTotalTime() > newRoute.getTotalTime()
-                                || currentMap.getTotalTime() == newRoute.getTotalTime()
-                                && currentMap.getRoute()
-                                .size() < newRoute.getRoute().size();
+                                || currentMap.getTotalTime()
+                                .getDeltaLong() > newRoute.getTotalTime()
+                                .getDeltaLong();
                     })
 
                     //Put it in the collector
@@ -89,7 +85,6 @@ public final class DonutLogicSupport {
                     .size());
             currentLayer = nextLayer;
         }
-
         return new HashSet<>(rval.values());
     }
 
@@ -100,7 +95,7 @@ public final class DonutLogicSupport {
      * @param maxDelta the maximum time to travel
      * @return a set of nodes representing traveling from center directly to the possible stations
      */
-    public static Set<TravelRouteNode> getAllPossibleStations(LocationPoint center, TimeModel startTime, TimeModel maxDelta) {
+    public static Set<TravelRouteNode> getAllPossibleStations(LocationPoint center, TimePoint startTime, TimeDelta maxDelta) {
         if (!(center instanceof TransStation)) return getWalkableStations(center, maxDelta);
         TransStation station = (TransStation) center;
 
@@ -115,14 +110,22 @@ public final class DonutLogicSupport {
         allPossibleStations.addAll(walkable.keySet());
         allPossibleStations.addAll(arrivable.keySet());
 
-        return allPossibleStations.parallelStream()
+        return allPossibleStations.stream()
+                .distinct()
                 .map(keyStation -> {
-                    if (walkable.containsKey(keyStation) && !arrivable.containsKey(keyStation))
+                    if (walkable.containsKey(keyStation) && !arrivable.containsKey(keyStation)) {
                         return walkable.get(keyStation);
-                    if (!walkable.containsKey(keyStation) && arrivable.containsKey(keyStation))
+                    }
+                    if (!walkable.containsKey(keyStation) && arrivable.containsKey(keyStation)) {
                         return arrivable.get(keyStation);
-                    if (walkable.get(keyStation).getTotalTimeToArrive() <= arrivable.get(keyStation)
-                            .getTotalTimeToArrive()) return walkable.get(keyStation);
+                    }
+                    if (walkable.get(keyStation)
+                            .getTotalTimeToArrive()
+                            .getDeltaLong() < arrivable.get(keyStation)
+                            .getTotalTimeToArrive()
+                            .getDeltaLong()) {
+                        return walkable.get(keyStation);
+                    }
                     return arrivable.get(keyStation);
                 })
                 .collect(Collectors.toSet());
@@ -134,9 +137,9 @@ public final class DonutLogicSupport {
      * @param maxDelta the maximum walking time
      * @return nodes representing walking to all possible stations
      */
-    public static Set<TravelRouteNode> getWalkableStations(LocationPoint begin, TimeModel maxDelta) {
+    public static Set<TravelRouteNode> getWalkableStations(LocationPoint begin, TimeDelta maxDelta) {
         return StationRetriever.getStations(begin.getCoordinates(), LocationUtils
-                .timeToWalkDistance(maxDelta.getUnixTimeDelta(), true), null, null)
+                .timeToWalkDistance(maxDelta.getDeltaLong(), true), null, null)
                 .parallelStream()
                 .map(point -> new TravelRouteNode.Builder()
                         .setWalkTime(LocationUtils.timeBetween(begin.getCoordinates(), point
@@ -154,21 +157,20 @@ public final class DonutLogicSupport {
      * @param maxDelta the maximum time to travel
      * @return nodes representing directly travelling from station to all possible stations
      */
-    public static Set<TravelRouteNode> getArrivableStations(TransStation station, TimeModel startTime, TimeModel maxDelta) {
+    public static Set<TravelRouteNode> getArrivableStations(TransStation station, TimePoint startTime, TimeDelta maxDelta) {
         if (station.getChain() == null) return Collections.emptySet();
 
-        TimeModel trueStart = getStationWithSchedule(station).getNextArrival(startTime);
-        long waitTime = trueStart.getUnixTime() - startTime.getUnixTime();
-        long deltaLong = maxDelta.getUnixTimeDelta();
-        long startTimeLong = startTime.getUnixTime();
+        TimePoint trueStart = getStationWithSchedule(station).getNextArrival(startTime);
 
-        return StationRetriever.getStations(null, 0, station.getChain(), null).parallelStream()
+
+        return StationRetriever.getStations(null, 0, station.getChain(), null)./*parallelS*/stream()
                 .filter(fromChain -> !Arrays.equals(fromChain.getCoordinates(), station.getCoordinates()))
                 .map(DonutLogicSupport::getStationWithSchedule)
-                .filter(fromChain -> fromChain.getNextArrival(trueStart)
-                        .getUnixTime() - startTimeLong <= deltaLong)
+                .filter(fromChain -> startTime.timeUntil(fromChain.getNextArrival(trueStart))
+                        .getDeltaLong() <= maxDelta.getDeltaLong())
                 .map(fromChain -> new TravelRouteNode.Builder()
-                        .setWaitTime(waitTime)
+                        .setWaitTime(startTime.timeUntil(trueStart)
+                                .getDeltaLong())
                         .setPoint(fromChain)
                         .setTravelTime(fromChain.getNextArrival(trueStart).getUnixTime() - trueStart.getUnixTime())
                         .build()
@@ -223,9 +225,9 @@ public final class DonutLogicSupport {
      * @param type     the type of destination to find
      * @return the found destinations
      */
-    public static Set<TravelRouteNode> getWalkableDestinations(LocationPoint center, TimeModel maxDelta, LocationType type) {
+    public static Set<TravelRouteNode> getWalkableDestinations(LocationPoint center, TimeDelta maxDelta, LocationType type) {
         return LocationRetriever.getLocations(center.getCoordinates(), LocationUtils
-                .timeToWalkDistance(maxDelta.getUnixTimeDelta(), true), type, null)
+                .timeToWalkDistance(maxDelta.getDeltaLong(), true), type, null)
                 .parallelStream()
                 .map(point -> new TravelRouteNode.Builder()
                         .setWalkTime(LocationUtils.timeBetween(center.getCoordinates(), point

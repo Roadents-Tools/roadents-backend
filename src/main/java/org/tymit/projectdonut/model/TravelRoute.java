@@ -11,61 +11,68 @@ import java.util.List;
  */
 public class TravelRoute {
 
-    private final List<TravelRouteNode> stationNodes;
-    private final TravelRouteNode start;
-    private final TimeModel startTime;
+    private final List<TravelRouteNode> routeNodes;
+    private final TimePoint startTime;
     private TravelRouteNode end;
 
-    public TravelRoute(StartPoint start, TimeModel startTime) {
-        this.start = new TravelRouteNode.Builder().setPoint(start).build();
-        stationNodes = new ArrayList<>();
+    public TravelRoute(StartPoint start, TimePoint startTime) {
+        TravelRouteNode stNode = new TravelRouteNode.Builder().setPoint(start)
+                .build();
+        routeNodes = new ArrayList<>();
+        routeNodes.add(stNode);
         this.startTime = startTime;
     }
 
-    public TimeModel getStartTime() {
+    public TimePoint getStartTime() {
         return startTime;
     }
 
-    public long getTotalTime() {
-        return getRoute().parallelStream().mapToLong(TravelRouteNode::getTotalTimeToArrive).sum();
+    public TimeDelta getTotalTime() {
+        return getRoute().parallelStream()
+                .map(TravelRouteNode::getTotalTimeToArrive)
+                .reduce(TimeDelta.NULL, TimeDelta::plus);
     }
 
     public List<TravelRouteNode> getRoute() {
         List<TravelRouteNode> route = new ArrayList<>();
-        route.add(start);
-        route.addAll(stationNodes);
+        route.addAll(routeNodes);
         if (end != null) route.add(end);
         return route;
     }
 
-    public long getTotalTimeAtNode(TravelRouteNode node) {
+    public TimeDelta getTotalTimeAtNode(TravelRouteNode node) {
         int nodeIndex = getRoute().indexOf(node);
-        return nodeIndex < 0 ? -1 : getTotalTimeAtNode(nodeIndex);
+        return nodeIndex < 0 ? TimeDelta.NULL : getTotalTimeAtNode(nodeIndex);
     }
 
-    public long getTotalTimeAtNode(int nodeIndex) {
-        return getRoute().stream().limit(nodeIndex + 1).mapToLong(TravelRouteNode::getTotalTimeToArrive).sum();
+    public TimeDelta getTotalTimeAtNode(int nodeIndex) {
+        return getRoute().stream()
+                .limit(nodeIndex + 1)
+                .map(TravelRouteNode::getTotalTimeToArrive)
+                .reduce(TimeDelta.NULL, TimeDelta::plus);
     }
 
-    public TimeModel getTimeAtNode(TravelRouteNode node) {
+    public TimePoint getTimeAtNode(TravelRouteNode node) {
         int nodeIndex = getRoute().indexOf(node);
-        return nodeIndex < 0 ? TimeModel.empty() : getTimeAtNode(nodeIndex);
+        if (nodeIndex < 0)
+            throw new IllegalArgumentException("Node not in route.");
+        return getTimeAtNode(nodeIndex);
     }
 
-    public TimeModel getTimeAtNode(int nodeIndex) {
-        return startTime.addUnixTime(getTotalTimeAtNode(nodeIndex));
+    public TimePoint getTimeAtNode(int nodeIndex) {
+        return startTime.plus(getTotalTimeAtNode(nodeIndex));
     }
 
     public LocationPoint getCurrentEnd() {
         if (end != null) return end.getPt();
-        if (stationNodes.size() > 0) return stationNodes.get(stationNodes.size() - 1).getPt();
-        return start.getPt();
+        if (routeNodes.size() > 0)
+            return routeNodes.get(routeNodes.size() - 1).getPt();
+        return routeNodes.get(0).getPt();
     }
 
     @Override
     public int hashCode() {
-        int result = stationNodes.hashCode();
-        result = 31 * result + start.hashCode();
+        int result = routeNodes.hashCode();
         result = 31 * result + (end != null ? end.hashCode() : 0);
         result = 31 * result + startTime.hashCode();
         return result;
@@ -76,16 +83,16 @@ public class TravelRoute {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TravelRoute route = (TravelRoute) o;
-        if (!stationNodes.equals(route.stationNodes)) return false;
-        if (!start.equals(route.start)) return false;
+        if (!routeNodes.equals(route.routeNodes)) return false;
         if (end != null ? !end.equals(route.end) : route.end != null) return false;
         return startTime.equals(route.startTime);
 
     }
 
     public TravelRoute clone() {
-        TravelRoute route = new TravelRoute((StartPoint) start.getPt(), startTime);
-        stationNodes.forEach(route::addNode);
+        TravelRoute route = new TravelRoute((StartPoint) routeNodes.get(0)
+                .getPt(), startTime);
+        routeNodes.stream().filter(n -> !n.isStart()).forEach(route::addNode);
         if (end != null) route.setDestinationNode(end);
         if (!this.equals(route) && route.equals(this)) {
             LoggingUtils.logError("TravelRoute", "Inequal clone.");
@@ -105,8 +112,7 @@ public class TravelRoute {
     @Override
     public String toString() {
         return "TravelRoute{" +
-                "stationNodes=" + stationNodes.toString() +
-                ", start=" + start.toString() +
+                "routeNodes=" + routeNodes.toString() +
                 ", end=" + ((end != null) ? end.toString() : "NULL") +
                 ", startTime=" + startTime.toString() +
                 '}';
@@ -114,8 +120,9 @@ public class TravelRoute {
 
     public TravelRoute cloneAtNode(int nodeIndex) {
         if (nodeIndex >= getRoute().size()) return clone();
-        TravelRoute route = new TravelRoute((StartPoint) start.getPt(), startTime);
-        for (int i = 0; i < nodeIndex; i++) route.addNode(stationNodes.get(i));
+        TravelRoute route = new TravelRoute((StartPoint) routeNodes.get(0)
+                .getPt(), startTime);
+        for (int i = 1; i < nodeIndex; i++) route.addNode(routeNodes.get(i));
         if (end != null && nodeIndex == getRoute().size()) route.setDestinationNode(end);
         return route;
     }
@@ -124,7 +131,7 @@ public class TravelRoute {
         if (node.isDest() || node.isStart()) {
             throw new IllegalArgumentException("Node is not station.\nNode: " + node.toString());
         }
-        if (!isInRoute(node.getPt())) stationNodes.add(node);
+        if (!isInRoute(node.getPt())) routeNodes.add(node);
         return this;
     }
 
@@ -132,14 +139,14 @@ public class TravelRoute {
         return location != null && (
                 Arrays.equals(location.getCoordinates(), getStart().getCoordinates())
                         || end != null && Arrays.equals(location.getCoordinates(), getDestination().getCoordinates())
-                        || stationNodes.stream()
+                        || routeNodes.stream()
                         .map(TravelRouteNode::getPt)
                         .anyMatch(station -> Arrays.equals(station.getCoordinates(), location.getCoordinates()))
         );
     }
 
     public StartPoint getStart() {
-        return (StartPoint) start.getPt();
+        return (StartPoint) routeNodes.get(0).getPt();
     }
 
     public DestinationLocation getDestination() {

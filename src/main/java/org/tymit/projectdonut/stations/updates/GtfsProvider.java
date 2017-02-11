@@ -5,7 +5,7 @@ import ch.qos.logback.classic.Logger;
 import org.onebusaway.gtfs.impl.GtfsDaoImpl;
 import org.onebusaway.gtfs.serialization.GtfsReader;
 import org.slf4j.LoggerFactory;
-import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.SchedulePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.utils.LoggingUtils;
@@ -99,7 +99,8 @@ public class GtfsProvider implements StationProvider {
         cache = new ConcurrentHashMap<>();
 
         Map<String, TransChain> chains = GtfsSupport.getChainsFromTrips(store);
-        Map<String, Map<TransStation, List<TimeModel>>> stations = GtfsSupport.getSchedulesForTrips(store);
+        Map<String, Map<TransStation, List<SchedulePoint>>> stations = GtfsSupport
+                .getSchedulesForTrips(store);
         chains.keySet().forEach(tripId -> {
             TransChain chain = chains.get(tripId);
             cache.putIfAbsent(chain, new ArrayList<>());

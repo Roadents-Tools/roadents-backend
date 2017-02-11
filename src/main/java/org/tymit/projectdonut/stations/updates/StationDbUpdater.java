@@ -1,6 +1,5 @@
 package org.tymit.projectdonut.stations.updates;
 
-import org.tymit.projectdonut.model.TimeModel;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.stations.database.StationDbHelper;
 import org.tymit.projectdonut.utils.LoggingUtils;
@@ -69,7 +68,8 @@ public class StationDbUpdater {
         return new Thread(() -> {
             while (backgroundUpdateMilli.get() > 0) {
                 updateStations();
-                while (TimeModel.now().getUnixTime() - lastUpdated.get() < backgroundUpdateMilli.get()) {
+                while (System.currentTimeMillis() - lastUpdated.get() < backgroundUpdateMilli
+                        .get()) {
                     try {
                         Thread.sleep(backgroundUpdateMilli.get() / 10);
                     } catch (InterruptedException e) {
@@ -136,7 +136,7 @@ public class StationDbUpdater {
             LoggingUtils.logMessage(getClass().getName(), (updSuccess) ? "Success!" : "Fail");
         }
 
-        if (isSuccessful) lastUpdated.set(TimeModel.now().getUnixTime());
+        if (isSuccessful) lastUpdated.set(System.currentTimeMillis());
         else LoggingUtils.logError(getClass().getName(), "Could not update database.");
 
         return isSuccessful;

@@ -4,7 +4,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.SchedulePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.utils.LoggingUtils;
@@ -44,8 +44,8 @@ public class GtfsProviderTest {
         System.out.printf("Chain:%s. %d stations.\n\n", testChain.getName(), testChain.getStations().size());
         for (TransStation station : testChain.getStations()) {
             System.out.println(station.toString());
-            for (TimeModel tm : station.getSchedule()) {
-                System.out.println("    " + tm.getUnixTimeDelta());
+            for (SchedulePoint tm : station.getSchedule()) {
+                System.out.println(tm);
             }
         }
     }

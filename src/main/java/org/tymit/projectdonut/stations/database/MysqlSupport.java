@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.SchedulePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.utils.LocationUtils;
@@ -123,26 +123,26 @@ public class MysqlSupport {
         }
 
         String scheduleJson = currentRow.getString(COST_SCHEDULE_KEY);
-        List<TimeModel> schedule = decodeSchedule(scheduleJson);
+        List<SchedulePoint> schedule = decodeSchedule(scheduleJson);
 
         return new TransStation(name, latlong, schedule, chain);
 
     }
 
-    public static List<TimeModel> decodeSchedule(String encodedSchedule) {
-        List<TimeModel> schedule = new ArrayList<>();
+    public static List<SchedulePoint> decodeSchedule(String encodedSchedule) {
+        List<SchedulePoint> schedule = new ArrayList<>();
         Gson gson = new Gson();
         JsonParser parser = new JsonParser();
 
         JsonArray array = parser.parse(encodedSchedule).getAsJsonArray();
         for (JsonElement elm : array) {
-            TimeModel model = gson.fromJson(elm, TimeModel.class);
+            SchedulePoint model = gson.fromJson(elm, SchedulePoint.class);
             schedule.add(model);
         }
         return schedule;
     }
 
-    public static String encodeSchedule(List<TimeModel> schedule) {
+    public static String encodeSchedule(List<SchedulePoint> schedule) {
         Gson gson = new Gson();
         return gson.toJson(schedule);
     }

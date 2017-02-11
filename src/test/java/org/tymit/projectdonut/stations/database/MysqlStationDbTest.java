@@ -4,7 +4,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.SchedulePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.utils.LoggingUtils;
@@ -40,12 +40,11 @@ public class MysqlStationDbTest {
         List<TransStation> allStations = new ArrayList<>();
         for (TransChain chain : testChains) {
             for (int i = 0; i < 5; i++) {
-                List<TimeModel> chainSchedule = new ArrayList<>(7);
+                List<SchedulePoint> chainSchedule = new ArrayList<>(7);
                 for (int j = 0; j < 7; j++) {
-                    TimeModel newModel = TimeModel.empty()
-                            .set(TimeModel.DAY_OF_WEEK, i)
-                            .set(TimeModel.HOUR, j);
-                    chainSchedule.add(newModel);
+                    boolean[] validDays = new boolean[7];
+                    validDays[i] = true;
+                    chainSchedule.add(new SchedulePoint(j, 0, 0, validDays, 60));
                 }
                 String stationName = String.format("TEST STATION: chain=%s, i=%d", chain.getName(), i);
                 TransStation station = new TransStation(stationName, new double[]{rng.nextDouble(), rng.nextDouble()}, chainSchedule, chain);

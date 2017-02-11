@@ -66,7 +66,7 @@ public class StationChainCacheHelper {
     }
 
     public void cacheStations(double[] center, double range, TransChain chain, List<TransStation> stations) {
-        if (stations == null || stations.size() == 0) return;
+        if (stations == null || stations.isEmpty()) return;
         if (center != null && chain != null) return;
         if (chain != null) cacheStations(chain, stations);
         cacheStations(center, range, stations);

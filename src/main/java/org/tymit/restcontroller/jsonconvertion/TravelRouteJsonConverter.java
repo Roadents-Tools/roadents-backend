@@ -4,7 +4,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.tymit.projectdonut.model.DestinationLocation;
 import org.tymit.projectdonut.model.StartPoint;
-import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.TimePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TravelRoute;
 import org.tymit.projectdonut.model.TravelRouteNode;
@@ -62,7 +62,7 @@ public class TravelRouteJsonConverter implements JsonConverter<TravelRoute> {
 
         JSONObject jsonObject = new JSONObject(json);
 
-        TimeModel startTime = TimeModel.fromUnixTime(jsonObject.getLong(START_TIME_TAG));
+        TimePoint startTime = new TimePoint(jsonObject.getLong(START_TIME_TAG), "America/Los_Angeles");
 
         Map<String, TransChain> storedChains = new ConcurrentHashMap<>();
 

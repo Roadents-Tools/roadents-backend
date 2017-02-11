@@ -45,7 +45,7 @@ public class TestDisplayConstants {
             "<button class=\"accordion\"> %s (%d hours, %d minutes, %f miles, Degree: %d) </button>\n" +
                     "<div class=\"panel\">\n<ul>";
 
-    public static String ROUTE_ELEMENT_FORMAT = "<li> Walk %d mins, wait %d mins, and travel %d mins to arrive at %s by %d:%d. </li>\n";
+    public static String ROUTE_ELEMENT_FORMAT = "<li> Walk %d mins, wait %d mins, and travel %d mins to arrive at %s (%f,%f) by %d:%d. </li>\n";
 
     public static String ROUTE_FOOTER = "</ul>\n</div>\n";
 

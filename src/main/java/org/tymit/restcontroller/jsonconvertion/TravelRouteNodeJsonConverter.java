@@ -49,9 +49,9 @@ public class TravelRouteNodeJsonConverter implements JsonConverter<TravelRouteNo
     @Override
     public String toJson(TravelRouteNode input) {
         JSONObject obj = new JSONObject();
-        obj.put(WAIT_TIME_TAG, input.getWaitTimeFromPrev());
-        obj.put(TRAVEL_TIME_TAG, input.getTravelTimeFromPrev());
-        obj.put(WALK_TIME_TAG, input.getWalkTimeFromPrev());
+        obj.put(WAIT_TIME_TAG, input.getWaitTimeFromPrev().getDeltaLong());
+        obj.put(TRAVEL_TIME_TAG, input.getTravelTimeFromPrev().getDeltaLong());
+        obj.put(WALK_TIME_TAG, input.getWalkTimeFromPrev().getDeltaLong());
         obj.put(LOCATION_TAG, extractPt(input));
         return obj.toString();
     }
@@ -102,7 +102,8 @@ public class TravelRouteNodeJsonConverter implements JsonConverter<TravelRouteNo
 
         JSONObject obj = new JSONObject(json);
 
-        return new TravelRouteNode.Builder().setTravelTime(obj.getLong(TRAVEL_TIME_TAG))
+        return new TravelRouteNode.Builder()
+                .setTravelTime(obj.getLong(TRAVEL_TIME_TAG))
                 .setWaitTime(obj.getLong(WAIT_TIME_TAG))
                 .setWalkTime(obj.getLong(WALK_TIME_TAG))
                 .setPoint(extractPt(obj.getJSONObject(LOCATION_TAG)))

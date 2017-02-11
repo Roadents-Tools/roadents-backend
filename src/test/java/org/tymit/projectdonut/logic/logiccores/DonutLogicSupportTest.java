@@ -9,8 +9,10 @@ import org.tymit.projectdonut.locations.LocationRetriever;
 import org.tymit.projectdonut.locations.providers.TestLocationProvider;
 import org.tymit.projectdonut.model.DestinationLocation;
 import org.tymit.projectdonut.model.LocationType;
+import org.tymit.projectdonut.model.SchedulePoint;
 import org.tymit.projectdonut.model.StartPoint;
-import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.TimeDelta;
+import org.tymit.projectdonut.model.TimePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.model.TravelRoute;
@@ -39,10 +41,10 @@ public class DonutLogicSupportTest {
     private static final double[] CENTER = new double[]{37.358658, -122.008763};
 
     //Thu Jul 28 03:56:47 2016 UTC
-    private static final TimeModel STARTTIME = TimeModel.fromUnixTime(1469678207308L);
+    private static final TimePoint STARTTIME = new TimePoint(1469678207308L, "America/Los_Angeles");
 
     //Standard test max delta of 1 hour.
-    private static final TimeModel MAXDELTA = TimeModel.fromUnixTimeDelta(1000L * 60L * 60L);
+    private static final TimeDelta MAXDELTA = new TimeDelta(1000L * 60L * 60L);
 
     //All of these points are within MAXDELTA of CENTER
     private static final double[][] WALKABLEPTS = new double[][]{
@@ -64,7 +66,6 @@ public class DonutLogicSupportTest {
     public void buildStationRouteList() throws Exception {
         //Constants
         final int STATIONS = 5;
-        final int[] EVERY_TEN_MINS = new int[]{0, 10, 20, 30, 40, 50};
 
         //Build test data
         Set<TransStation> allStations = new HashSet<>();
@@ -72,10 +73,11 @@ public class DonutLogicSupportTest {
         for (int walkableIndex = 0; walkableIndex < WALKABLEPTS.length; walkableIndex++) {
             TransChain testChain = new TransChain("TEST CHAIN: " + walkableIndex);
 
-            List<TimeModel> walkableSchedule = new ArrayList<>(EVERY_TEN_MINS.length);
-            for (int min : EVERY_TEN_MINS) {
-                TimeModel item = TimeModel.empty().set(TimeModel.MINUTE, min);
-                walkableSchedule.add(item);
+            List<SchedulePoint> walkableSchedule = new ArrayList<>();
+            for (int h = 0; h < 23; h++) {
+                for (int m = 0; m < 60; m += 10) {
+                    walkableSchedule.add(new SchedulePoint(h, m, 0, null, 60));
+                }
             }
             String walkableName = String.format("TEST STATION: %d,W", walkableIndex);
             double[] walkableCoords = WALKABLEPTS[walkableIndex];
@@ -84,10 +86,11 @@ public class DonutLogicSupportTest {
             testStations.add(walkable);
 
             for (int stationNum = 1; stationNum < STATIONS; stationNum++) {
-                List<TimeModel> arrivableSchedule = new ArrayList<>(EVERY_TEN_MINS.length);
-                for (int min : EVERY_TEN_MINS) {
-                    TimeModel item = TimeModel.empty().set(TimeModel.MINUTE, min + stationNum);
-                    arrivableSchedule.add(item);
+                List<SchedulePoint> arrivableSchedule = new ArrayList<>();
+                for (int h = 0; h < 24; h++) {
+                    for (int m = 0; m < 60; m += 10) {
+                        arrivableSchedule.add(new SchedulePoint(h, m + stationNum, 0, null, 60));
+                    }
                 }
                 String arrivableName = String.format("TEST STATION: %d, %d", walkableIndex, stationNum);
                 double[] coords = new double[]{((stationNum + 1) * CENTER[0]) % 90 + walkableIndex, ((stationNum + 1) * CENTER[1]) % 180 + walkableIndex};
@@ -126,6 +129,17 @@ public class DonutLogicSupportTest {
 
         Assert.assertEquals(uniqueCoords.size() + 1, allRoutes.size());
 
+        //Test for a middleman issue
+        allRoutes.parallelStream()
+                .forEach(route -> {
+                    for (int i = 1; i < route.getRoute().size(); i++) {
+                        Assert.assertNotSame(route.getRoute()
+                                .get(i)
+                                .arrivesByFoot(), route.getRoute()
+                                .get(i - 1)
+                                .arrivesByFoot());
+                    }
+                });
     }
 
 
@@ -175,10 +189,8 @@ public class DonutLogicSupportTest {
 
     @Test
     public void getAllPossibleStations() throws Exception {
-
         //Constants
         final int STATIONS = 5;
-        final int[] EVERY_TEN_MINS = new int[]{0, 10, 20, 30, 40, 50};
 
         //Build test data
         Set<TransStation> allStations = new HashSet<>();
@@ -186,10 +198,11 @@ public class DonutLogicSupportTest {
         for (int walkableIndex = 0; walkableIndex < WALKABLEPTS.length; walkableIndex++) {
             TransChain testChain = new TransChain("TEST CHAIN: " + walkableIndex);
 
-            List<TimeModel> walkableSchedule = new ArrayList<>(EVERY_TEN_MINS.length);
-            for (int min : EVERY_TEN_MINS) {
-                TimeModel item = TimeModel.empty().set(TimeModel.MINUTE, min);
-                walkableSchedule.add(item);
+            List<SchedulePoint> walkableSchedule = new ArrayList<>();
+            for (int h = 0; h < 23; h++) {
+                for (int m = 0; m < 60; m += 10) {
+                    walkableSchedule.add(new SchedulePoint(h, m, 0, null, 60));
+                }
             }
             String walkableName = String.format("TEST STATION: %d,W", walkableIndex);
             double[] walkableCoords = WALKABLEPTS[walkableIndex];
@@ -198,13 +211,14 @@ public class DonutLogicSupportTest {
             testStations.add(walkable);
 
             for (int stationNum = 1; stationNum < STATIONS; stationNum++) {
-                List<TimeModel> arrivableSchedule = new ArrayList<>(EVERY_TEN_MINS.length);
-                for (int min : EVERY_TEN_MINS) {
-                    TimeModel item = TimeModel.empty().set(TimeModel.MINUTE, min + stationNum);
-                    arrivableSchedule.add(item);
+                List<SchedulePoint> arrivableSchedule = new ArrayList<>();
+                for (int h = 0; h < 24; h++) {
+                    for (int m = 0; m < 60; m += 10) {
+                        arrivableSchedule.add(new SchedulePoint(h, m + stationNum, 0, null, 60));
+                    }
                 }
                 String arrivableName = String.format("TEST STATION: %d, %d", walkableIndex, stationNum);
-                double[] coords = new double[]{((stationNum + 1) * CENTER[0]) % 90, ((stationNum + 1) * CENTER[1]) % 180};
+                double[] coords = new double[] { ((stationNum + 1) * CENTER[0]) % 90 + walkableIndex, ((stationNum + 1) * CENTER[1]) % 180 + walkableIndex };
                 TransStation arrivable = new TransStation(arrivableName, coords, arrivableSchedule, testChain);
                 allStations.add(arrivable);
             }
@@ -257,9 +271,10 @@ public class DonutLogicSupportTest {
         TransChain chain = new TransChain("TEST CHAIN");
         List<TransStation> testStations = new ArrayList<>(STATIONS);
         for (int i = 0; i < STATIONS; i++) {
-            List<TimeModel> schedule = new ArrayList<>(6);
-            for (int MIN : EVERY_TEN_MINS) {
-                schedule.add(TimeModel.empty().set(TimeModel.MINUTE, MIN + i));
+            List<SchedulePoint> schedule = new ArrayList<>(6);
+            for (int h = 0; h < 24; h++)
+                for (int m = 0; m < 60; m += 10) {
+                    schedule.add(new SchedulePoint(h, m + i, 0, null, 60));
             }
             double[] location = WALKABLEPTS[i % WALKABLEPTS.length];
             TransStation testStation = new TransStation("TEST STATION " + i, location, schedule, chain);
@@ -276,8 +291,9 @@ public class DonutLogicSupportTest {
 
             TransStation station = (TransStation) stationNode.getPt();
 
-            int result = STARTTIME.addUnixTime(stationNode.getTotalTimeToArrive()).get(TimeModel.MINUTE) % 10;
-            int expected = station.getSchedule().get(0).get(TimeModel.MINUTE) % 10;
+            int result = STARTTIME.plus(stationNode.getTotalTimeToArrive())
+                    .getMinute() % 10;
+            int expected = station.getSchedule().get(0).getMinute() % 10;
             Assert.assertEquals(expected, result);
         }
     }

@@ -8,15 +8,15 @@ import org.tymit.projectdonut.utils.LoggingUtils;
 public class TravelRouteNode {
 
     private LocationPoint pt;
-    private long walkTimeFromPrev;
-    private long waitTimeFromPrev;
-    private long travelTimeFromPrev;
+    private TimeDelta walkTimeFromPrev;
+    private TimeDelta waitTimeFromPrev;
+    private TimeDelta travelTimeFromPrev;
 
     private TravelRouteNode() {
         pt = null;
-        waitTimeFromPrev = -1;
-        walkTimeFromPrev = -1;
-        travelTimeFromPrev = -1;
+        waitTimeFromPrev = TimeDelta.NULL;
+        walkTimeFromPrev = TimeDelta.NULL;
+        travelTimeFromPrev = TimeDelta.NULL;
     }
 
     public boolean arrivesByTransportation() {
@@ -28,44 +28,27 @@ public class TravelRouteNode {
     }
 
     public boolean arrivesByFoot() {
-        return !isStart() && waitTimeFromPrev < 0 && travelTimeFromPrev < 0;
+        return !isStart() && waitTimeFromPrev == TimeDelta.NULL && travelTimeFromPrev == TimeDelta.NULL;
     }
 
     public boolean isDest() {
         return pt instanceof DestinationLocation;
     }
 
-    public long getTotalTimeToArrive() {
-        if (isStart()) return -1;
-        long totalTime = 0;
-        if (waitTimeFromPrev > 0) totalTime += waitTimeFromPrev;
-        if (travelTimeFromPrev > 0) totalTime += travelTimeFromPrev;
-        if (walkTimeFromPrev > 0) totalTime += walkTimeFromPrev;
-        return totalTime;
-    }
-
-    public LocationPoint getPt() {
-        return pt;
-    }
-
-    public long getWalkTimeFromPrev() {
-        return walkTimeFromPrev;
-    }
-
-    public long getWaitTimeFromPrev() {
-        return waitTimeFromPrev;
-    }
-
-    public long getTravelTimeFromPrev() {
-        return travelTimeFromPrev;
+    public TimeDelta getTotalTimeToArrive() {
+        if (isStart()) return TimeDelta.NULL;
+        return TimeDelta.NULL
+                .plus(waitTimeFromPrev)
+                .plus(walkTimeFromPrev)
+                .plus(travelTimeFromPrev);
     }
 
     @Override
     public int hashCode() {
-        int result = pt.hashCode();
-        result = 31 * result + (int) (walkTimeFromPrev ^ (walkTimeFromPrev >>> 32));
-        result = 31 * result + (int) (waitTimeFromPrev ^ (waitTimeFromPrev >>> 32));
-        result = 31 * result + (int) (travelTimeFromPrev ^ (travelTimeFromPrev >>> 32));
+        int result = getPt().hashCode();
+        result = 31 * result + getWalkTimeFromPrev().hashCode();
+        result = 31 * result + getWaitTimeFromPrev().hashCode();
+        result = 31 * result + getTravelTimeFromPrev().hashCode();
         return result;
     }
 
@@ -76,17 +59,34 @@ public class TravelRouteNode {
 
         TravelRouteNode that = (TravelRouteNode) o;
 
-        return walkTimeFromPrev == that.walkTimeFromPrev
-                && waitTimeFromPrev == that.waitTimeFromPrev
-                && travelTimeFromPrev == that.travelTimeFromPrev
-                && pt.equals(that.pt);
+        if (!getPt().equals(that.getPt())) return false;
+        if (!getWalkTimeFromPrev().equals(that.getWalkTimeFromPrev()))
+            return false;
+        if (!getWaitTimeFromPrev().equals(that.getWaitTimeFromPrev()))
+            return false;
+        return getTravelTimeFromPrev().equals(that.getTravelTimeFromPrev());
+    }
 
+    public LocationPoint getPt() {
+        return pt;
+    }
+
+    public TimeDelta getWalkTimeFromPrev() {
+        return walkTimeFromPrev;
+    }
+
+    public TimeDelta getWaitTimeFromPrev() {
+        return waitTimeFromPrev;
+    }
+
+    public TimeDelta getTravelTimeFromPrev() {
+        return travelTimeFromPrev;
     }
 
     @Override
     public String toString() {
         return "TravelRouteNode{" +
-                "pt=" + pt.toString() +
+                "pt=" + pt +
                 ", walkTimeFromPrev=" + walkTimeFromPrev +
                 ", waitTimeFromPrev=" + waitTimeFromPrev +
                 ", travelTimeFromPrev=" + travelTimeFromPrev +
@@ -106,17 +106,17 @@ public class TravelRouteNode {
         }
 
         public Builder setWalkTime(long walkTime) {
-            output.walkTimeFromPrev = walkTime;
+            output.walkTimeFromPrev = new TimeDelta(walkTime);
             return this;
         }
 
         public Builder setWaitTime(long waitTime) {
-            output.waitTimeFromPrev = waitTime;
+            output.waitTimeFromPrev = new TimeDelta(waitTime);
             return this;
         }
 
         public Builder setTravelTime(long travelTime) {
-            output.travelTimeFromPrev = travelTime;
+            output.travelTimeFromPrev = new TimeDelta(travelTime);
             return this;
         }
 

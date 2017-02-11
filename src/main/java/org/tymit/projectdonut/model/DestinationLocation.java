@@ -36,8 +36,7 @@ public class DestinationLocation implements LocationPoint {
 
     @Override
     public int hashCode() {
-        int result = name.hashCode();
-        result = 31 * result + type.hashCode();
+        int result = getType().hashCode();
         result = 31 * result + Arrays.hashCode(latLong);
         return result;
     }
@@ -49,7 +48,6 @@ public class DestinationLocation implements LocationPoint {
 
         DestinationLocation location = (DestinationLocation) o;
 
-        if (!name.equals(location.name)) return false;
         if (!type.equals(location.type)) return false;
         if (Math.abs(location.getCoordinates()[0] - getCoordinates()[0]) > ERROR_MARGIN) return false;
         return Math.abs(location.getCoordinates()[1] - getCoordinates()[1]) <= ERROR_MARGIN;

@@ -1,12 +1,9 @@
 package org.tymit.projectdonut.model;
 
-import org.tymit.projectdonut.utils.LoggingUtils;
-
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Created by ilan on 7/7/16.
@@ -16,7 +13,7 @@ public class TransStation implements LocationPoint {
     private static final LocationType type = new LocationType("Station", "TransStation");
     private final double[] location;
     private final String name;
-    private List<TimeModel> schedule;
+    private List<SchedulePoint> schedule;
     private TransChain chain;
 
 
@@ -25,11 +22,10 @@ public class TransStation implements LocationPoint {
         this.location = location;
     }
 
-    public TransStation(String name, double[] location, List<TimeModel> schedule, TransChain chain) {
+    public TransStation(String name, double[] location, List<SchedulePoint> schedule, TransChain chain) {
         this.location = location;
         this.name = name;
         this.schedule = schedule;
-        if(schedule != null) schedule.remove(TimeModel.empty());
         this.chain = chain;
 
         chain.addStation(this);
@@ -54,53 +50,19 @@ public class TransStation implements LocationPoint {
         return chain;
     }
 
-    public List<TimeModel> getSchedule() {
+    public List<SchedulePoint> getSchedule() {
         return new ArrayList<>(schedule);
     }
 
-    public TimeModel getNextArrival(TimeModel start) {
-        long min = Long.MAX_VALUE;
-        TimeModel minTime = null;
-
-        Map<TimeModel, Long> results = new HashMap<>();
-        for (TimeModel possible : schedule) {
-            long compareVal = possible.compareTo(start);
-            if (compareVal <= 0 && possible.get(TimeModel.HOUR) < 0) {
-                possible = possible.set(TimeModel.HOUR, start.get(TimeModel.HOUR) + 1);
-                compareVal = possible.compareTo(start);
-            }
-            if (compareVal <= 0 && possible.get(TimeModel.DAY_OF_MONTH) < 0) {
-                possible = possible.set(TimeModel.DAY_OF_MONTH, start.get(TimeModel.DAY_OF_MONTH) + 1);
-                compareVal = possible.compareTo(start);
-            }
-            if (compareVal > 0 && compareVal < min) {
-                min = compareVal;
-                minTime = possible;
-            }
-            if (compareVal == 0 && minTime == null){
-                minTime = TimeModel.empty();
-            }
-
-            results.put(possible, compareVal);
-        }
-        if (minTime == null){
-            String errMsg = "Mintime is NULL.\n\n";
-            errMsg += String.format("Data:\nThis: %s\nStart: %s\nSchedule: %s\n", this.toString(), start.toString(), this.getSchedule().toString());
-            for (TimeModel trial : results.keySet()){
-                errMsg += String.format("%s -> %d", trial.toString(), results.get(trial));
-            }
-            LoggingUtils.logError("TransStation", errMsg);
-            throw new RuntimeException(errMsg);
-        }
-        TimeModel rval = minTime.toInstant(start);
-        if (rval.getUnixTime() < start.getUnixTime()){
-            LoggingUtils.logError("TransStation", "Rval before start.\nRval: %s\nStart: %s\n", rval.toString(), start.toString());
-            throw new RuntimeException();
-        }
-        return rval;
+    public TimePoint getNextArrival(TimePoint start) {
+        TimePoint tp = schedule.parallelStream()
+                .map(sp -> sp.nextValidTime(start))
+                .min(Comparator.naturalOrder())
+                .get();
+        return tp;
     }
 
-    public TransStation clone(List<TimeModel> newSchedule, TransChain newChain) {
+    public TransStation clone(List<SchedulePoint> newSchedule, TransChain newChain) {
         return new TransStation(name, location, newSchedule, newChain);
     }
 
@@ -131,9 +93,11 @@ public class TransStation implements LocationPoint {
     @Override
     public String toString() {
         return "TransStation{" +
-                "chain=" + ((chain != null) ? chain.toString() : "null") +
+                "location=" + Arrays.toString(location) +
                 ", name='" + name + '\'' +
-                ", location=" + Arrays.toString(location) +
+                ", schedule=" + schedule +
+                ", chain=" + chain +
                 '}';
     }
+
 }

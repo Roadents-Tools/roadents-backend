@@ -6,7 +6,7 @@ import org.onebusaway.gtfs.impl.GtfsDaoImpl;
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.model.Route;
 import org.slf4j.LoggerFactory;
-import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.SchedulePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 
@@ -38,8 +38,8 @@ public class GtfsSupport {
      * @param store
      * @return a map from trip id -> TransStation in trip -> schedule for that TransStation
      */
-    public static Map<String, Map<TransStation, List<TimeModel>>> getSchedulesForTrips(GtfsDaoImpl store) {
-        Map<String, Map<TransStation, List<TimeModel>>> rval = new ConcurrentHashMap<>();
+    public static Map<String, Map<TransStation, List<SchedulePoint>>> getSchedulesForTrips(GtfsDaoImpl store) {
+        Map<String, Map<TransStation, List<SchedulePoint>>> rval = new ConcurrentHashMap<>();
 
 
         Map<String, TransStation> stations = getBaseStops(store);
@@ -54,10 +54,7 @@ public class GtfsSupport {
 
                     int secondsSinceMidnight = (stopTime.getDepartureTime() > 0) ? stopTime.getDepartureTime() : stopTime.getArrivalTime();
 
-                    TimeModel model = TimeModel.empty()
-                            .set(TimeModel.SECOND, secondsSinceMidnight % 60)
-                            .set(TimeModel.MINUTE, (secondsSinceMidnight / 60) % 60)
-                            .set(TimeModel.HOUR, secondsSinceMidnight / 60 / 60);
+                    SchedulePoint model = new SchedulePoint(secondsSinceMidnight % 60, (secondsSinceMidnight / 60) % 60, (secondsSinceMidnight / 3600) % 60, null, 60);
                     rval.get(tripId).get(station).add(model);
                 });
         return rval;
