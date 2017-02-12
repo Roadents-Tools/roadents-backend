@@ -162,20 +162,26 @@ public final class DonutLogicSupport {
 
         TimePoint trueStart = getStationWithSchedule(station).getNextArrival(startTime);
 
+        TimeDelta waitTime = startTime.timeUntil(trueStart);
 
-        return StationRetriever.getStations(null, 0, station.getChain(), null)./*parallelS*/stream()
+        if (waitTime.getDeltaLong() >= maxDelta.getDeltaLong()) {
+            return Collections.emptySet();
+        }
+
+        Set<TravelRouteNode> rval = StationRetriever.getStations(trueStart, maxDelta, station
+                .getChain(), null)./*parallelS*/stream()
                 .filter(fromChain -> !Arrays.equals(fromChain.getCoordinates(), station.getCoordinates()))
                 .map(DonutLogicSupport::getStationWithSchedule)
                 .filter(fromChain -> startTime.timeUntil(fromChain.getNextArrival(trueStart))
                         .getDeltaLong() <= maxDelta.getDeltaLong())
                 .map(fromChain -> new TravelRouteNode.Builder()
-                        .setWaitTime(startTime.timeUntil(trueStart)
-                                .getDeltaLong())
+                        .setWaitTime(waitTime.getDeltaLong())
                         .setPoint(fromChain)
                         .setTravelTime(fromChain.getNextArrival(trueStart).getUnixTime() - trueStart.getUnixTime())
                         .build()
                 )
                 .collect(Collectors.toSet());
+        return rval;
     }
 
     /**

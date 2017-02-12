@@ -17,13 +17,13 @@ public class SchedulePoint {
         if (validDays == null) validDays = new boolean[7];
         Arrays.fill(validDays, true);
         if (validDays.length != 7)
-            throw new IllegalArgumentException("There are 7 days in the week.");
+            throw new IllegalArgumentException("There are 7 days in the week. You passed: " + validDays.length);
         if (hour < 0 || hour > 23)
             throw new IllegalArgumentException("There are 24 hours in the day. You passed " + hour);
         if (minute < 0 || minute > 60)
-            throw new IllegalArgumentException("There are 60 minutes in an hour.");
+            throw new IllegalArgumentException("There are 60 minutes in an hour. You passed " + minute);
         if (second < 0 || second > 60)
-            throw new IllegalArgumentException("there are 60 seconds in a minute.");
+            throw new IllegalArgumentException("there are 60 seconds in a minute. You passed " + second);
         if (fuzz < 0) throw new IllegalArgumentException("Cannot time travel.");
         this.validDays = validDays;
         this.hour = hour;
@@ -84,6 +84,17 @@ public class SchedulePoint {
         return Arrays.equals(getValidDays(), that.getValidDays());
     }
 
+    @Override
+    public String toString() {
+        return "SchedulePoint{" +
+                "validDays=" + Arrays.toString(validDays) +
+                ", hour=" + hour +
+                ", minute=" + minute +
+                ", second=" + second +
+                ", fuzz=" + fuzz +
+                '}';
+    }
+
     public boolean[] getValidDays() {
         return validDays;
     }
@@ -102,16 +113,5 @@ public class SchedulePoint {
 
     public long getFuzz() {
         return fuzz;
-    }
-
-    @Override
-    public String toString() {
-        return "SchedulePoint{" +
-                "validDays=" + Arrays.toString(validDays) +
-                ", hour=" + hour +
-                ", minute=" + minute +
-                ", second=" + second +
-                ", fuzz=" + fuzz +
-                '}';
     }
 }

@@ -19,7 +19,7 @@ import java.util.Map;
 /**
  * Created by ilan on 7/9/16.
  */
-public class MysqlStationDb implements StationDbInstance {
+public class MysqlStationDb implements StationDbInstance.AreaDb {
 
     public static final String[] DB_URLS = new String[] { "jdbc:mysql://127.0.0.1:3306/Donut" };
     private static final String USER = "donut";

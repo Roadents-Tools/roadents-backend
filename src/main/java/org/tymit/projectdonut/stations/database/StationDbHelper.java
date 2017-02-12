@@ -1,5 +1,7 @@
 package org.tymit.projectdonut.stations.database;
 
+import org.tymit.projectdonut.model.TimeDelta;
+import org.tymit.projectdonut.model.TimePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.stations.caches.StationChainCacheHelper;
@@ -65,7 +67,9 @@ public class StationDbHelper {
 
         List<TransStation> rval = Arrays.stream(allDatabases)
                 .filter(StationDbInstance::isUp)
-                .flatMap(db -> db.queryStations(center, range, chain).stream())
+                .filter(db -> db instanceof StationDbInstance.AreaDb)
+                .flatMap(db -> ((StationDbInstance.AreaDb) db).queryStations(center, range, chain)
+                        .stream())
                 .distinct()
                 .collect(Collectors.toList());
 
@@ -73,6 +77,18 @@ public class StationDbHelper {
         return rval;
     }
 
+    public List<TransStation> queryStations(TimePoint start, TimeDelta range, TransChain chain) {
+
+        //TODO: Implement schedule-based caching
+
+        return Arrays.stream(allDatabases)
+                .filter(StationDbInstance::isUp)
+                .filter(db -> db instanceof StationDbInstance.ScheduleDb)
+                .flatMap(db -> ((StationDbInstance.ScheduleDb) db).queryStations(start, range, chain)
+                        .stream())
+                .distinct()
+                .collect(Collectors.toList());
+    }
     public boolean putStations(List<TransStation> stations) {
         //We create a boolean set and then check if any are true
         //to guarantee that all instances are attempted.

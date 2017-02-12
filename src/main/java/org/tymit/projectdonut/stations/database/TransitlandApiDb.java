@@ -26,7 +26,7 @@ import java.util.stream.IntStream;
 /**
  * Created by ilan on 1/22/17.
  */
-public class TransitlandApiDb implements StationDbInstance {
+public class TransitlandApiDb implements StationDbInstance.AreaDb, StationDbInstance.ScheduleDb {
 
     private static final int MAX_QUERY_SIZE = 100;
 
@@ -34,7 +34,7 @@ public class TransitlandApiDb implements StationDbInstance {
     private static final String AREA_FORMAT = "bbox=%f,%f,%f,%f";
     private static final String ROUTE_FORMAT = "route_onestop_id=%s";
     private static final String TRIP_FORMAT = "trip=%s";
-    private static final String SCHEDULE_FORMAT = "origin_departure_between=%d:%d,%d:%d";
+    private static final String SCHEDULE_FORMAT = "origin_departure_between=%d:%d,%d:%d&date=%d-%d-%d";
     private static final String STOP_ID_URL = "http://transit.land/api/v1/stops?per_page=" + MAX_QUERY_SIZE + "&onestop_id=%s";
 
     private static final double MILES_TO_LAT = 1.0 / 69.5;
@@ -58,8 +58,9 @@ public class TransitlandApiDb implements StationDbInstance {
     public List<TransStation> queryStations(double[] center, double range, TimePoint start, TimeDelta maxDelta, TransChain chain) {
 
         //Get scheduling info
+        String scheduleUrl = buildScheduleUrl(center, range, start, maxDelta, chain);
         Request request = new Request.Builder()
-                .url(buildScheduleUrl(center, range, start, maxDelta, chain))
+                .url(scheduleUrl)
                 .build();
 
         Response response;
@@ -157,13 +158,19 @@ public class TransitlandApiDb implements StationDbInstance {
                 builder.append(String.format(TRIP_FORMAT, chain.getName()));
             else builder.append(String.format(ROUTE_FORMAT, routeTrip[0]))
                     .append("&")
-                    .append(String.format(TRIP_FORMAT, routeTrip[1]));
+                    .append(String.format(TRIP_FORMAT, routeTrip[1]))
+                    .append("&");
         }
         if (start != null && maxDelta != null && maxDelta != TimeDelta.NULL) {
             TimePoint maxTime = start.plus(maxDelta);
             builder.append(String.format(SCHEDULE_FORMAT, start.getHour(), start
-                    .getMinute(), maxTime.getHour(), maxTime.getMinute()))
+                            .getMinute(),
+                    (maxTime.getHour() > start.getHour()) ? maxTime.getHour() : maxTime
+                            .getHour() + 24, maxTime.getMinute(),
+                    start.getYear(), start.getMonth(), start.getDayOfMonth())
+            )
                     .append("&");
+
         }
         return BASE_SCHEDULE_URL + builder.toString();
     }
@@ -194,6 +201,11 @@ public class TransitlandApiDb implements StationDbInstance {
     }
 
     @Override
+    public List<TransStation> queryStations(TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+        return queryStations(null, 0, startTime, maxDelta, chain);
+    }
+
+    @Override
     public boolean putStations(List<TransStation> stations) {
         return true;
     }
@@ -206,5 +218,4 @@ public class TransitlandApiDb implements StationDbInstance {
     @Override
     public void close() {
     }
-
 }

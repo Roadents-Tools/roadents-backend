@@ -39,9 +39,9 @@ public class TestDisplayer {
         route.getRoute().stream()
                 .map(node -> String.format(TestDisplayConstants.ROUTE_ELEMENT_FORMAT,
                         node.getWalkTimeFromPrev()
-                                .getDeltaLong(), node.getWaitTimeFromPrev()
-                                .getDeltaLong(), node.getTravelTimeFromPrev()
-                                .getDeltaLong(),
+                                .getDeltaLong() / 60000, node.getWaitTimeFromPrev()
+                                .getDeltaLong() / 60000, node.getTravelTimeFromPrev()
+                                .getDeltaLong() / 60000,
                         node.getPt().getName(), node.getPt()
                                 .getCoordinates()[0], node.getPt()
                                 .getCoordinates()[1],
