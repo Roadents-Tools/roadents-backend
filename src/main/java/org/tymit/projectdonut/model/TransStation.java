@@ -13,13 +13,15 @@ public class TransStation implements LocationPoint {
     private static final LocationType type = new LocationType("Station", "TransStation");
     private final double[] location;
     private final String name;
-    private List<SchedulePoint> schedule;
-    private TransChain chain;
+    private final List<SchedulePoint> schedule;
+    private final TransChain chain;
 
 
     public TransStation(String name, double[] location) {
         this.name = name;
         this.location = location;
+        schedule = null;
+        chain = null;
     }
 
     public TransStation(String name, double[] location, List<SchedulePoint> schedule, TransChain chain) {
@@ -100,4 +102,11 @@ public class TransStation implements LocationPoint {
                 '}';
     }
 
+    public TransStation withSchedule(TransChain chain, List<SchedulePoint> schedule) {
+        return new TransStation(name, location, schedule, chain);
+    }
+
+    public TransStation stripSchedule() {
+        return new TransStation(name, location);
+    }
 }
