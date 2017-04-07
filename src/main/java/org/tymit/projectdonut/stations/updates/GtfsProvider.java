@@ -12,6 +12,10 @@ import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -43,16 +47,33 @@ public class GtfsProvider implements StationProvider {
         disableApacheLogging();
     }
 
-    private String zipFileName;
+    private File zipFile;
     private Map<TransChain, List<TransStation>> cache;
     private boolean isWorking = true;
 
     public GtfsProvider(String fileName) {
-        zipFileName = fileName;
+        zipFile = new File(fileName);
     }
 
     public GtfsProvider(File file) {
-        zipFileName = file.getName();
+        zipFile = file;
+    }
+
+    public GtfsProvider(URL url) {
+        zipFile = new File(url.getFile().replaceAll("/", "__"));
+        try {
+            zipFile.delete();
+            zipFile.createNewFile();
+            zipFile.setWritable(true);
+            System.out.println("\n\n" + url.toString() + "\n\n");
+            URLConnection con = url.openConnection();
+            URL trurl = con.getHeaderField("Location") == null ? url : new URL(con
+                    .getHeaderField("Location"));
+            Files.copy(trurl.openStream(), zipFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        } catch (Exception e) {
+            LoggingUtils.logError(e);
+            isWorking = false;
+        }
     }
 
     private static void disableApacheLogging() {
@@ -84,8 +105,6 @@ public class GtfsProvider implements StationProvider {
     }
 
     private void cacheData() {
-        File zipFile = new File(zipFileName);
-
         GtfsDaoImpl store;
 
         try {
@@ -115,7 +134,7 @@ public class GtfsProvider implements StationProvider {
         if (cache.size() == 0) {
             LoggingUtils.logError(getClass().getName(),
                     "WARNING: GTFS file %s returned no data. Are you sure everything is correct?",
-                    zipFileName
+                    zipFile.getName()
             );
         }
     }
@@ -131,7 +150,7 @@ public class GtfsProvider implements StationProvider {
 
     @Override
     public int hashCode() {
-        return zipFileName != null ? zipFileName.hashCode() : 0;
+        return zipFile != null ? zipFile.hashCode() : 0;
     }
 
     @Override
@@ -141,14 +160,14 @@ public class GtfsProvider implements StationProvider {
 
         GtfsProvider provider = (GtfsProvider) o;
 
-        return zipFileName != null ? zipFileName.equals(provider.zipFileName) : provider.zipFileName == null;
+        return zipFile != null ? zipFile.equals(provider.zipFile) : provider.zipFile == null;
 
     }
 
     @Override
     public String toString() {
         return "GtfsProvider{" +
-                "zipFileName='" + zipFileName + '\'' +
+                "zipFileName='" + zipFile.getName() + '\'' +
                 '}';
     }
 }

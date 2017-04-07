@@ -54,7 +54,7 @@ public class GtfsSupport {
 
                     int secondsSinceMidnight = (stopTime.getDepartureTime() > 0) ? stopTime.getDepartureTime() : stopTime.getArrivalTime();
 
-                    SchedulePoint model = new SchedulePoint(secondsSinceMidnight % 60, (secondsSinceMidnight / 60) % 60, (secondsSinceMidnight / 3600) % 60, null, 60);
+                    SchedulePoint model = new SchedulePoint((secondsSinceMidnight % 60 < 24) ? secondsSinceMidnight % 60 : secondsSinceMidnight % 60 % 24, (secondsSinceMidnight / 60) % 60, (secondsSinceMidnight / 3600) % 60, null, 60);
                     rval.get(tripId).get(station).add(model);
                 });
         return rval;
