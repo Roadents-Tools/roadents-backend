@@ -6,6 +6,7 @@ import org.tymit.projectdonut.model.TimeDelta;
 import org.tymit.projectdonut.model.TimePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
+import org.tymit.projectdonut.stations.caches.StationChainCacheHelper;
 import org.tymit.projectdonut.stations.database.StationDbHelper;
 import org.tymit.projectdonut.stations.updates.StationDbUpdater;
 
@@ -16,9 +17,24 @@ import java.util.List;
  * Created by ilan on 7/7/16.
  */
 public class StationRetriever {
-    public static List<TransStation> getStations(double[] center, double range, TransChain chain, List<CostArgs> args) {
 
-        List<TransStation> allStations = StationDbHelper.getHelper().queryStations(center, range, chain);
+
+    @Deprecated
+    public static List<TransStation> getStations(double[] center, double range, TransChain chain, List<CostArgs> args) {
+        return getStations(center, range, null, null, chain, args);
+    }
+
+    public static List<TransStation> getStations(double[] center, double range,
+                                                 TimePoint startTime, TimeDelta maxDelta,
+                                                 TransChain chain, List<CostArgs> args) {
+        List<TransStation> allStations = StationChainCacheHelper.getHelper()
+                .getCachedStations(center, range, startTime, maxDelta, chain);
+        if (allStations == null || allStations.isEmpty()) {
+            allStations = StationDbHelper.getHelper()
+                    .queryStations(center, range, startTime, maxDelta, chain);
+            if (chain == null) StationChainCacheHelper.getHelper()
+                    .cacheStations(center, range, startTime, maxDelta, allStations);
+        }
 
         if (args == null || args.size() == 0) return allStations;
         Iterator<TransStation> stationIterator = allStations.iterator();
@@ -32,20 +48,9 @@ public class StationRetriever {
         return allStations;
     }
 
+    @Deprecated
     public static List<TransStation> getStations(TimePoint startTime, TimeDelta range, TransChain chain, List<CostArgs> args) {
-
-        List<TransStation> allStations = StationDbHelper.getHelper()
-                .queryStations(startTime, range, chain);
-
-        if (args == null || args.size() == 0) return allStations;
-        Iterator<TransStation> stationIterator = allStations.iterator();
-        while (stationIterator.hasNext()) {
-            for (CostArgs arg : args) {
-                arg.setSubject(stationIterator.next());
-                if (!CostCalculator.isWithinCosts(arg)) stationIterator.remove();
-            }
-        }
-        return allStations;
+        return getStations(null, -1, startTime, range, chain, args);
     }
 
     public static void setTestMode(boolean testMode) {
