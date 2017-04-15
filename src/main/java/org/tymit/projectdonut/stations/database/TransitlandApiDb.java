@@ -13,6 +13,8 @@ import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.io.IOException;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +33,7 @@ public class TransitlandApiDb implements StationDbInstance.AreaDb, StationDbInst
     private static final int MAX_QUERY_SIZE = 100;
 
     private static final String BASE_SCHEDULE_URL = "http://transit.land/api/v1/schedule_stop_pairs";
+    private static final String BASE_FEED_URL = "http://transit.land/api/v1/feeds";
     private static final String AREA_FORMAT = "bbox=%f,%f,%f,%f";
     private static final String ROUTE_FORMAT = "route_onestop_id=%s";
     private static final String TRIP_FORMAT = "trip=%s";
@@ -39,7 +42,6 @@ public class TransitlandApiDb implements StationDbInstance.AreaDb, StationDbInst
 
     private static final double MILES_TO_LAT = 1.0 / 69.5;
     private static final double MILES_TO_LONG = 1 / 69.5;
-    private static final int MAX_CACHE_SIZE = 1000;
 
     private OkHttpClient client;
     private boolean isUp;
@@ -133,7 +135,6 @@ public class TransitlandApiDb implements StationDbInstance.AreaDb, StationDbInst
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
-        ;
         return rval;
     }
 
@@ -212,10 +213,46 @@ public class TransitlandApiDb implements StationDbInstance.AreaDb, StationDbInst
 
     @Override
     public boolean isUp() {
-        return true;
+        return isUp;
     }
 
     @Override
     public void close() {
+    }
+
+    public List<URL> getFeedsInArea(double[] center, double range, Map<String, String> restrictions) {
+        String url = BASE_FEED_URL + "?per_page=500";
+        if (center != null && range >= 0) {
+            double latVal1 = center[0] - range * MILES_TO_LAT;
+            double latVal2 = center[0] + range * MILES_TO_LAT;
+
+            double lngVal1 = center[1] - range * MILES_TO_LONG;
+            double lngVal2 = center[1] + range * MILES_TO_LONG;
+            url += "&" + String.format(AREA_FORMAT, lngVal1, latVal1, lngVal2, latVal2);
+        }
+        Request req = new Request.Builder()
+                .url(url)
+                .build();
+        try {
+            Response res = client.newCall(req).execute();
+            JSONObject obj = new JSONObject(res.body().string());
+            JSONArray feeds = obj.getJSONArray("feeds");
+            int len = feeds.length();
+            List<URL> rval = new ArrayList<>(len);
+            for (int i = 0; i < len; i++) {
+                JSONObject curobj = feeds.getJSONObject(i);
+                boolean works = restrictions == null ||
+                        restrictions.keySet()
+                                .stream()
+                                .allMatch(key -> curobj.get(key)
+                                        .equals(restrictions.get(key)));
+                if (works) rval.add(new URL(curobj.getString("url")));
+            }
+            return rval;
+        } catch (Exception e) {
+            LoggingUtils.logError(e);
+            isUp = false;
+            return null;
+        }
     }
 }
