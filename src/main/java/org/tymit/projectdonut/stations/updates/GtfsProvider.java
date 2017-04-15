@@ -17,6 +17,7 @@ import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,6 +51,7 @@ public class GtfsProvider implements StationProvider {
     private File zipFile;
     private Map<TransChain, List<TransStation>> cache;
     private boolean isWorking = true;
+    private boolean deleteOnCache = false;
 
     public GtfsProvider(String fileName) {
         zipFile = new File(fileName);
@@ -65,11 +67,12 @@ public class GtfsProvider implements StationProvider {
             zipFile.delete();
             zipFile.createNewFile();
             zipFile.setWritable(true);
-            System.out.println("\n\n" + url.toString() + "\n\n");
             URLConnection con = url.openConnection();
-            URL trurl = con.getHeaderField("Location") == null ? url : new URL(con
-                    .getHeaderField("Location"));
+            URL trurl = con.getHeaderField("Location") == null
+                    ? url
+                    : new URL(con.getHeaderField("Location"));
             Files.copy(trurl.openStream(), zipFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            deleteOnCache = true;
         } catch (Exception e) {
             LoggingUtils.logError(e);
             isWorking = false;
@@ -94,6 +97,11 @@ public class GtfsProvider implements StationProvider {
     @Override
     public Map<TransChain, List<TransStation>> getUpdatedStations() {
         if (cache == null) cacheData();
+        if (cache == null) {
+            LoggingUtils.logError(new Exception("Cacheing failed."));
+            isWorking = false;
+            return Collections.emptyMap();
+        }
         return new ConcurrentHashMap<>(cache);
     }
 
@@ -137,6 +145,8 @@ public class GtfsProvider implements StationProvider {
                     zipFile.getName()
             );
         }
+
+        if (deleteOnCache) zipFile.delete();
     }
 
     private GtfsDaoImpl readData(File file) throws IOException {
