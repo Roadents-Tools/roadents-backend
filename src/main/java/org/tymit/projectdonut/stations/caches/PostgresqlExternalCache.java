@@ -73,6 +73,12 @@ public class PostgresqlExternalCache implements StationCacheInstance {
     @Override
     public boolean cacheStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, List<TransStation> stations) {
         try {
+
+            //Null time values = all possible available schedule points.
+            if (startTime == null && maxDelta == null) {
+                startTime = new TimePoint(0, "GMT-8:00");
+                maxDelta = new TimeDelta(Long.MAX_VALUE);
+            }
             return PostgresSqlSupport.storeArea(getConnection(), center, range, startTime, maxDelta, stations);
         } catch (SQLException e) {
             LoggingUtils.logError(e);
@@ -98,11 +104,6 @@ public class PostgresqlExternalCache implements StationCacheInstance {
             LoggingUtils.logError(e);
             return Collections.emptyList();
         }
-    }
-
-    @Override
-    public int getSize() {
-        return 0;
     }
 
     public boolean isUp() {

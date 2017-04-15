@@ -205,20 +205,6 @@ public class PostgresSqlSupport {
                 .getDeltaLong() : MAX_POSTGRES_INTERVAL_MILLI;
         Statement stm = con.createStatement();
 
-        //Insert the range into the database
-        String query = String.format("INSERT INTO %s(%s, %s, %s, %s) " +
-                        "VALUES (ST_POINT(%f,%f)::geography, %f, to_timestamp(%d), INTERVAL '%d seconds') " +
-                        "ON CONFLICT(%s, %s) DO UPDATE SET %s=%f, %s=to_timestamp(%d), %s=INTERVAL '%d seconds'",
-                PostgresqlContract.RANGE_TABLE_NAME, PostgresqlContract.RANGE_LAT_KEY, PostgresqlContract.RANGE_BOX_KEY, PostgresqlContract.RANGE_TIME_KEY, PostgresqlContract.RANGE_FUZZ_KEY,
-                center[0], center[1], LocationUtils.milesToMeters(range), startTime
-                        .getUnixTime(), deltlong / 1000,
-                PostgresqlContract.RANGE_LAT_KEY, PostgresqlContract.RANGE_TIME_KEY,
-                PostgresqlContract.RANGE_BOX_KEY, LocationUtils.milesToMeters(range),
-                PostgresqlContract.RANGE_TIME_KEY, startTime.getUnixTime(),
-                PostgresqlContract.RANGE_FUZZ_KEY, deltlong / 1000
-        );
-        stm.execute(query);
-
         //Insert the chains into the database in a batch
         AtomicInteger ctprev = new AtomicInteger(0);
         stations.stream()
@@ -268,7 +254,7 @@ public class PostgresSqlSupport {
                     }
                 });
 
-        //Finally schedule information
+        //Insert schedule information
         ctprev.set(0);
         stations.stream()
                 .flatMap(PostgresSqlSupport::createScheduleQuery)
@@ -284,6 +270,21 @@ public class PostgresSqlSupport {
                     }
                 });
         if (ctprev.get() != 0) stm.executeBatch();
+
+
+        //Lastly put the range into the database
+        String query = String.format("INSERT INTO %s(%s, %s, %s, %s) " +
+                        "VALUES (ST_POINT(%f,%f)::geography, %f, to_timestamp(%d), INTERVAL '%d seconds') " +
+                        "ON CONFLICT(%s, %s) DO UPDATE SET %s=%f, %s=to_timestamp(%d), %s=INTERVAL '%d seconds'",
+                PostgresqlContract.RANGE_TABLE_NAME, PostgresqlContract.RANGE_LAT_KEY, PostgresqlContract.RANGE_BOX_KEY, PostgresqlContract.RANGE_TIME_KEY, PostgresqlContract.RANGE_FUZZ_KEY,
+                center[0], center[1], (LocationUtils.milesToMeters(range) != Double.POSITIVE_INFINITY) ? LocationUtils
+                        .milesToMeters(range) : 9e99, startTime.getUnixTime(), deltlong / 1000,
+                PostgresqlContract.RANGE_LAT_KEY, PostgresqlContract.RANGE_TIME_KEY,
+                PostgresqlContract.RANGE_BOX_KEY, LocationUtils.milesToMeters(range),
+                PostgresqlContract.RANGE_TIME_KEY, startTime.getUnixTime(),
+                PostgresqlContract.RANGE_FUZZ_KEY, deltlong / 1000
+        );
+        stm.execute(query);
 
         //And close
         stm.close();
