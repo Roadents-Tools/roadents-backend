@@ -1,8 +1,5 @@
 package org.tymit.projectdonut.stations.database;
 
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
@@ -53,9 +50,10 @@ public class MysqlStationDb implements StationDbInstance.AreaDb {
             String deleteQuery = "DELETE FROM " + table + " WHERE " + whereClause;
             try {
                 Connection connection = getConnection();
+                if (connection == null) throw new Exception("Null connection.");
                 if (!connection.createStatement().execute(deleteQuery)) success = false;
                 connection.close();
-            } catch (SQLException e) {
+            } catch (Exception e) {
                 LoggingUtils.logError(e);
                 success = false;
             }
@@ -63,23 +61,23 @@ public class MysqlStationDb implements StationDbInstance.AreaDb {
         return success;
     }
 
-    private Connection getConnection() throws SQLException {
-        return connSource.getConnection();
-    }
-
-    @Override
-    public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
-
-        Connection connection;
+    private Connection getConnection() {
         try {
-            connection = getConnection();
+            return connSource.getConnection();
         } catch (SQLException e) {
             LoggingUtils.logError(e);
             isUp = false;
             return null;
         }
+    }
 
-        Map<TransStation, Integer> queryOut = null;
+    @Override
+    public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
+
+        Connection connection = getConnection();
+        if (connection == null) return null;
+
+        Map<Integer, TransStation> queryOut = null;
         try {
             queryOut = MysqlSupport.getStationIdMap(connection, center, range, chain);
             connection.close();
@@ -87,54 +85,12 @@ public class MysqlStationDb implements StationDbInstance.AreaDb {
             LoggingUtils.logError(e);
         }
         if (queryOut == null) return null;
-        return new ArrayList<>(queryOut.keySet());
+        return new ArrayList<>(queryOut.values());
     }
 
     @Override
     public boolean putStations(List<TransStation> stations) {
-
-        //Declare a cache that maps chain -> Id.
-        //We do this to a) only insert chains if we need to and
-        // b) so that we don't run out of memory.
-        LoadingCache<TransChain, Integer> chainToId = CacheBuilder.newBuilder()
-                .maximumSize(1000)
-                .build(new CacheLoader<TransChain, Integer>() {
-                    @Override
-                    public Integer load(TransChain key) throws Exception {
-                        Connection con = getConnection();
-                        int id = MysqlSupport.insertOrGetChain(con, key);
-                        con.close();
-                        return id;
-                    }
-                });
-
-        //Ditto for the stations.
-        LoadingCache<TransStation, Integer> stationToId = CacheBuilder.newBuilder()
-                .maximumSize(1000)
-                .build(new CacheLoader<TransStation, Integer>() {
-                           @Override
-                           public Integer load(TransStation key) throws Exception {
-                               Connection con = getConnection();
-                               int id = MysqlSupport.insertOrGetStation(con, key);
-                               con.close();
-                               return id;
-                           }
-                       }
-                );
-
-            //Insert new schedules and costs
-        return stations.parallelStream().map(station -> {
-            try {
-                String encodedSchedule = MysqlSupport.encodeSchedule(station.getSchedule());
-                Connection con = getConnection();
-                MysqlSupport.insertOrUpdateCosts(con, stationToId.get(convertToKey(station)), chainToId.get(station.getChain()), encodedSchedule);
-                con.close();
-                return true;
-            } catch (Exception e) {
-                LoggingUtils.logError(e);
-                return false;
-            }
-        }).allMatch(Boolean::booleanValue);
+        return MysqlSupport.insertOrUpdateStations(this::getConnection, stations);
     }
 
     @Override
@@ -145,9 +101,5 @@ public class MysqlStationDb implements StationDbInstance.AreaDb {
     @Override
     public void close() {
         connSource.close();
-    }
-
-    public TransStation convertToKey(TransStation base) {
-        return new TransStation(base.getName(), base.getCoordinates());
     }
 }
