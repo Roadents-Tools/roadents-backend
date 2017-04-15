@@ -25,6 +25,20 @@ public interface StationDbInstance {
     interface ScheduleDb extends StationDbInstance {
         List<TransStation> queryStations(TimePoint startTime, TimeDelta maxDelta, TransChain chain);
     }
+
+    interface ComboDb extends ScheduleDb, AreaDb {
+        @Override
+        default List<TransStation> queryStations(double[] center, double range, TransChain chain) {
+            return queryStations(center, range, null, null, chain);
+        }
+
+        List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain);
+
+        @Override
+        default List<TransStation> queryStations(TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+            return queryStations(null, -1, startTime, maxDelta, chain);
+        }
+    }
 }
 
 

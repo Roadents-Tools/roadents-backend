@@ -10,25 +10,31 @@ import org.tymit.projectdonut.model.TimeDelta;
 import org.tymit.projectdonut.model.TimePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
+import org.tymit.projectdonut.stations.caches.StationChainCacheHelper;
+import org.tymit.projectdonut.stations.updates.GtfsProvider;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.StringJoiner;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * Created by ilan on 1/22/17.
  */
-public class TransitlandApiDb implements StationDbInstance.AreaDb, StationDbInstance.ScheduleDb {
+public class TransitlandApiDb implements StationDbInstance.ComboDb {
 
     private static final int MAX_QUERY_SIZE = 100;
 
@@ -53,10 +59,6 @@ public class TransitlandApiDb implements StationDbInstance.AreaDb, StationDbInst
     }
 
     @Override
-    public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
-        return queryStations(center, range, null, null, chain);
-    }
-
     public List<TransStation> queryStations(double[] center, double range, TimePoint start, TimeDelta maxDelta, TransChain chain) {
 
         //Get scheduling info
@@ -74,6 +76,10 @@ public class TransitlandApiDb implements StationDbInstance.AreaDb, StationDbInst
                 return Collections.emptyList();
             }
             rawobj = new JSONObject(response.body().string());
+        } catch (SocketTimeoutException e) {
+            LoggingUtils.logError(e);
+            seedStations(center, range);
+            return Collections.emptyList();
         } catch (Exception e) {
             LoggingUtils.logError(e);
             isUp = false;
@@ -201,26 +207,23 @@ public class TransitlandApiDb implements StationDbInstance.AreaDb, StationDbInst
         return new TransStation(name, coords, Collections.singletonList(departTime), chain);
     }
 
-    @Override
-    public List<TransStation> queryStations(TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
-        return queryStations(null, 0, startTime, maxDelta, chain);
+    private CompletableFuture<Boolean> seedStations(double[] center, double range) {
+        return CompletableFuture.supplyAsync(() -> {
+            Stream<List<TransStation>> srcStream = getFeedsInArea(center, range, null)
+                    .parallelStream()
+                    .map(url -> new GtfsProvider(url)
+                            .getUpdatedStations()
+                            .values()
+                            .stream()
+                            .flatMap(Collection::stream)
+                            .collect(Collectors.toList())
+                    );
+            StationChainCacheHelper h = StationChainCacheHelper.getHelper();
+            return h.cacheStations(center, range, null, null, srcStream);
+        });
     }
 
-    @Override
-    public boolean putStations(List<TransStation> stations) {
-        return true;
-    }
-
-    @Override
-    public boolean isUp() {
-        return isUp;
-    }
-
-    @Override
-    public void close() {
-    }
-
-    public List<URL> getFeedsInArea(double[] center, double range, Map<String, String> restrictions) {
+    private List<URL> getFeedsInArea(double[] center, double range, Map<String, String> restrictions) {
         String url = BASE_FEED_URL + "?per_page=500";
         if (center != null && range >= 0) {
             double latVal1 = center[0] - range * MILES_TO_LAT;
@@ -252,7 +255,21 @@ public class TransitlandApiDb implements StationDbInstance.AreaDb, StationDbInst
         } catch (Exception e) {
             LoggingUtils.logError(e);
             isUp = false;
-            return null;
+            return Collections.emptyList();
         }
+    }
+
+    @Override
+    public boolean putStations(List<TransStation> stations) {
+        return true;
+    }
+
+    @Override
+    public boolean isUp() {
+        return isUp;
+    }
+
+    @Override
+    public void close() {
     }
 }

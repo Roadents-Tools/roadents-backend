@@ -4,7 +4,6 @@ import org.tymit.projectdonut.model.TimeDelta;
 import org.tymit.projectdonut.model.TimePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
-import org.tymit.projectdonut.stations.caches.StationChainCacheHelper;
 
 import java.util.Arrays;
 import java.util.List;
@@ -36,12 +35,12 @@ public class StationDbHelper {
             return;
         }
 
-        StationDbInstance[] allDbs = new StationDbInstance[MysqlStationDb.DB_URLS.length + 1];
+        /*StationDbInstance[] allDbs = new StationDbInstance[MysqlStationDb.DB_URLS.length + 1];
         allDbs[0] = new TransitlandApiDb();
         for (int i = 1; i < MysqlStationDb.DB_URLS.length + 1; i++) {
             allDbs[i] = new MysqlStationDb(MysqlStationDb.DB_URLS[i - 1]);
         }
-        allDatabases = allDbs;
+        allDatabases = allDbs;*/
         allDatabases = new StationDbInstance[] { new TransitlandApiDb() };
     }
 
@@ -58,29 +57,16 @@ public class StationDbHelper {
     }
 
     public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
-        if (!isTest && chain == null) {
-            List<TransStation> cached = StationChainCacheHelper.getHelper().getCachedStations(center, range, chain);
-            if (cached != null && cached.size() > 0) {
-                return cached;
-            }
-        }
-
-        List<TransStation> rval = Arrays.stream(allDatabases)
+        return Arrays.stream(allDatabases)
                 .filter(StationDbInstance::isUp)
                 .filter(db -> db instanceof StationDbInstance.AreaDb)
                 .flatMap(db -> ((StationDbInstance.AreaDb) db).queryStations(center, range, chain)
                         .stream())
                 .distinct()
                 .collect(Collectors.toList());
-
-        if (!isTest) StationChainCacheHelper.getHelper().cacheStations(center, range, chain, rval);
-        return rval;
     }
 
     public List<TransStation> queryStations(TimePoint start, TimeDelta range, TransChain chain) {
-
-        //TODO: Implement schedule-based caching
-
         return Arrays.stream(allDatabases)
                 .filter(StationDbInstance::isUp)
                 .filter(db -> db instanceof StationDbInstance.ScheduleDb)
@@ -89,6 +75,17 @@ public class StationDbHelper {
                 .distinct()
                 .collect(Collectors.toList());
     }
+
+    public List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+        return Arrays.stream(allDatabases)
+                .filter(StationDbInstance::isUp)
+                .filter(db -> db instanceof StationDbInstance.ComboDb)
+                .flatMap(db -> ((StationDbInstance.ComboDb) db).queryStations(center, range, startTime, maxDelta, chain)
+                        .stream())
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
     public boolean putStations(List<TransStation> stations) {
         //We create a boolean set and then check if any are true
         //to guarantee that all instances are attempted.
