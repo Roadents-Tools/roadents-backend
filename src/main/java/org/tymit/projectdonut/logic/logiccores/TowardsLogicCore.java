@@ -2,7 +2,7 @@ package org.tymit.projectdonut.logic.logiccores;
 
 import org.tymit.projectdonut.model.DestinationLocation;
 import org.tymit.projectdonut.model.LocationType;
-import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.TimeDelta;
 import org.tymit.projectdonut.model.TravelRoute;
 
 import java.util.List;
@@ -27,14 +27,14 @@ public class TowardsLogicCore implements LogicCore {
         return TAG;
     }
 
-    private Map<DestinationLocation, TravelRoute> runTowardsCore(TravelRoute baseroute, TimeModel maxDelta, LocationType type) {
+    private Map<DestinationLocation, TravelRoute> runTowardsCore(TravelRoute baseroute, TimeDelta maxDelta, LocationType type) {
 
-        TimeModel[] deltas = TowardsLogicCoreSupport.getTrueDeltasPerNode(baseroute, maxDelta);
+        TimeDelta[] deltas = TowardsLogicCoreSupport.getTrueDeltasPerNode(baseroute, maxDelta);
 
         return IntStream.range(0, deltas.length).boxed().parallel()
 
                 //No extra time at that node, skip it
-                .filter(index -> deltas[index] != null && deltas[index].getUnixTimeDelta() > 0)
+                .filter(index -> deltas[index] != null && deltas[index].getDeltaLong() > 0)
 
                 //Get the dests surrounding each node
                 .flatMap(index -> TowardsLogicCoreSupport.callDonutForRouteAtIndex(index, baseroute, deltas, type)
@@ -46,15 +46,19 @@ public class TowardsLogicCore implements LogicCore {
                         (curmap, route) -> {
                             DestinationLocation dest = route.getDestination();
                             TravelRoute current = curmap.get(dest);
-                            if (current == null || current.getTotalTime() > route.getTotalTime())
+                            if (current == null || current.getTotalTime()
+                                    .getDeltaLong() > route.getTotalTime()
+                                    .getDeltaLong())
                                 curmap.put(dest, route);
                         },
                         (curmap, curmap2) -> {
                             for (DestinationLocation key : curmap2.keySet()) {
                                 TravelRoute current = curmap.get(key);
                                 TravelRoute current2 = curmap2.get(key);
-                                if (current == null || current.getTotalTime() > current2.getTotalTime())
-                                    curmap.replace(key, current, current2);
+                                if (current == null || current.getTotalTime()
+                                        .getDeltaLong() > current2.getTotalTime()
+                                        .getDeltaLong())
+                                    curmap.put(key, current2);
                             }
                         }
                 );

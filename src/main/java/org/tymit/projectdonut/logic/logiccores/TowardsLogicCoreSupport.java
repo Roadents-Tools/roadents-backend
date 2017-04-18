@@ -2,7 +2,7 @@ package org.tymit.projectdonut.logic.logiccores;
 
 import org.tymit.projectdonut.logic.ApplicationRunner;
 import org.tymit.projectdonut.model.LocationType;
-import org.tymit.projectdonut.model.TimeModel;
+import org.tymit.projectdonut.model.TimeDelta;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.model.TravelRoute;
 import org.tymit.projectdonut.model.TravelRouteNode;
@@ -23,10 +23,10 @@ public class TowardsLogicCoreSupport {
         return DonutLogicSupport.getStationWithSchedule(station);
     }
 
-    public static TimeModel[] getTrueDeltasPerNode(TravelRoute route, TimeModel maxDelta) {
+    public static TimeDelta[] getTrueDeltasPerNode(TravelRoute route, TimeDelta maxDelta) {
         final int routeLen = route.getRoute().size();
-        TimeModel[] rval = new TimeModel[routeLen];
-        rval[routeLen - 1] = maxDelta.clone();
+        TimeDelta[] rval = new TimeDelta[routeLen];
+        rval[routeLen - 1] = maxDelta; //We allow maxDelta time from the destination
 
         // TODO: Figure out and implement calculating each node's truly available time
         // Research notes:
@@ -45,13 +45,13 @@ public class TowardsLogicCoreSupport {
         return rval;
     }
 
-    public static List<TravelRoute> callDonutForRouteAtIndex(int index, TravelRoute route, TimeModel[] deltas, LocationType type) {
+    public static List<TravelRoute> callDonutForRouteAtIndex(int index, TravelRoute route, TimeDelta[] deltas, LocationType type) {
 
         TravelRouteNode node = route.getRoute().get(index);
 
         Map<String, Object> donutParams = new ConcurrentHashMap<>();
         donutParams.put(DonutLogicCore.TYPE_TAG, type.getEncodedname());
-        donutParams.put(DonutLogicCore.TIME_DELTA_TAG, deltas[index].getUnixTimeDelta());
+        donutParams.put(DonutLogicCore.TIME_DELTA_TAG, deltas[index].getDeltaLong());
         donutParams.put(DonutLogicCore.LAT_TAG, node.getPt().getCoordinates()[0]);
         donutParams.put(DonutLogicCore.LONG_TAG, node.getPt().getCoordinates()[1]);
         donutParams.put(DonutLogicCore.START_TIME_TAG, route.getTimeAtNode(index));
