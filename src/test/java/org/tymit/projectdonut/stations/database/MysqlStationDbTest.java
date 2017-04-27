@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
  */
 public class MysqlStationDbTest {
 
+    private static boolean runTest = false;
     private MysqlStationDb instance;
 
     @Before
@@ -31,6 +32,8 @@ public class MysqlStationDbTest {
 
     @Test
     public void testLocalMysql() {
+        if (!runTest) return;
+
         Random rng = new Random(175);
         TransChain[] testChains = new TransChain[5];
         for (int i = 0; i < 5; i++) {
