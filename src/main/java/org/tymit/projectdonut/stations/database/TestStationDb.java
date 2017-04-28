@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 /**
  * Created by ilan on 7/10/16.
  */
-public class TestStationDb implements StationDbInstance.AreaDb, StationDbInstance.ScheduleDb {
+public class TestStationDb implements StationDbInstance.ComboDb {
 
     private static final TransChain NULL_CHAIN = new TransChain("NULLCHAINNAME");
     private static final Map<TransChain, List<TransStation>> chainsToStations = new ConcurrentHashMap<>();
@@ -32,19 +32,6 @@ public class TestStationDb implements StationDbInstance.AreaDb, StationDbInstanc
         });
     }
 
-    @Override
-    public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
-        List<TransStation> stationsToCheck = (chain != null) ? chainsToStations.get(chain) : null;
-        if (stationsToCheck == null) {
-            stationsToCheck = chainsToStations.values()
-                    .stream()
-                    .flatMap(Collection::stream)
-                    .collect(Collectors.toList());
-        }
-        return stationsToCheck.parallelStream()
-                .filter(station -> center == null || LocationUtils.distanceBetween(center, station.getCoordinates(), true) <= range + 0.001)
-                .collect(Collectors.toList());
-    }
 
     @Override
     public boolean putStations(List<TransStation> stations) {
@@ -65,6 +52,37 @@ public class TestStationDb implements StationDbInstance.AreaDb, StationDbInstanc
     @Override
     public void close() {
         chainsToStations.clear();
+    }
+
+    @Override
+    public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
+        List<TransStation> stationsToCheck = (chain != null) ? chainsToStations.get(chain) : chainsToStations
+                .values()
+                .stream()
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+
+        return stationsToCheck.parallelStream()
+                .filter(station -> center == null || LocationUtils.distanceBetween(center, station
+                        .getCoordinates(), true) <= range + 0.001)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+        List<TransStation> stationsToCheck = (chain != null) ? chainsToStations.get(chain) : chainsToStations
+                .values()
+                .stream()
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+
+        return stationsToCheck.parallelStream()
+                .filter(station -> center == null || LocationUtils.distanceBetween(center, station
+                        .getCoordinates(), true) <= range + 0.001)
+                .filter(st -> startTime == null || maxDelta == null || startTime
+                        .timeUntil(st.getNextArrival(startTime))
+                        .getDeltaLong() <= maxDelta.getDeltaLong())
+                .collect(Collectors.toList());
     }
 
     @Override
