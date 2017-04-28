@@ -22,7 +22,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * Static utilities for the DonutLogicCore.
@@ -50,35 +54,12 @@ public final class DonutLogicSupport {
         rval.put(getLocationTag(initialPoint), startRoute);
         List<TravelRoute> currentLayer = new ArrayList<>(Sets.newHashSet(startRoute));
 
+        Function<TravelRoute, Stream<TravelRoute>> unfilteredLayerBuilder = buildNextLayerFunction(startTime, maxDelta);
         while (!currentLayer.isEmpty()) {
             List<TravelRoute> nextLayer = currentLayer.stream()
-
-                    //For each current end in the previous layer, check for all possible next nodes
-                    .flatMap(route -> getAllPossibleStations(route.getCurrentEnd(), startTime
-                                    .plus(route.getTotalTime()),
-                            maxDelta.minus(route.getTotalTime()))
-                            .stream().map(node -> route.clone().addNode(node))
-                    )
-
-                    //Filter those passed our max time delta
-                    .filter(newRoute -> newRoute.getTotalTime()
-                            .getDeltaLong() <= maxDelta.getDeltaLong())
-
-                    //Check if the new nodes that go to previously visited locations
-                    //are better than what we have already
-                    .filter(newRoute -> {
-                        String currentEndTag = getLocationTag(newRoute.getCurrentEnd());
-                        TravelRoute currentMap = rval.getOrDefault(currentEndTag, null);
-                        return currentMap == null
-                                || currentMap.getTotalTime()
-                                .getDeltaLong() > newRoute.getTotalTime()
-                                .getDeltaLong();
-                    })
-
-                    //Put it in the collector
+                    .flatMap(unfilteredLayerBuilder)
+                    .filter(nextLayerFilter(maxDelta, rval))
                     .peek(newRoute -> rval.put(getLocationTag(newRoute.getCurrentEnd()), newRoute))
-
-                    //Collect them into the next layer
                     .collect(Collectors.toList());
 
             LoggingUtils.logMessage("DONUT", "Next recursive layer size: %d", nextLayer
@@ -86,6 +67,13 @@ public final class DonutLogicSupport {
             currentLayer = nextLayer;
         }
         return new HashSet<>(rval.values());
+    }
+
+    public static Function<TravelRoute, Stream<TravelRoute>> buildNextLayerFunction(TimePoint startTime, TimeDelta maxDelta) {
+        return route -> getAllPossibleStations(route.getCurrentEnd(), startTime.plus(route
+                .getTotalTime()), maxDelta.minus(route.getTotalTime()))
+                .stream()
+                .map(node -> route.clone().addNode(node));
     }
 
     /**
@@ -140,7 +128,7 @@ public final class DonutLogicSupport {
     public static Set<TravelRouteNode> getWalkableStations(LocationPoint begin, TimeDelta maxDelta) {
         return StationRetriever.getStations(begin.getCoordinates(), LocationUtils
                 .timeToWalkDistance(maxDelta.getDeltaLong(), true), null, null)
-                .parallelStream()
+                .stream()
                 .map(point -> new TravelRouteNode.Builder()
                         .setWalkTime(LocationUtils.timeBetween(begin.getCoordinates(), point
                                 .getCoordinates()))
@@ -214,6 +202,40 @@ public final class DonutLogicSupport {
         return rval;
     }
 
+    public static Predicate<TravelRoute> nextLayerFilter(TimeDelta maxDelta, Map<String, TravelRoute> currentRoutes) {
+        return route -> {
+            if (route.getTotalTime().getDeltaLong() >= maxDelta.getDeltaLong())
+                return false;
+            if (isMiddleMan(route))
+                return false; //TODO: Not bandaid the middleman issue
+            TravelRoute currentInMap = currentRoutes.get(getLocationTag(route.getCurrentEnd()));
+            if (currentInMap == null) return true;
+            return currentInMap.getTotalTime()
+                    .getDeltaLong() > route.getTotalTime().getDeltaLong();
+        };
+    }
+
+    /**
+     * Checks to see if a travelroute suffered from the middleman issue.
+     * This is defined as a route telling the user to walk to 2 different places in a row;
+     * a situation that, since our algorithm walks as the crow flies, should never happen
+     * in an optimized route.
+     *
+     * @param route the route to check
+     * @return whether or not this is a middleman error
+     */
+    public static boolean isMiddleMan(TravelRoute route) {
+        int rtSize = route.getRoute().size();
+        return IntStream.range(1, rtSize)
+                .boxed()
+                .parallel()
+                .anyMatch(i -> route.getRoute()
+                        .get(i - 1)
+                        .arrivesByFoot() && route.getRoute()
+                        .get(i)
+                        .arrivesByFoot());
+    }
+
     /**
      * Get a tag to represent a single location, for filtering purposes.
      * @param pt the location
@@ -234,7 +256,7 @@ public final class DonutLogicSupport {
     public static Set<TravelRouteNode> getWalkableDestinations(LocationPoint center, TimeDelta maxDelta, LocationType type) {
         return LocationRetriever.getLocations(center.getCoordinates(), LocationUtils
                 .timeToWalkDistance(maxDelta.getDeltaLong(), true), type, null)
-                .parallelStream()
+                .stream()
                 .map(point -> new TravelRouteNode.Builder()
                         .setWalkTime(LocationUtils.timeBetween(center.getCoordinates(), point
                                 .getCoordinates()))

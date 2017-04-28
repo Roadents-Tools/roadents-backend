@@ -66,7 +66,6 @@ public class PostgresqlExternalCache implements StationCacheInstance {
             double curange = LocationUtils.distanceBetween(center, stat.getCoordinates(), true);
             if (curange > range) range = curange;
         }
-        System.out.printf("Beginning insert of %d stations...\n", size);
         return cacheStations(center, range, new TimePoint(0, "GMT-8:00"), new TimeDelta(Long.MAX_VALUE), new ArrayList<>(stations));
     }
 
