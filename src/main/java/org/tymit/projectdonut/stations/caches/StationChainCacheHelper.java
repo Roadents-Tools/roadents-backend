@@ -8,9 +8,9 @@ import org.tymit.projectdonut.utils.LocationUtils;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -19,18 +19,26 @@ import java.util.stream.Stream;
  */
 public class StationChainCacheHelper {
 
-    private static final StationCacheInstance[] allStationInstances = initializeStationInstanceList();
-    private static final StationChainCacheHelper instance = new StationChainCacheHelper();
+    private static StationChainCacheHelper instance = new StationChainCacheHelper();
+
+    private StationCacheInstance[] allStationInstances;
+    private boolean isTest = false;
 
     private StationChainCacheHelper() {
-
+        initializeStationInstanceList();
     }
 
-    private static StationCacheInstance[] initializeStationInstanceList() {
-        return Arrays.stream(PostgresqlExternalCache.DB_URLS)
+    private void initializeStationInstanceList() {
+        if (isTest) allStationInstances = null;
+        allStationInstances = Arrays.stream(PostgresqlExternalCache.DB_URLS)
                 .map(PostgresqlExternalCache::new)
                 .collect(Collectors.toList())
                 .toArray(new StationCacheInstance[0]);
+    }
+
+    public static void setTestMode(boolean testMode) {
+        instance.isTest = testMode;
+        instance.initializeStationInstanceList();
     }
 
     public static StationChainCacheHelper getHelper() {
@@ -38,6 +46,7 @@ public class StationChainCacheHelper {
     }
 
     public List<TransStation> getCachedStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+        if (isTest) return Collections.emptyList();
         return Arrays.stream(allStationInstances)
                 .parallel()
                 .map(cache -> cache.getCachedStations(center, range, startTime, maxDelta, chain))
@@ -47,7 +56,7 @@ public class StationChainCacheHelper {
     }
 
     public boolean cacheStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, Stream<List<TransStation>> stations) {
-        AtomicInteger a = new AtomicInteger(0);
+        if (isTest) return true;
         return !stations
                 .map(src -> cacheStations(center, range, startTime, maxDelta, src))
                 .distinct()
@@ -55,6 +64,8 @@ public class StationChainCacheHelper {
     }
 
     public boolean cacheStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, List<TransStation> stations) {
+
+        if (isTest) return true;
 
         //Since physical range is easily calculable even without being given it,
         //we do so for possible efficiencies in the future.

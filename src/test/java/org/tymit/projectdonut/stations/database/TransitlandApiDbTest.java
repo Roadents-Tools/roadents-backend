@@ -17,7 +17,7 @@ public class TransitlandApiDbTest {
 
     private static final double[] TEST_COORDS = new double[] { 32.8801, -117.2340 };
     private static final double TEST_RANGE = 1;
-    private static final TransChain TEST_CHAIN = new TransChain("r-9mue-101 TripID: 11508646");
+    private static final TransChain TEST_CHAIN = new TransChain("r-9mue-101 TripID: 12050379");
     private TransitlandApiDb instance;
 
     @Before

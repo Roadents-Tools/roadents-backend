@@ -56,5 +56,6 @@ public class StationRetriever {
     public static void setTestMode(boolean testMode) {
         StationDbUpdater.setTestMode(testMode);
         StationDbHelper.setTestMode(testMode);
+        StationChainCacheHelper.setTestMode(testMode);
     }
 }
