@@ -7,7 +7,6 @@ import org.tymit.projectdonut.model.TravelRoute;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.IntStream;
 
 /**
@@ -41,26 +40,6 @@ public class TowardsLogicCore implements LogicCore {
                         .parallelStream())
 
                 //Collect the optimal routes to each destination, since the same dest could have multiple routes
-                .collect(
-                        ConcurrentHashMap<DestinationLocation, TravelRoute>::new,
-                        (curmap, route) -> {
-                            DestinationLocation dest = route.getDestination();
-                            TravelRoute current = curmap.get(dest);
-                            if (current == null || current.getTotalTime()
-                                    .getDeltaLong() > route.getTotalTime()
-                                    .getDeltaLong())
-                                curmap.put(dest, route);
-                        },
-                        (curmap, curmap2) -> {
-                            for (DestinationLocation key : curmap2.keySet()) {
-                                TravelRoute current = curmap.get(key);
-                                TravelRoute current2 = curmap2.get(key);
-                                if (current == null || current.getTotalTime()
-                                        .getDeltaLong() > current2.getTotalTime()
-                                        .getDeltaLong())
-                                    curmap.put(key, current2);
-                            }
-                        }
-                );
+                .collect(DonutLogicSupport.OPTIMAL_ROUTES_FOR_DESTINATIONS);
     }
 }

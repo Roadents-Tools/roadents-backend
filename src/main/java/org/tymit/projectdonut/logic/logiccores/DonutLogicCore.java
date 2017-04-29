@@ -6,8 +6,6 @@ import org.tymit.projectdonut.model.StartPoint;
 import org.tymit.projectdonut.model.TimeDelta;
 import org.tymit.projectdonut.model.TimePoint;
 import org.tymit.projectdonut.model.TravelRoute;
-import org.tymit.projectdonut.model.TravelRouteNode;
-import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.ArrayList;
@@ -15,8 +13,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 
@@ -87,7 +83,6 @@ public class DonutLogicCore implements LogicCore {
         Set<TravelRoute> stationRoutes = DonutLogicSupport.buildStationRouteList(center, startTime, maxTimeDelta);
         LoggingUtils.logMessage(getClass().getName(), "Got %d station routes.", stationRoutes.size());
 
-
         //Get the raw dest routes
         Set<TravelRoute> destRoutes = stationRoutes.stream()
                 .filter(route -> maxTimeDelta.getDeltaLong() >= route.getTotalTime()
@@ -101,37 +96,11 @@ public class DonutLogicCore implements LogicCore {
         LoggingUtils.logMessage(getClass().getName(), "Got %d -> %d dest routes.", stationRoutes
                 .size(), destRoutes.size());
 
-
         //Filter and correct the dest routes
-        ConcurrentMap<DestinationLocation, TravelRoute> destToShortest = new ConcurrentHashMap<>();
-        destRoutes.stream()
+        Map<DestinationLocation, TravelRoute> destToShortest = destRoutes.stream()
+                .filter(rt -> !DonutLogicSupport.isMiddleMan(rt))
+                .collect(DonutLogicSupport.OPTIMAL_ROUTES_FOR_DESTINATIONS);
 
-                //Only save the optimal route
-                .filter(route -> destToShortest.putIfAbsent(route.getDestination(), route) != null)
-                .filter(route -> destToShortest.get(route.getDestination())
-                        .getTotalTime()
-                        .getDeltaLong() > route.getTotalTime().getDeltaLong())
-
-                //See server issue #48 to see more information of the middleman timing issue
-                .map(route -> {
-                    if (route.getRoute().size() != 3) return route;
-                    long destWalkTime = LocationUtils.timeBetween(route.getStart()
-                            .getCoordinates(), route.getDestination()
-                            .getCoordinates());
-                    if (destWalkTime > maxTimeDelta.getDeltaLong()) {
-                        LoggingUtils.logError(getTag(), "Failed to find or create valid route.\nWalk time: %d\nFake time: %d", destWalkTime, route
-                                .getTotalTime());
-                        return route;
-                    }
-                    TravelRouteNode destNode = new TravelRouteNode.Builder().setPoint(route.getDestination())
-                            .setWalkTime(destWalkTime)
-                            .build();
-                    return new TravelRoute(route.getStart(), route.getStartTime()).setDestinationNode(destNode);
-                })
-                .filter(travelRoute -> travelRoute.getRoute().size() != 3)
-
-                .forEach(route -> destToShortest.put(route.getDestination(), route));
-        //destToShortest.values().forEach(DonutLogicCore::testLocationError);
         LoggingUtils.logMessage(getClass().getName(), "Got %d -> %d filtered routes.", destRoutes
                 .size(), destToShortest.size());
         return destToShortest;
