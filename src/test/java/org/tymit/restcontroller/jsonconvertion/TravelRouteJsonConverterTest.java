@@ -17,6 +17,7 @@ import org.tymit.projectdonut.stations.updates.StationDbUpdater;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.List;
+import java.util.Random;
 
 /**
  * Created by ilan on 7/17/16.
@@ -38,11 +39,12 @@ public class TravelRouteJsonConverterTest {
         StartPoint startPoint = new StartPoint(new double[]{latitude, longitude});
         TimePoint startTime = new TimePoint(System.currentTimeMillis(), "America/Los_Angeles");
         testRoute = new TravelRoute(startPoint, startTime);
+        Random rng = new Random();
 
         final double range = 50;
         for (int i = 0; i < 5; i++) {
-            List<TransStation> stationsInRange = StationRetriever.getStations(testRoute.getCurrentEnd().getCoordinates(), range, null, null);
-            TransStation currentStation = stationsInRange.get(i % stationsInRange.size());
+            TransStation currentStation = new TransStation("t" + i, new double[] { latitude + (i + 1) * 10 * rng
+                    .nextDouble(), longitude + (i + 1) * 10 * rng.nextDouble() });
             TravelRouteNode stationNode = new TravelRouteNode.Builder().setPoint(currentStation).setTravelTime(1).setWaitTime(1).build();
             if (testRoute.isInRoute(stationNode.getPt())) {
                 testRoute.addNode(stationNode);
@@ -60,8 +62,10 @@ public class TravelRouteJsonConverterTest {
 
     @Test
     public void testBackAndForth() {
-        String routeJson = new TravelRouteJsonConverter().toJson(testRoute);
-        TravelRoute fromJson = new TravelRouteJsonConverter().fromJson(routeJson);
+        String routeJson = new TravelRouteJsonConverter()
+                .toJson(testRoute);
+        TravelRoute fromJson = new TravelRouteJsonConverter()
+                .fromJson(routeJson);
         Assert.assertEquals(testRoute, fromJson);
     }
 
