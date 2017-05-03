@@ -12,9 +12,9 @@ import java.util.stream.IntStream;
 /**
  * Created by ilan on 12/24/16.
  */
-public class TowardsLogicCore implements LogicCore {
+public class MoleLogicCore implements LogicCore {
 
-    private static final String TAG = "DONUT_TOWARDS";
+    public static final String TAG = "MOLE";
 
     @Override
     public Map<String, List<Object>> performLogic(Map<String, Object> args) {
@@ -28,7 +28,7 @@ public class TowardsLogicCore implements LogicCore {
 
     private Map<DestinationLocation, TravelRoute> runTowardsCore(TravelRoute baseroute, TimeDelta maxDelta, LocationType type) {
 
-        TimeDelta[] deltas = TowardsLogicCoreSupport.getTrueDeltasPerNode(baseroute, maxDelta);
+        TimeDelta[] deltas = MoleLogicCoreSupport.getTrueDeltasPerNode(baseroute, maxDelta);
 
         return IntStream.range(0, deltas.length).boxed().parallel()
 
@@ -36,7 +36,7 @@ public class TowardsLogicCore implements LogicCore {
                 .filter(index -> deltas[index] != null && deltas[index].getDeltaLong() > 0)
 
                 //Get the dests surrounding each node
-                .flatMap(index -> TowardsLogicCoreSupport.callDonutForRouteAtIndex(index, baseroute, deltas, type)
+                .flatMap(index -> MoleLogicCoreSupport.callDonutForRouteAtIndex(index, baseroute, deltas, type)
                         .parallelStream())
 
                 //Collect the optimal routes to each destination, since the same dest could have multiple routes

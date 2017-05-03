@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 /**
  * Created by ilan on 12/24/16.
  */
-public class TowardsLogicCoreSupport {
+public class MoleLogicCoreSupport {
 
     public static TransStation getStationWithSchedule(TransStation station) {
         return DonutLogicSupport.getStationWithSchedule(station);
