@@ -84,6 +84,11 @@ public class TimeCostProvider implements CostProvider {
         return null;
     }
 
+    @Override
+    public boolean isUp() {
+        return true; //TODO
+    }
+
     private static Predicate<TimeDelta> extractComparison(CostArgs args) {
 
         long border = extractCompareBorder(args);

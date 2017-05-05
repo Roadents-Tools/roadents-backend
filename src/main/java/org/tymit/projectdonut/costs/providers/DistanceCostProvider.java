@@ -77,6 +77,11 @@ public class DistanceCostProvider implements CostProvider {
         return LocationUtils.distanceBetween(subj, oth, miles);
     }
 
+    @Override
+    public boolean isUp() {
+        return true;
+    }
+
     private static double[] extractCoords(Object obj) {
 
         if (obj instanceof LocationPoint) return ((LocationPoint) obj).getCoordinates();

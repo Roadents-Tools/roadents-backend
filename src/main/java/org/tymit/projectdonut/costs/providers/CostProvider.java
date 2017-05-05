@@ -12,4 +12,5 @@ public interface CostProvider {
 
     Object getCostValue(CostArgs arg);
 
+    boolean isUp();
 }
