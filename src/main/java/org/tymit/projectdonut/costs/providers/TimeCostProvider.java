@@ -86,9 +86,6 @@ public abstract class TimeCostProvider implements CostProvider {
 
     protected abstract int getMaxCalls();
 
-    /**
-     * Argument extraction methods
-     **/
     private static double[] extractStart(CostArgs args) {
         double[] rval = null;
         Object startArg = args.getSubject();
@@ -136,9 +133,6 @@ public abstract class TimeCostProvider implements CostProvider {
         return -1;
     }
 
-    /**
-     * Call running methods
-     **/
     private String buildCallUrl(List<double[]> srcs, List<double[]> dests, long startTime) {
         String srcStr = srcs.parallelStream()
                 .map(latlng -> String.format(getLocationFormat(), latlng[0], latlng[1]))

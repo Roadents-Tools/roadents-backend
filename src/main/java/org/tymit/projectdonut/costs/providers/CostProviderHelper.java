@@ -4,6 +4,9 @@ import com.google.common.collect.Sets;
 import org.tymit.projectdonut.costs.CostArgs;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -14,7 +17,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class CostProviderHelper {
 
-    private static final CostProvider[] allProviders = initializeProvidersList();
     private static final CostProviderHelper instance = new CostProviderHelper();
 
     private final Map<String, Set<CostProvider>> tagToProvider = new ConcurrentHashMap<>();
@@ -24,14 +26,25 @@ public class CostProviderHelper {
     }
 
     private void initializeProviderMap() {
-        for (CostProvider provider : allProviders) {
+        initializeProvidersList().forEach(provider -> {
             tagToProvider.putIfAbsent(provider.getTag(), Sets.newConcurrentHashSet());
             tagToProvider.get(provider.getTag()).add(provider);
-        }
+        });
     }
 
-    private static CostProvider[] initializeProvidersList() {
-        return new CostProvider[]{new DistanceCostProvider()};
+    private static Collection<? extends CostProvider> initializeProvidersList() {
+        Set<CostProvider> rval = new HashSet<>();
+        rval.add(new DistanceCostProvider());
+
+        Arrays.stream(GoogleTimeCostProvider.API_KEYS)
+                .map(GoogleTimeCostProvider::new)
+                .forEach(rval::add);
+
+        Arrays.stream(MapzenTimeCostProvider.API_KEYS)
+                .map(MapzenTimeCostProvider::new)
+                .forEach(rval::add);
+
+        return rval;
     }
 
     public static CostProviderHelper getHelper() {
