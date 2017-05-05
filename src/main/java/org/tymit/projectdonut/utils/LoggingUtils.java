@@ -2,6 +2,8 @@ package org.tymit.projectdonut.utils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Created by ilan on 7/8/16.
@@ -77,5 +79,36 @@ public class LoggingUtils {
 
     public static void setPrintImmediate(boolean printImmediate) {
         LoggingUtils.printImmediate = printImmediate;
+    }
+
+    @FunctionalInterface
+    public interface WrappedFunction<T, R> extends Function<T, R> {
+
+        @Override
+        default R apply(T o) {
+            try {
+                return acceptWithException(o);
+            } catch (Exception e) {
+                LoggingUtils.logError(e);
+                return null;
+            }
+        }
+
+        R acceptWithException(T o) throws Exception;
+    }
+
+    @FunctionalInterface
+    public interface WrappedConsumer<T> extends Consumer<T> {
+
+        @Override
+        default void accept(T t) {
+            try {
+                acceptWithException(t);
+            } catch (Exception e) {
+                LoggingUtils.logError(e);
+            }
+        }
+
+        void acceptWithException(T t) throws Exception;
     }
 }

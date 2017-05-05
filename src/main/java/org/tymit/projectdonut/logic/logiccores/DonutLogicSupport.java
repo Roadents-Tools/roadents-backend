@@ -50,8 +50,7 @@ public final class DonutLogicSupport {
             return (curmap, route) -> {
                 DestinationLocation dest = route.getDestination();
                 TravelRoute current = curmap.get(dest);
-                if (current == null || current.getTotalTime()
-                        .getDeltaLong() > route.getTotalTime().getDeltaLong())
+                if (current == null || current.getTotalTime().getDeltaLong() > route.getTotalTime().getDeltaLong())
                     curmap.put(dest, route);
             };
         }
@@ -62,8 +61,7 @@ public final class DonutLogicSupport {
                 for (DestinationLocation key : curmap2.keySet()) {
                     TravelRoute current = curmap.get(key);
                     TravelRoute current2 = curmap2.get(key);
-                    if (current == null || current.getTotalTime()
-                            .getDeltaLong() > current2.getTotalTime()
+                    if (current == null || current.getTotalTime().getDeltaLong() > current2.getTotalTime()
                             .getDeltaLong())
                         curmap.put(key, current2);
                 }
@@ -111,16 +109,15 @@ public final class DonutLogicSupport {
                     .peek(newRoute -> rval.put(getLocationTag(newRoute.getCurrentEnd()), newRoute))
                     .collect(Collectors.toList());
 
-            LoggingUtils.logMessage("DONUT", "Next recursive layer size: %d", nextLayer
-                    .size());
+            LoggingUtils.logMessage("DONUT", "Next recursive layer size: %d", nextLayer.size());
             currentLayer = nextLayer;
         }
         return new HashSet<>(rval.values());
     }
 
     public static Function<TravelRoute, Stream<TravelRoute>> buildNextLayerFunction(TimePoint startTime, TimeDelta maxDelta) {
-        return route -> getAllPossibleStations(route.getCurrentEnd(), startTime.plus(route
-                .getTotalTime()), maxDelta.minus(route.getTotalTime()))
+        return route -> getAllPossibleStations(route.getCurrentEnd(), startTime.plus(route.getTotalTime()), maxDelta.minus(route
+                .getTotalTime()))
                 .stream()
                 .map(node -> route.clone().addNode(node));
     }
@@ -156,11 +153,8 @@ public final class DonutLogicSupport {
                     if (!walkable.containsKey(keyStation) && arrivable.containsKey(keyStation)) {
                         return arrivable.get(keyStation);
                     }
-                    if (walkable.get(keyStation)
-                            .getTotalTimeToArrive()
-                            .getDeltaLong() < arrivable.get(keyStation)
-                            .getTotalTimeToArrive()
-                            .getDeltaLong()) {
+                    if (walkable.get(keyStation).getTotalTimeToArrive().getDeltaLong() <
+                            arrivable.get(keyStation).getTotalTimeToArrive().getDeltaLong()) {
                         return walkable.get(keyStation);
                     }
                     return arrivable.get(keyStation);
@@ -179,8 +173,7 @@ public final class DonutLogicSupport {
                 .timeToWalkDistance(maxDelta.getDeltaLong(), true), null, null)
                 .stream()
                 .map(point -> new TravelRouteNode.Builder()
-                        .setWalkTime(LocationUtils.timeBetween(begin.getCoordinates(), point
-                                .getCoordinates()))
+                        .setWalkTime(LocationUtils.timeBetween(begin.getCoordinates(), point.getCoordinates()))
                         .setPoint(point)
                         .build()
                 )
@@ -259,8 +252,7 @@ public final class DonutLogicSupport {
                 return false; //TODO: Not bandaid the middleman issue
             TravelRoute currentInMap = currentRoutes.get(getLocationTag(route.getCurrentEnd()));
             if (currentInMap == null) return true;
-            return currentInMap.getTotalTime()
-                    .getDeltaLong() > route.getTotalTime().getDeltaLong();
+            return currentInMap.getTotalTime().getDeltaLong() > route.getTotalTime().getDeltaLong();
         };
     }
 
@@ -307,8 +299,7 @@ public final class DonutLogicSupport {
                 .timeToWalkDistance(maxDelta.getDeltaLong(), true), type, null)
                 .stream()
                 .map(point -> new TravelRouteNode.Builder()
-                        .setWalkTime(LocationUtils.timeBetween(center.getCoordinates(), point
-                                .getCoordinates()))
+                        .setWalkTime(LocationUtils.timeBetween(center.getCoordinates(), point.getCoordinates()))
                         .setPoint(point)
                         .build()
                 )

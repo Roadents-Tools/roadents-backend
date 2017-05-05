@@ -1,12 +1,12 @@
 package org.tymit.projectdonut.stations.caches;
 
-import com.google.common.base.Throwables;
 import org.tymit.projectdonut.model.SchedulePoint;
 import org.tymit.projectdonut.model.TimeDelta;
 import org.tymit.projectdonut.model.TimePoint;
 import org.tymit.projectdonut.model.TransChain;
 import org.tymit.projectdonut.model.TransStation;
 import org.tymit.projectdonut.utils.LocationUtils;
+import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -217,15 +217,11 @@ public class PostgresSqlSupport {
                                 .replace("'", "`"), PostgresqlContract.CHAIN_NAME_KEY)
                 )
                 .filter(Objects::nonNull)
-                .forEach((sql1) -> {
-                    try {
-                        stm.addBatch(sql1);
-                        if (ctprev.incrementAndGet() >= BATCH_SIZE) {
-                            ctprev.getAndSet(0);
-                            stm.executeBatch();
-                        }
-                    } catch (SQLException e) {
-                        Throwables.propagate(e);
+                .forEach((LoggingUtils.WrappedConsumer<String>) (sql1) -> {
+                    stm.addBatch(sql1);
+                    if (ctprev.incrementAndGet() >= BATCH_SIZE) {
+                        ctprev.getAndSet(0);
+                        stm.executeBatch();
                     }
                 });
         if (ctprev.get() != 0) stm.executeBatch();
@@ -241,16 +237,11 @@ public class PostgresSqlSupport {
                                 .replace("'", "`"), station.getCoordinates()[0], station
                                 .getCoordinates()[1])
                 )
-                .forEach((sql1) -> {
-                    try {
-                        stm.addBatch(sql1);
-                        if (ctprev.incrementAndGet() >= BATCH_SIZE) {
-                            ctprev.getAndSet(0);
-                            stm.executeBatch();
-                        }
-
-                    } catch (SQLException e) {
-                        Throwables.propagate(e);
+                .forEach((LoggingUtils.WrappedConsumer<String>) (sql1) -> {
+                    stm.addBatch(sql1);
+                    if (ctprev.incrementAndGet() >= BATCH_SIZE) {
+                        ctprev.getAndSet(0);
+                        stm.executeBatch();
                     }
                 });
 
@@ -258,15 +249,11 @@ public class PostgresSqlSupport {
         ctprev.set(0);
         stations.stream()
                 .flatMap(PostgresSqlSupport::createScheduleQuery)
-                .forEach((sql) -> {
-                    try {
-                        stm.addBatch(sql);
-                        if (ctprev.incrementAndGet() >= BATCH_SIZE) {
-                            ctprev.getAndSet(0);
-                            stm.executeBatch();
-                        }
-                    } catch (SQLException e) {
-                        Throwables.propagate(e);
+                .forEach((LoggingUtils.WrappedConsumer<String>) (sql) -> {
+                    stm.addBatch(sql);
+                    if (ctprev.incrementAndGet() >= BATCH_SIZE) {
+                        ctprev.getAndSet(0);
+                        stm.executeBatch();
                     }
                 });
         if (ctprev.get() != 0) stm.executeBatch();

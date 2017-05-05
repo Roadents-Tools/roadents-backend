@@ -72,8 +72,7 @@ public class GtfsSupport {
         return store.getAllStops().parallelStream()
                 .collect(ConcurrentHashMap::new,
                         (rval1, stop) -> rval1.put(stop.getId().getId(),
-                                new TransStation(stop.getName()
-                                        .trim(), new double[] { stop.getLat(), stop.getLon() })
+                                new TransStation(stop.getName().trim(), new double[] { stop.getLat(), stop.getLon() })
                         ),
                         ConcurrentHashMap::putAll
                 );

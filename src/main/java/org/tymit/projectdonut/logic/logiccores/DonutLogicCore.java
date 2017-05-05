@@ -28,6 +28,9 @@ public class DonutLogicCore implements LogicCore {
     public static final String TYPE_TAG = "type";
     public static final String TIME_DELTA_TAG = "timedelta";
 
+    public static final String DEST_LIST_TAG = "DESTS";
+    public static final String ROUTE_LIST_TAG = "ROUTES";
+
     @Override
     public Map<String, List<Object>> performLogic(Map<String, Object> args) {
 
@@ -54,11 +57,11 @@ public class DonutLogicCore implements LogicCore {
             List<Object> errs = new ArrayList<>(LoggingUtils.getErrors());
             output.put("ERRORS", errs);
         }
-        output.put("DESTS", new ArrayList<>());
-        output.put("ROUTES", new ArrayList<>());
+        output.put(DEST_LIST_TAG, new ArrayList<>());
+        output.put(ROUTE_LIST_TAG, new ArrayList<>());
         for (TravelRoute route : destsToRoutes.values()) {
-            output.get("DESTS").add(route.getDestination());
-            output.get("ROUTES").add(route);
+            output.get(DEST_LIST_TAG).add(route.getDestination());
+            output.get(ROUTE_LIST_TAG).add(route);
         }
         return output;
     }

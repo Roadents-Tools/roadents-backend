@@ -26,8 +26,7 @@ public class TransChain {
     }
 
     public void addStation(TransStation station) {
-        if (station != null && (!stations.contains(station) || (station.getSchedule() != null && station
-                .getSchedule()
+        if (station != null && (!stations.contains(station) || (station.getSchedule() != null && station.getSchedule()
                 .size() != 0))) {
             stations.add(station);
         }

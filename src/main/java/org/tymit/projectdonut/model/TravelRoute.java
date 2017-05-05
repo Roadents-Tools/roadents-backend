@@ -90,8 +90,7 @@ public class TravelRoute {
     }
 
     public TravelRoute clone() {
-        TravelRoute route = new TravelRoute((StartPoint) routeNodes.get(0)
-                .getPt(), startTime);
+        TravelRoute route = new TravelRoute((StartPoint) routeNodes.get(0).getPt(), startTime);
         routeNodes.stream().filter(n -> !n.isStart()).forEach(route::addNode);
         if (end != null) route.setDestinationNode(end);
         if (!this.equals(route) && route.equals(this)) {

@@ -41,10 +41,9 @@ dependencies {
     compile group: 'com.zaxxer', name: 'HikariCP', version: '2.4.7'
     compile 'com.squareup.retrofit2:retrofit:2.1.0'
     compile 'com.moodysalem:LatLongToTimezoneMaven:1.1'
-    testCompile 'junit:junit:4.12'
-// https://mvnrepository.com/artifact/org.postgresql/postgresql
     compile group: 'org.postgresql', name: 'postgresql', version: '42.0.0'
 
+    testCompile 'junit:junit:4.12'
     testCompile('org.springframework.boot:spring-boot-starter-test')
 
 }
