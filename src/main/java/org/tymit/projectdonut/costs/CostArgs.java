@@ -19,20 +19,27 @@ public class CostArgs {
         return costTag;
     }
 
-    public void setCostTag(String costTag) {
+    public CostArgs setCostTag(String costTag) {
         this.costTag = costTag;
+        return this;
     }
 
     public Object getSubject() {
         return subject;
     }
 
-    public void setSubject(Object subject) {
+    public CostArgs setSubject(Object subject) {
         this.subject = subject;
+        return this;
     }
 
     public Map<String, Object> getArgs() {
         return args;
+    }
+
+    public CostArgs setArg(String key, Object value) {
+        args.put(key, value);
+        return this;
     }
 
 }
