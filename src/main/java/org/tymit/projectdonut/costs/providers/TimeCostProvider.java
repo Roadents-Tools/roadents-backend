@@ -22,12 +22,15 @@ import java.util.function.Predicate;
  */
 public abstract class TimeCostProvider implements CostProvider {
 
-    /*
-    PARAM:
-    Subject: a LocationPoint or double[] representing the point to start at
+    /**
+     Subject: a LocationPoint or double[] representing the point to start at in the case a p2 is passed,
+     or a LocationPoint or double[] representing the point to end at in the case a p1 is passed.
+     This ability is for the sake of easily being able to handle split up bulk request args.
+     Note that if both p1 and p2 are set, then the subject is ignored.
     Args:
      - starttime = the TimePoint or unixtime in milliseconds since the unix epoch to start at
      - p2 = the LocationPoint or double[] to travel to
+     - p1 = the LocationPoint or double[] to travel from
      - compareTo = the TimeDelta or millisecond long to compare the time between A and B to
      - comparison = the comparison to make in an isWithinCost call,
        either >,<,>=,<=,==, or !=.
@@ -38,6 +41,7 @@ public abstract class TimeCostProvider implements CostProvider {
     public static final String COMPARISON_TAG = "comparison";
     public static final String COMPARE_VALUE_TAG = "compareto";
     public static final String POINT_TWO_TAG = "p2";
+    public static final String POINT_ONE_TAG = "p1";
 
     private OkHttpClient client = new OkHttpClient();
     private String apiKey;
@@ -88,7 +92,8 @@ public abstract class TimeCostProvider implements CostProvider {
 
     private static double[] extractStart(CostArgs args) {
         double[] rval = null;
-        Object startArg = args.getSubject();
+        Object startArg = args.getArgs().containsKey(POINT_ONE_TAG) ? args.getArgs()
+                .get(POINT_ONE_TAG) : args.getSubject();
 
         if (startArg instanceof double[]) rval = (double[]) startArg;
 
@@ -107,7 +112,8 @@ public abstract class TimeCostProvider implements CostProvider {
 
     private static double[] extractEnd(CostArgs args) {
         double[] rval = null;
-        Object endArg = args.getArgs().get(POINT_TWO_TAG);
+        Object endArg = args.getArgs().containsKey(POINT_TWO_TAG) ? args.getArgs()
+                .get(POINT_TWO_TAG) : args.getSubject();
 
         if (endArg instanceof double[]) rval = (double[]) endArg;
 
