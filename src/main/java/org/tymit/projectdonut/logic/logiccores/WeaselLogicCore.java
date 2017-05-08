@@ -35,7 +35,8 @@ public class WeaselLogicCore implements LogicCore {
     public Map<String, List<Object>> performLogic(Map<String, Object> args) {
 
         List<StartPoint> locs = new ArrayList<>();
-        for (int i = 0; args.containsKey(LAT_TAG + i); i++) {
+        locs.add(new StartPoint(new double[] { (double) args.get(LAT_TAG), (double) args.get(LONG_TAG) }));
+        for (int i = 2; args.containsKey(LAT_TAG + i); i++) {
             double lat = (double) args.get(LAT_TAG + i);
             if (!args.containsKey(LONG_TAG + i)) {
                 break;
