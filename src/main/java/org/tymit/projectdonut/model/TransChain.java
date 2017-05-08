@@ -2,6 +2,7 @@ package org.tymit.projectdonut.model;
 
 import com.google.common.collect.Sets;
 
+import java.util.Arrays;
 import java.util.Set;
 
 /**
@@ -23,6 +24,20 @@ public class TransChain {
 
     public Set<TransStation> getStations() {
         return stations;
+    }
+
+    public TransStation getSchedule(TransStation base) {
+        if (base.getChain() != null
+                && base.getChain().equals(this)
+                && base.getSchedule() != null
+                && base.getSchedule().size() > 0) {
+            return base;
+        }
+        return stations.stream()
+                .filter(st -> Arrays.equals(st.getCoordinates(), base.getCoordinates()))
+                .findAny()
+                .map(onto -> base.withSchedule(this, onto.getSchedule()))
+                .orElse(base);
     }
 
     public void addStation(TransStation station) {
