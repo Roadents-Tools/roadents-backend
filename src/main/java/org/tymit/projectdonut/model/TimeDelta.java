@@ -3,7 +3,7 @@ package org.tymit.projectdonut.model;
 /**
  * Created by ilan on 2/6/17.
  */
-public class TimeDelta {
+public class TimeDelta implements Comparable<TimeDelta> {
 
     public static final TimeDelta NULL = new TimeDelta(0);
 
@@ -49,5 +49,11 @@ public class TimeDelta {
         return "TimeDelta{" +
                 "delta=" + delta +
                 '}';
+    }
+
+
+    @Override
+    public int compareTo(TimeDelta o) {
+        return Long.compare(getDeltaLong(), o.getDeltaLong());
     }
 }
