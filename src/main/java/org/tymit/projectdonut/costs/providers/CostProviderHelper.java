@@ -3,11 +3,14 @@ package org.tymit.projectdonut.costs.providers;
 import com.google.common.collect.Sets;
 import org.tymit.projectdonut.costs.BulkCostArgs;
 import org.tymit.projectdonut.costs.CostArgs;
+import org.tymit.projectdonut.costs.providers.distance.DistanceCostProvider;
+import org.tymit.projectdonut.costs.providers.routing.DonutRouteCostProvider;
+import org.tymit.projectdonut.costs.providers.timing.GoogleTimeCostProvider;
+import org.tymit.projectdonut.costs.providers.timing.MapzenTimeCostProvider;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -39,8 +42,9 @@ public class CostProviderHelper {
     }
 
     private static Collection<? extends CostProvider> initializeProvidersList() {
-        Set<CostProvider> rval = new HashSet<>();
+        Set<CostProvider> rval = Sets.newConcurrentHashSet();
         rval.add(new DistanceCostProvider());
+        rval.add(new DonutRouteCostProvider());
 
         Arrays.stream(GoogleTimeCostProvider.API_KEYS)
                 .map(GoogleTimeCostProvider::new)

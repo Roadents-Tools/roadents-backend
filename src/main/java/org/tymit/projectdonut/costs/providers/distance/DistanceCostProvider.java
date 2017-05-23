@@ -1,6 +1,7 @@
-package org.tymit.projectdonut.costs.providers;
+package org.tymit.projectdonut.costs.providers.distance;
 
 import org.tymit.projectdonut.costs.CostArgs;
+import org.tymit.projectdonut.costs.providers.CostProvider;
 import org.tymit.projectdonut.model.LocationPoint;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;

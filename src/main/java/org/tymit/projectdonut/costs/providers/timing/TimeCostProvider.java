@@ -1,10 +1,11 @@
-package org.tymit.projectdonut.costs.providers;
+package org.tymit.projectdonut.costs.providers.timing;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import org.json.JSONObject;
 import org.tymit.projectdonut.costs.CostArgs;
+import org.tymit.projectdonut.costs.providers.CostProvider;
 import org.tymit.projectdonut.model.LocationPoint;
 import org.tymit.projectdonut.model.TimeDelta;
 import org.tymit.projectdonut.model.TimePoint;

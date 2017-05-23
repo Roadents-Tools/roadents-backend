@@ -3,6 +3,7 @@ package org.tymit.projectdonut.costs.providers;
 import org.junit.Assert;
 import org.junit.Test;
 import org.tymit.projectdonut.costs.CostArgs;
+import org.tymit.projectdonut.costs.providers.distance.DistanceCostProvider;
 import org.tymit.projectdonut.model.DestinationLocation;
 import org.tymit.projectdonut.utils.LocationUtils;
 
