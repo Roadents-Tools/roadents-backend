@@ -14,7 +14,6 @@ import org.tymit.projectdonut.stations.caches.StationChainCacheHelper;
 import org.tymit.projectdonut.stations.updates.GtfsProvider;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
-import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -49,12 +48,10 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
     private static final double MILES_TO_LAT = 1.0 / 69.5;
     private static final double MILES_TO_LONG = 1 / 69.5;
 
-    private OkHttpClient client;
     private boolean isUp;
 
 
     public TransitlandApiDb() {
-        client = new OkHttpClient();
         isUp = true;
     }
 
@@ -63,26 +60,10 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
 
         //Get scheduling info
         String scheduleUrl = buildScheduleUrl(center, range, start, maxDelta, chain);
-        Request request = new Request.Builder()
-                .url(scheduleUrl)
-                .build();
+        JSONObject rawobj = callUrl(scheduleUrl);
 
-        Response response;
-        JSONObject rawobj;
-        try {
-            response = client.newCall(request).execute();
-            if (!response.isSuccessful()) {
-                isUp = false;
-                return Collections.emptyList();
-            }
-            rawobj = new JSONObject(response.body().string());
-        } catch (SocketTimeoutException e) {
-            LoggingUtils.logError(e);
-            seedStations(center, range);
-            return Collections.emptyList();
-        } catch (Exception e) {
-            LoggingUtils.logError(e);
-            isUp = false;
+        if (rawobj == null) {
+            if (isUp) seedStations(center, range);
             return Collections.emptyList();
         }
 
@@ -100,22 +81,8 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
                 .peek(obj -> numOfStops.getAndIncrement())
                 .collect(() -> new StringJoiner(","), StringJoiner::add, StringJoiner::merge);
         String stopQuery = String.format(STOP_ID_URL, ids.toString());
-        Request stopRequest = new Request.Builder().url(stopQuery).build();
-        Response stopResponse;
-        JSONObject rawStopObj;
-
-        try {
-            stopResponse = client.newCall(stopRequest).execute();
-            if (!stopResponse.isSuccessful()) {
-                isUp = false;
-                return Collections.emptyList();
-            }
-            rawStopObj = new JSONObject(stopResponse.body().string());
-        } catch (IOException e) {
-            LoggingUtils.logError(e);
-            isUp = false;
-            return Collections.emptyList();
-        }
+        JSONObject rawStopObj = callUrl(stopQuery);
+        if (rawStopObj == null) return Collections.emptyList();
 
         Map<String, String[]> idToStopInfo = new ConcurrentHashMap<>(size);
         JSONArray stopInfoArray = rawStopObj.getJSONArray("stops");
@@ -233,12 +200,11 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
             double lngVal2 = center[1] + range * MILES_TO_LONG;
             url += "&" + String.format(AREA_FORMAT, lngVal1, latVal1, lngVal2, latVal2);
         }
-        Request req = new Request.Builder()
-                .url(url)
-                .build();
+
         try {
-            Response res = client.newCall(req).execute();
-            JSONObject obj = new JSONObject(res.body().string());
+            JSONObject obj = callUrl(url);
+            if (obj == null) return Collections.emptyList();
+
             JSONArray feeds = obj.getJSONArray("feeds");
             int len = feeds.length();
             List<URL> rval = new ArrayList<>(len);
@@ -247,8 +213,7 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
                 boolean works = restrictions == null ||
                         restrictions.keySet()
                                 .stream()
-                                .allMatch(key -> curobj.get(key)
-                                        .equals(restrictions.get(key)));
+                                .allMatch(key -> curobj.get(key).equals(restrictions.get(key)));
                 if (works) rval.add(new URL(curobj.getString("url")));
             }
             return rval;
@@ -257,6 +222,36 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
             isUp = false;
             return Collections.emptyList();
         }
+    }
+
+    private JSONObject callUrl(String url) {
+        OkHttpClient client;
+        client = new OkHttpClient();
+
+
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+
+        Response response;
+        JSONObject rawobj;
+        try {
+            response = client.newCall(request).execute();
+            if (!response.isSuccessful()) {
+                isUp = false;
+                return null;
+            }
+            rawobj = new JSONObject(response.body().string());
+        } catch (SocketTimeoutException e) {
+            LoggingUtils.logError(e);
+            return null;
+        } catch (Exception e) {
+            LoggingUtils.logError(e);
+            isUp = false;
+            return null;
+        }
+
+        return rawobj;
     }
 
     @Override
