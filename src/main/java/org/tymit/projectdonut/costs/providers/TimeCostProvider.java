@@ -1,6 +1,5 @@
 package org.tymit.projectdonut.costs.providers;
 
-import com.google.common.collect.Lists;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -13,8 +12,6 @@ import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.io.IOException;
 import java.util.Calendar;
-import java.util.List;
-import java.util.StringJoiner;
 import java.util.function.Predicate;
 
 /**
@@ -42,10 +39,9 @@ public abstract class TimeCostProvider implements CostProvider {
     public static final String COMPARE_VALUE_TAG = "compareto";
     public static final String POINT_TWO_TAG = "p2";
     public static final String POINT_ONE_TAG = "p1";
-
+    protected String apiKey;
+    protected int calls = 0;
     private OkHttpClient client = new OkHttpClient();
-    private String apiKey;
-    private int calls = 0;
 
 
     public TimeCostProvider(String apiKey) {
@@ -68,20 +64,19 @@ public abstract class TimeCostProvider implements CostProvider {
         double[] end = extractEnd(arg);
         long startTime = extractStartTime(arg);
 
-        String url = buildCallUrl(Lists.newArrayList(start), Lists.newArrayList(end), startTime);
+        String url = buildCallUrl(start, end, startTime);
         JSONObject obj = runCall(url);
         if (obj == null) return null;
-        TimeDelta[][] timeMatrix = extractTimeMatrix(obj);
-        if (timeMatrix == null
-                || timeMatrix.length < 1
-                || timeMatrix[0].length < 1
-                || timeMatrix[0][0].getDeltaLong() < 0) {
+        TimeDelta timeMatrix = extractTimeDelta(obj);
+        if (timeMatrix == null || timeMatrix.getDeltaLong() < 0) {
             return null;
         }
-        return timeMatrix[0][0];
+        return timeMatrix;
     }
 
-    protected abstract TimeDelta[][] extractTimeMatrix(JSONObject json);
+    protected abstract String buildCallUrl(double[] start, double[] end, long startTime);
+
+    protected abstract TimeDelta extractTimeDelta(JSONObject obj);
 
     @Override
     public boolean isUp() {
@@ -90,37 +85,23 @@ public abstract class TimeCostProvider implements CostProvider {
 
     protected abstract int getMaxCalls();
 
-    private static double[] extractStart(CostArgs args) {
-        double[] rval = null;
-        Object startArg = args.getArgs().containsKey(POINT_ONE_TAG) ? args.getArgs()
-                .get(POINT_ONE_TAG) : args.getSubject();
+    protected static double[] extractStart(CostArgs args) {
+        Object startArg = args.getArgs().containsKey(POINT_ONE_TAG)
+                ? args.getArgs().get(POINT_ONE_TAG)
+                : args.getSubject();
 
-        if (startArg instanceof double[]) rval = (double[]) startArg;
-
-        else if (startArg instanceof LocationPoint) rval = ((LocationPoint) startArg).getCoordinates();
-
-        else if (startArg instanceof Double[]) {
-            Double[] lclstartArg = (Double[]) startArg;
-            rval = new double[lclstartArg.length];
-            for (int i = 0; i < lclstartArg.length; i++) {
-                rval[i] = lclstartArg[i];
-            }
-        }
-
-        return rval;
+        return normalizeLocation(startArg);
     }
 
-    private static double[] extractEnd(CostArgs args) {
+    protected static double[] normalizeLocation(Object rawLocation) {
         double[] rval = null;
-        Object endArg = args.getArgs().containsKey(POINT_TWO_TAG) ? args.getArgs()
-                .get(POINT_TWO_TAG) : args.getSubject();
 
-        if (endArg instanceof double[]) rval = (double[]) endArg;
+        if (rawLocation instanceof double[]) rval = (double[]) rawLocation;
 
-        else if (endArg instanceof LocationPoint) rval = ((LocationPoint) endArg).getCoordinates();
+        else if (rawLocation instanceof LocationPoint) rval = ((LocationPoint) rawLocation).getCoordinates();
 
-        else if (endArg instanceof Double[]) {
-            Double[] lclendArg = (Double[]) endArg;
+        else if (rawLocation instanceof Double[]) {
+            Double[] lclendArg = (Double[]) rawLocation;
             rval = new double[lclendArg.length];
             for (int i = 0; i < lclendArg.length; i++) {
                 rval[i] = lclendArg[i];
@@ -128,9 +109,18 @@ public abstract class TimeCostProvider implements CostProvider {
         }
 
         return rval;
+
     }
 
-    private static long extractStartTime(CostArgs args) {
+    protected static double[] extractEnd(CostArgs args) {
+        Object endArg = args.getArgs().containsKey(POINT_TWO_TAG)
+                ? args.getArgs().get(POINT_TWO_TAG)
+                : args.getSubject();
+
+        return normalizeLocation(endArg);
+    }
+
+    protected static long extractStartTime(CostArgs args) {
         Object startTimeArg = args.getArgs().get(START_TIME_TAG);
         if (startTimeArg instanceof Long) return (Long) startTimeArg;
         if (startTimeArg instanceof Integer) return (Integer) startTimeArg;
@@ -139,27 +129,7 @@ public abstract class TimeCostProvider implements CostProvider {
         return -1;
     }
 
-    private String buildCallUrl(List<double[]> srcs, List<double[]> dests, long startTime) {
-        String srcStr = srcs.parallelStream()
-                .map(latlng -> String.format(getLocationFormat(), latlng[0], latlng[1]))
-                .collect(() -> new StringJoiner(getLocationSeparator()), StringJoiner::add, StringJoiner::merge)
-                .toString();
-
-        String destStr = dests.parallelStream()
-                .map(latlng -> String.format(getLocationFormat(), latlng[0], latlng[1]))
-                .collect(() -> new StringJoiner(getLocationSeparator()), StringJoiner::add, StringJoiner::merge)
-                .toString();
-
-        return String.format(getCallUrlFormat(), srcStr, destStr, startTime, apiKey);
-    }
-
-    protected abstract String getCallUrlFormat();
-
-    protected abstract String getLocationFormat();
-
-    protected abstract String getLocationSeparator();
-
-    private JSONObject runCall(String url) {
+    protected JSONObject runCall(String url) {
         Request req = new Request.Builder().url(url).build();
         try {
             calls++;
@@ -171,7 +141,7 @@ public abstract class TimeCostProvider implements CostProvider {
         }
     }
 
-    private static Predicate<TimeDelta> extractComparison(CostArgs args) {
+    protected static Predicate<TimeDelta> extractComparison(CostArgs args) {
 
         long border = extractCompareBorder(args);
         Object compTagArg = args.getArgs().get(COMPARISON_TAG);
@@ -182,6 +152,8 @@ public abstract class TimeCostProvider implements CostProvider {
                     return dt -> dt == null || dt.getDeltaLong() < border;
                 case '>':
                     return dt -> dt == null || dt.getDeltaLong() > border;
+                case '=':
+                    return dt -> dt == null || dt.getDeltaLong() == border;
             }
         }
 
@@ -218,7 +190,7 @@ public abstract class TimeCostProvider implements CostProvider {
         return a -> true;
     }
 
-    private static long extractCompareBorder(CostArgs args) {
+    protected static long extractCompareBorder(CostArgs args) {
         Object rvalArg = args.getArgs().get(COMPARE_VALUE_TAG);
         if (rvalArg instanceof Long) return (Long) rvalArg;
         else if (rvalArg instanceof TimeDelta) return ((TimeDelta) rvalArg).getDeltaLong();

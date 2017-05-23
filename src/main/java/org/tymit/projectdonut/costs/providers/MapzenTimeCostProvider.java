@@ -15,27 +15,17 @@ public class MapzenTimeCostProvider extends TimeCostProvider {
     }
 
     @Override
-    protected TimeDelta[][] extractTimeMatrix(JSONObject json) {
-        return new TimeDelta[0][0];
+    protected String buildCallUrl(double[] start, double[] end, long startTime) {
+        return null;
+    }
+
+    @Override
+    protected TimeDelta extractTimeDelta(JSONObject obj) {
+        return null;
     }
 
     @Override
     protected int getMaxCalls() {
         return 0;
-    }
-
-    @Override
-    protected String getCallUrlFormat() {
-        return null;
-    }
-
-    @Override
-    protected String getLocationFormat() {
-        return null;
-    }
-
-    @Override
-    protected String getLocationSeparator() {
-        return null;
     }
 }
