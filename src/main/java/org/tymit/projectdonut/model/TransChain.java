@@ -22,13 +22,8 @@ public class TransChain {
         return name;
     }
 
-    public Set<TransStation> getStations() {
-        return stations;
-    }
-
     public TransStation getSchedule(TransStation base) {
-        if (base.getChain() != null
-                && base.getChain().equals(this)
+        if (this.equals(base.getChain())
                 && base.getSchedule() != null
                 && base.getSchedule().size() > 0) {
             return base;
@@ -38,6 +33,22 @@ public class TransChain {
                 .findAny()
                 .map(onto -> base.withSchedule(this, onto.getSchedule()))
                 .orElse(base);
+    }
+
+    public boolean containsStation(TransStation station) {
+        return containsLocation(station);
+    }
+
+    public boolean containsLocation(LocationPoint point) {
+        return containsLocation(point.getCoordinates());
+    }
+
+    public boolean containsLocation(double[] coords) {
+        return getStations().stream().anyMatch(st -> Arrays.equals(st.getCoordinates(), coords));
+    }
+
+    public Set<TransStation> getStations() {
+        return stations;
     }
 
     public void addStation(TransStation station) {
