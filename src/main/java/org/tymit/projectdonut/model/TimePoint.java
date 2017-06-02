@@ -13,15 +13,31 @@ public class TimePoint implements Comparable<TimePoint> {
     private static final long HOURS_TO_MILLIS = 60 * MINUTES_TO_MILLIS;
     private static final long DAYS_TO_MILLIS = 24 * HOURS_TO_MILLIS;
     private static final long WEEKS_TO_MILLIS = 7 * DAYS_TO_MILLIS;
+    private static final long MONTHES_TO_MILLIS = 31 * DAYS_TO_MILLIS;
+    private static final long YEARS_TO_MILLIS = 365 * DAYS_TO_MILLIS + DAYS_TO_MILLIS / 4;
+    private static final long MIN_TIME = 31536000000L; //We don't allow for any time before 1971 for error checking
 
     private final String timeZone;
     private final long unixTime;
 
+    /**
+     * Creates a new TimePoint.
+     *
+     * @param unixTime the unix epoch time in milliseconds that this TimePoint represents. This value must be later
+     *                 than January 1st, 1971, to prevent accidentally using seconds instead of milliseconds.
+     * @param timeZone the timezone to use
+     */
     public TimePoint(long unixTime, String timeZone) {
+        if (unixTime < MIN_TIME)
+            throw new IllegalArgumentException("Unixtime too low. Did you pass seconds instead of milliseconds?");
         this.unixTime = unixTime;
         this.timeZone = timeZone;
     }
 
+    /**
+     * Gets the year that this TimePoint represents.
+     * @return the year component of this TimePoint
+     */
     public int getYear() {
         return getCalendar().get(Calendar.YEAR);
     }
@@ -32,16 +48,22 @@ public class TimePoint implements Comparable<TimePoint> {
         return cal;
     }
 
+    /**
+     * Gets the month component of this TimePoint.
+     * @return the month component of this TimePoint. The valid range is 1 for January to 12 for December.
+     */
     public int getMonth() {
-        return getCalendar().get(Calendar.MONTH);
+        return getCalendar().get(Calendar.MONTH) + 1;
     }
 
     /**
-     * NEW TIME CREATORS
-     **/
+     * Creates a new TimePoint that represents the closest time from this TimePoint such that the day of the month
+     * is dayOfMonth. This can be either before or after the original TimePoint, depending on when the nearest time is.
+     * @param dayOfMonth the new day of the month to use
+     * @return the new TimePoint
+     */
     public TimePoint withDayOfMonth(int dayOfMonth) {
-        if (dayOfMonth < 0 || dayOfMonth > 31)
-            throw new IllegalArgumentException("Day of month invalid.");
+        if (dayOfMonth < 0 || dayOfMonth > 31) throw new IllegalArgumentException("Day of month invalid.");
         int dayDiff = dayOfMonth - getDayOfMonth();
         long millidiff = dayDiff * DAYS_TO_MILLIS;
         return new TimePoint(unixTime + millidiff, timeZone);
@@ -52,8 +74,7 @@ public class TimePoint implements Comparable<TimePoint> {
     }
 
     public TimePoint withDayOfWeek(int dayOfWeek) {
-        if (dayOfWeek < 0 || dayOfWeek > 7)
-            throw new IllegalArgumentException("Day of week invalid.");
+        if (dayOfWeek < 0 || dayOfWeek > 7) throw new IllegalArgumentException("Day of week invalid.");
         int dayDiff = dayOfWeek - getDayOfWeek();
         long millidiff = dayDiff * DAYS_TO_MILLIS;
         return new TimePoint(unixTime + millidiff, timeZone);
@@ -65,8 +86,7 @@ public class TimePoint implements Comparable<TimePoint> {
     }
 
     public TimePoint withHour(int hour) {
-        if (hour < 0 || hour > 23)
-            throw new IllegalArgumentException("Hour invalid.");
+        if (hour < 0 || hour > 23) throw new IllegalArgumentException("Hour invalid.");
         int hourDiff = hour - getHour();
         long milliDiff = hourDiff * HOURS_TO_MILLIS;
         return new TimePoint(unixTime + milliDiff, timeZone);
@@ -87,6 +107,7 @@ public class TimePoint implements Comparable<TimePoint> {
     }
 
     public TimePoint withSecond(int second) {
+        if (second < 0 || second > 60) throw new IllegalArgumentException("Second invalid.");
         int secDiff = second - getSecond();
         long milliDiff = secDiff * SECONDS_TO_MILLIS;
         return new TimePoint(unixTime + milliDiff, timeZone);
@@ -96,6 +117,15 @@ public class TimePoint implements Comparable<TimePoint> {
         return getCalendar().get(Calendar.SECOND);
     }
 
+    public TimePoint withMilliseconds(int milliseconds) {
+        long millidiff = milliseconds - getMilliseconds();
+        return new TimePoint(unixTime + millidiff, timeZone);
+    }
+
+    public long getMilliseconds() {
+        return unixTime % 1000;
+    }
+
     public TimePoint addWeek() {
         return new TimePoint(unixTime + WEEKS_TO_MILLIS, timeZone);
     }
@@ -103,10 +133,6 @@ public class TimePoint implements Comparable<TimePoint> {
     public TimePoint addDay() {
         return new TimePoint(unixTime + DAYS_TO_MILLIS, timeZone);
     }
-
-    /**
-     * MATH METHODS
-     **/
 
     public TimePoint plus(TimeDelta delta) {
         return new TimePoint(unixTime + delta.getDeltaLong(), timeZone);
@@ -119,10 +145,6 @@ public class TimePoint implements Comparable<TimePoint> {
     public TimeDelta timeUntil(TimePoint other) {
         return new TimeDelta(other.getUnixTime() - getUnixTime());
     }
-
-    /**
-     * FIELD ACCESSORS
-     **/
 
     public long getUnixTime() {
         return unixTime;
