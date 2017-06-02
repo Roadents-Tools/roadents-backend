@@ -1,4 +1,7 @@
-package org.tymit.projectdonut.model;
+package org.tymit.projectdonut.model.location;
+
+import org.tymit.projectdonut.model.time.SchedulePoint;
+import org.tymit.projectdonut.model.time.TimePoint;
 
 import java.util.ArrayList;
 import java.util.Arrays;

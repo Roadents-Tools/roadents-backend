@@ -4,8 +4,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.tymit.projectdonut.model.DestinationLocation;
-import org.tymit.projectdonut.model.LocationType;
+import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
@@ -26,11 +26,6 @@ public class LocationsProvidersTest {
         testProvider(new GoogleLocationsProvider());
     }
 
-    @Test
-    public void testFourSquare() throws Exception {
-        testProvider(new FoursquareLocationsProvider());
-    }
-
     private void testProvider(LocationProvider provider) throws Exception{
         double[] testPt = new double[]{37.3532801, -122.0052875};
         double testRange = 1;
@@ -49,6 +44,11 @@ public class LocationsProvidersTest {
                 }
         );
         System.out.printf("Total: %d\n\n", testDests.size());
+    }
+
+    @Test
+    public void testFourSquare() throws Exception {
+        testProvider(new FoursquareLocationsProvider());
     }
 
     @After

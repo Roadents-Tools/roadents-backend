@@ -2,8 +2,8 @@ package org.tymit.projectdonut.locations.caches;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.tymit.projectdonut.model.DestinationLocation;
-import org.tymit.projectdonut.model.LocationType;
+import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationType;
 
 import java.util.ArrayList;
 import java.util.HashMap;

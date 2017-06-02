@@ -5,12 +5,12 @@ import org.json.JSONObject;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.tymit.projectdonut.jsonconvertion.location.DestinationJsonConverter;
+import org.tymit.projectdonut.jsonconvertion.routing.TravelRouteJsonConverter;
 import org.tymit.projectdonut.logic.ApplicationRunner;
-import org.tymit.projectdonut.model.DestinationLocation;
-import org.tymit.projectdonut.model.TravelRoute;
+import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.routing.TravelRoute;
 import org.tymit.projectdonut.utils.LoggingUtils;
-import org.tymit.restcontroller.jsonconvertion.DestinationJsonConverter;
-import org.tymit.restcontroller.jsonconvertion.TravelRouteJsonConverter;
 import org.tymit.restcontroller.testdisplay.TestDisplayer;
 
 import java.util.ArrayList;

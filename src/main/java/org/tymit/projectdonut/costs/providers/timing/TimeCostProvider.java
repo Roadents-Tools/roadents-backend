@@ -6,9 +6,9 @@ import okhttp3.Response;
 import org.json.JSONObject;
 import org.tymit.projectdonut.costs.CostArgs;
 import org.tymit.projectdonut.costs.providers.CostProvider;
-import org.tymit.projectdonut.model.LocationPoint;
-import org.tymit.projectdonut.model.TimeDelta;
-import org.tymit.projectdonut.model.TimePoint;
+import org.tymit.projectdonut.model.location.LocationPoint;
+import org.tymit.projectdonut.model.time.TimeDelta;
+import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.io.IOException;

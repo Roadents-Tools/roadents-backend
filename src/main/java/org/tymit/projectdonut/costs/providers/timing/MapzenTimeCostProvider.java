@@ -1,7 +1,7 @@
 package org.tymit.projectdonut.costs.providers.timing;
 
 import org.json.JSONObject;
-import org.tymit.projectdonut.model.TimeDelta;
+import org.tymit.projectdonut.model.time.TimeDelta;
 
 /**
  * Created by ilan on 5/5/17.

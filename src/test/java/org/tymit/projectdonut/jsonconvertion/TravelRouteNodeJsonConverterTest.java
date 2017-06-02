@@ -1,9 +1,10 @@
-package org.tymit.restcontroller.jsonconvertion;
+package org.tymit.projectdonut.jsonconvertion;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.tymit.projectdonut.model.StartPoint;
-import org.tymit.projectdonut.model.TravelRouteNode;
+import org.tymit.projectdonut.jsonconvertion.routing.TravelRouteNodeJsonConverter;
+import org.tymit.projectdonut.model.location.StartPoint;
+import org.tymit.projectdonut.model.routing.TravelRouteNode;
 
 /**
  * Created by ilan on 8/22/16.

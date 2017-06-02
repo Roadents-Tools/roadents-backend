@@ -5,10 +5,10 @@ import org.tymit.projectdonut.costs.BulkCostArgs;
 import org.tymit.projectdonut.costs.CostArgs;
 import org.tymit.projectdonut.costs.providers.BulkCostProvider;
 import org.tymit.projectdonut.logic.ApplicationRunner;
-import org.tymit.projectdonut.model.DestinationLocation;
-import org.tymit.projectdonut.model.StartPoint;
-import org.tymit.projectdonut.model.TimePoint;
-import org.tymit.projectdonut.model.TravelRoute;
+import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.StartPoint;
+import org.tymit.projectdonut.model.routing.TravelRoute;
+import org.tymit.projectdonut.model.time.TimePoint;
 
 import java.util.ArrayList;
 import java.util.Collection;

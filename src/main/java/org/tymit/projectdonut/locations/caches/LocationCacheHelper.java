@@ -1,7 +1,7 @@
 package org.tymit.projectdonut.locations.caches;
 
-import org.tymit.projectdonut.model.DestinationLocation;
-import org.tymit.projectdonut.model.LocationType;
+import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationType;
 
 import java.util.Arrays;
 import java.util.List;

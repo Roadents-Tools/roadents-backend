@@ -2,12 +2,12 @@ package org.tymit.projectdonut.costs.providers.routing;
 
 import org.tymit.projectdonut.costs.CostArgs;
 import org.tymit.projectdonut.costs.providers.CostProvider;
-import org.tymit.projectdonut.model.DestinationLocation;
-import org.tymit.projectdonut.model.LocationPoint;
-import org.tymit.projectdonut.model.LocationType;
-import org.tymit.projectdonut.model.StartPoint;
-import org.tymit.projectdonut.model.TimePoint;
-import org.tymit.projectdonut.model.TravelRoute;
+import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationPoint;
+import org.tymit.projectdonut.model.location.LocationType;
+import org.tymit.projectdonut.model.location.StartPoint;
+import org.tymit.projectdonut.model.routing.TravelRoute;
+import org.tymit.projectdonut.model.time.TimePoint;
 
 import java.util.Calendar;
 

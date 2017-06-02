@@ -1,6 +1,6 @@
 package org.tymit.restcontroller.testdisplay;
 
-import org.tymit.projectdonut.model.TravelRoute;
+import org.tymit.projectdonut.model.routing.TravelRoute;
 import org.tymit.projectdonut.utils.LocationUtils;
 
 import java.util.List;

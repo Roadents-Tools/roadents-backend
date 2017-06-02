@@ -1,12 +1,15 @@
-package org.tymit.restcontroller.jsonconvertion;
+package org.tymit.projectdonut.jsonconvertion.routing;
 
 import org.json.JSONObject;
-import org.tymit.projectdonut.model.DestinationLocation;
-import org.tymit.projectdonut.model.LocationPoint;
-import org.tymit.projectdonut.model.StartPoint;
-import org.tymit.projectdonut.model.TransChain;
-import org.tymit.projectdonut.model.TransStation;
-import org.tymit.projectdonut.model.TravelRouteNode;
+import org.tymit.projectdonut.jsonconvertion.JsonConverter;
+import org.tymit.projectdonut.jsonconvertion.location.DestinationJsonConverter;
+import org.tymit.projectdonut.jsonconvertion.location.StartPointJsonConverter;
+import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationPoint;
+import org.tymit.projectdonut.model.location.StartPoint;
+import org.tymit.projectdonut.model.location.TransChain;
+import org.tymit.projectdonut.model.location.TransStation;
+import org.tymit.projectdonut.model.routing.TravelRouteNode;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.Map;

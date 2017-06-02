@@ -4,8 +4,8 @@ import org.tymit.projectdonut.costs.CostArgs;
 import org.tymit.projectdonut.costs.CostCalculator;
 import org.tymit.projectdonut.locations.caches.LocationCacheHelper;
 import org.tymit.projectdonut.locations.providers.LocationProviderHelper;
-import org.tymit.projectdonut.model.DestinationLocation;
-import org.tymit.projectdonut.model.LocationType;
+import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationType;
 
 import java.util.ArrayList;
 import java.util.Iterator;

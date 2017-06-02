@@ -1,6 +1,6 @@
 package org.tymit.projectdonut.stations.updates;
 
-import org.tymit.projectdonut.model.TransStation;
+import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.stations.database.StationDbHelper;
 import org.tymit.projectdonut.utils.LoggingUtils;
 

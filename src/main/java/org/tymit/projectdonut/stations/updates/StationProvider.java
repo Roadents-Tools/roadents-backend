@@ -1,7 +1,7 @@
 package org.tymit.projectdonut.stations.updates;
 
-import org.tymit.projectdonut.model.TransChain;
-import org.tymit.projectdonut.model.TransStation;
+import org.tymit.projectdonut.model.location.TransChain;
+import org.tymit.projectdonut.model.location.TransStation;
 
 import java.util.List;
 import java.util.Map;

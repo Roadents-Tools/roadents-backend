@@ -6,9 +6,9 @@ import org.junit.Test;
 import org.onebusaway.gtfs.impl.GtfsDaoImpl;
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.serialization.GtfsReader;
-import org.tymit.projectdonut.model.SchedulePoint;
-import org.tymit.projectdonut.model.TransChain;
-import org.tymit.projectdonut.model.TransStation;
+import org.tymit.projectdonut.model.location.TransChain;
+import org.tymit.projectdonut.model.location.TransStation;
+import org.tymit.projectdonut.model.time.SchedulePoint;
 
 import java.io.File;
 import java.io.IOException;

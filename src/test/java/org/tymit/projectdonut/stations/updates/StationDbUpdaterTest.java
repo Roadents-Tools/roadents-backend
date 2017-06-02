@@ -5,7 +5,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.tymit.projectdonut.locations.LocationRetriever;
-import org.tymit.projectdonut.model.TransStation;
+import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.stations.StationRetriever;
 import org.tymit.projectdonut.utils.LoggingUtils;
 

@@ -4,8 +4,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.tymit.projectdonut.model.TransChain;
-import org.tymit.projectdonut.model.TransStation;
+import org.tymit.projectdonut.model.location.TransChain;
+import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.List;

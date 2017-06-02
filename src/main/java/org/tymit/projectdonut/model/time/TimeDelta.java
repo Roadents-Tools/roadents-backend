@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.model;
+package org.tymit.projectdonut.model.time;
 
 /**
  * Created by ilan on 2/6/17.

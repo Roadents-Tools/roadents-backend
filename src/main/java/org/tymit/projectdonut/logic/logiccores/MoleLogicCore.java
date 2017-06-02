@@ -1,11 +1,11 @@
 package org.tymit.projectdonut.logic.logiccores;
 
-import org.tymit.projectdonut.model.DestinationLocation;
-import org.tymit.projectdonut.model.LocationType;
-import org.tymit.projectdonut.model.StartPoint;
-import org.tymit.projectdonut.model.TimeDelta;
-import org.tymit.projectdonut.model.TimePoint;
-import org.tymit.projectdonut.model.TravelRoute;
+import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationType;
+import org.tymit.projectdonut.model.location.StartPoint;
+import org.tymit.projectdonut.model.routing.TravelRoute;
+import org.tymit.projectdonut.model.time.TimeDelta;
+import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.ArrayList;

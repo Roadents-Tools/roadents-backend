@@ -1,7 +1,8 @@
-package org.tymit.restcontroller.jsonconvertion;
+package org.tymit.projectdonut.jsonconvertion.location;
 
 import com.google.gson.Gson;
-import org.tymit.projectdonut.model.DestinationLocation;
+import org.tymit.projectdonut.jsonconvertion.JsonConverter;
+import org.tymit.projectdonut.model.location.DestinationLocation;
 
 /**
  * Created by ilan on 7/16/16.

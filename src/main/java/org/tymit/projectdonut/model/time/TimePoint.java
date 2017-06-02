@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.model;
+package org.tymit.projectdonut.model.time;
 
 import java.util.Calendar;
 import java.util.TimeZone;

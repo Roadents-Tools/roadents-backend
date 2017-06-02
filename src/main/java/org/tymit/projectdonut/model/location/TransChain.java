@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.model;
+package org.tymit.projectdonut.model.location;
 
 import com.google.common.collect.Sets;
 

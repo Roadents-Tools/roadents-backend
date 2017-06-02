@@ -6,7 +6,7 @@ import org.json.JSONObject;
 import org.tymit.projectdonut.costs.BulkCostArgs;
 import org.tymit.projectdonut.costs.CostArgs;
 import org.tymit.projectdonut.costs.providers.BulkCostProvider;
-import org.tymit.projectdonut.model.TimeDelta;
+import org.tymit.projectdonut.model.time.TimeDelta;
 
 import java.util.List;
 import java.util.Map;

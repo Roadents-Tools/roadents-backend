@@ -1,12 +1,13 @@
-package org.tymit.restcontroller.jsonconvertion;
+package org.tymit.projectdonut.jsonconvertion;
 
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.tymit.projectdonut.jsonconvertion.location.DestinationJsonConverter;
 import org.tymit.projectdonut.locations.LocationRetriever;
-import org.tymit.projectdonut.model.DestinationLocation;
-import org.tymit.projectdonut.model.LocationType;
+import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.stations.StationRetriever;
 import org.tymit.projectdonut.utils.LoggingUtils;
 

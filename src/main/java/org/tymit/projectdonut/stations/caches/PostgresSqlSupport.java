@@ -1,10 +1,10 @@
 package org.tymit.projectdonut.stations.caches;
 
-import org.tymit.projectdonut.model.SchedulePoint;
-import org.tymit.projectdonut.model.TimeDelta;
-import org.tymit.projectdonut.model.TimePoint;
-import org.tymit.projectdonut.model.TransChain;
-import org.tymit.projectdonut.model.TransStation;
+import org.tymit.projectdonut.model.location.TransChain;
+import org.tymit.projectdonut.model.location.TransStation;
+import org.tymit.projectdonut.model.time.SchedulePoint;
+import org.tymit.projectdonut.model.time.TimeDelta;
+import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 

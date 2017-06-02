@@ -1,8 +1,9 @@
-package org.tymit.restcontroller.jsonconvertion;
+package org.tymit.projectdonut.jsonconvertion.location;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.tymit.projectdonut.model.StartPoint;
+import org.tymit.projectdonut.jsonconvertion.JsonConverter;
+import org.tymit.projectdonut.model.location.StartPoint;
 
 /**
  * Created by ilan on 7/16/16.

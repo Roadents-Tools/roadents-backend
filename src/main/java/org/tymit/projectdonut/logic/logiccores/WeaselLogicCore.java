@@ -2,9 +2,9 @@ package org.tymit.projectdonut.logic.logiccores;
 
 import org.tymit.projectdonut.costs.BulkCostArgs;
 import org.tymit.projectdonut.costs.CostCalculator;
-import org.tymit.projectdonut.model.DestinationLocation;
-import org.tymit.projectdonut.model.StartPoint;
-import org.tymit.projectdonut.model.TravelRoute;
+import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.StartPoint;
+import org.tymit.projectdonut.model.routing.TravelRoute;
 
 import java.util.ArrayList;
 import java.util.List;

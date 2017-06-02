@@ -1,5 +1,10 @@
-package org.tymit.projectdonut.model;
+package org.tymit.projectdonut.model.routing;
 
+import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationPoint;
+import org.tymit.projectdonut.model.location.StartPoint;
+import org.tymit.projectdonut.model.time.TimeDelta;
+import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.ArrayList;

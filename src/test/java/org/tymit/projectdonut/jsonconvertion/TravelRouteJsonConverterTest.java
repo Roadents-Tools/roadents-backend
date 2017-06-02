@@ -1,17 +1,18 @@
-package org.tymit.restcontroller.jsonconvertion;
+package org.tymit.projectdonut.jsonconvertion;
 
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.tymit.projectdonut.jsonconvertion.routing.TravelRouteJsonConverter;
 import org.tymit.projectdonut.locations.LocationRetriever;
-import org.tymit.projectdonut.model.DestinationLocation;
-import org.tymit.projectdonut.model.LocationType;
-import org.tymit.projectdonut.model.StartPoint;
-import org.tymit.projectdonut.model.TimePoint;
-import org.tymit.projectdonut.model.TransStation;
-import org.tymit.projectdonut.model.TravelRoute;
-import org.tymit.projectdonut.model.TravelRouteNode;
+import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationType;
+import org.tymit.projectdonut.model.location.StartPoint;
+import org.tymit.projectdonut.model.location.TransStation;
+import org.tymit.projectdonut.model.routing.TravelRoute;
+import org.tymit.projectdonut.model.routing.TravelRouteNode;
+import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.StationRetriever;
 import org.tymit.projectdonut.stations.updates.StationDbUpdater;
 import org.tymit.projectdonut.utils.LoggingUtils;

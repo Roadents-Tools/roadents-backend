@@ -1,5 +1,9 @@
-package org.tymit.projectdonut.model;
+package org.tymit.projectdonut.model.routing;
 
+import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationPoint;
+import org.tymit.projectdonut.model.location.StartPoint;
+import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 /**
@@ -67,6 +71,16 @@ public class TravelRouteNode {
         return getTravelTimeFromPrev().equals(that.getTravelTimeFromPrev());
     }
 
+    @Override
+    public String toString() {
+        return "TravelRouteNode{" +
+                "pt=" + pt +
+                ", walkTimeFromPrev=" + walkTimeFromPrev +
+                ", waitTimeFromPrev=" + waitTimeFromPrev +
+                ", travelTimeFromPrev=" + travelTimeFromPrev +
+                '}';
+    }
+
     public LocationPoint getPt() {
         return pt;
     }
@@ -81,16 +95,6 @@ public class TravelRouteNode {
 
     public TimeDelta getTravelTimeFromPrev() {
         return travelTimeFromPrev;
-    }
-
-    @Override
-    public String toString() {
-        return "TravelRouteNode{" +
-                "pt=" + pt +
-                ", walkTimeFromPrev=" + walkTimeFromPrev +
-                ", waitTimeFromPrev=" + waitTimeFromPrev +
-                ", travelTimeFromPrev=" + travelTimeFromPrev +
-                '}';
     }
 
     public static class Builder {

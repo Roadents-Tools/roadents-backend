@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.model;
+package org.tymit.projectdonut.model.location;
 
 public class LocationType {
     private final String visibleName;
@@ -31,11 +31,11 @@ public class LocationType {
                 '}';
     }
 
-    public String getVisibleName() {
-        return visibleName;
-    }
-
     public String getEncodedname() {
         return encodedName;
+    }
+
+    public String getVisibleName() {
+        return visibleName;
     }
 }
