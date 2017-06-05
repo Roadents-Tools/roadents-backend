@@ -43,6 +43,10 @@ dependencies {
     compile 'com.moodysalem:LatLongToTimezoneMaven:1.1'
     compile group: 'org.postgresql', name: 'postgresql', version: '42.0.0'
 
+    //AWS. TODO: Figure out how to split Spring from main code
+    compile 'com.amazonaws:aws-lambda-java-core:1.1.0'
+    compile 'com.amazonaws:aws-lambda-java-events:1.1.0'
+
     testCompile 'junit:junit:4.12'
     testCompile('org.springframework.boot:spring-boot-starter-test')
 
@@ -51,3 +55,13 @@ dependencies {
 task wrapper(type: Wrapper) {
     gradleVersion = '2.3'
 }
+
+task buildZip(type: Zip) {
+    from compileJava
+    from processResources
+    into('lib') {
+        from configurations.runtime
+    }
+}
+
+build.dependsOn buildZip
