@@ -63,7 +63,7 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
         JSONObject rawobj = callUrl(scheduleUrl);
 
         if (rawobj == null) {
-            if (isUp) seedStations(center, range);
+            //if (isUp) seedStations(center, range);
             return Collections.emptyList();
         }
 
@@ -174,6 +174,36 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
         return new TransStation(name, coords, Collections.singletonList(departTime), chain);
     }
 
+    private JSONObject callUrl(String url) {
+        OkHttpClient client;
+        client = new OkHttpClient();
+
+
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+
+        Response response;
+        JSONObject rawobj;
+        try {
+            response = client.newCall(request).execute();
+            if (!response.isSuccessful()) {
+                isUp = false;
+                return null;
+            }
+            rawobj = new JSONObject(response.body().string());
+        } catch (SocketTimeoutException e) {
+            LoggingUtils.logError(e);
+            return null;
+        } catch (Exception e) {
+            LoggingUtils.logError(e);
+            isUp = false;
+            return null;
+        }
+
+        return rawobj;
+    }
+
     private CompletableFuture<Boolean> seedStations(double[] center, double range) {
         return CompletableFuture.supplyAsync(() -> {
             Stream<List<TransStation>> srcStream = getFeedsInArea(center, range, null)
@@ -190,7 +220,7 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
         });
     }
 
-    private List<URL> getFeedsInArea(double[] center, double range, Map<String, String> restrictions) {
+    public List<URL> getFeedsInArea(double[] center, double range, Map<String, String> restrictions) {
         String url = BASE_FEED_URL + "?per_page=500";
         if (center != null && range >= 0) {
             double latVal1 = center[0] - range * MILES_TO_LAT;
@@ -222,36 +252,6 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
             isUp = false;
             return Collections.emptyList();
         }
-    }
-
-    private JSONObject callUrl(String url) {
-        OkHttpClient client;
-        client = new OkHttpClient();
-
-
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
-
-        Response response;
-        JSONObject rawobj;
-        try {
-            response = client.newCall(request).execute();
-            if (!response.isSuccessful()) {
-                isUp = false;
-                return null;
-            }
-            rawobj = new JSONObject(response.body().string());
-        } catch (SocketTimeoutException e) {
-            LoggingUtils.logError(e);
-            return null;
-        } catch (Exception e) {
-            LoggingUtils.logError(e);
-            isUp = false;
-            return null;
-        }
-
-        return rawobj;
     }
 
     @Override
