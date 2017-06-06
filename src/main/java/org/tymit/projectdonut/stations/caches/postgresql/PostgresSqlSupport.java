@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.stations.caches;
+package org.tymit.projectdonut.stations.caches.postgresql;
 
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;

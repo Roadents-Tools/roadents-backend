@@ -1,10 +1,11 @@
-package org.tymit.projectdonut.stations.database;
+package org.tymit.projectdonut.stations.database.mysql;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
+import org.tymit.projectdonut.stations.database.StationDbInstance;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.sql.Connection;

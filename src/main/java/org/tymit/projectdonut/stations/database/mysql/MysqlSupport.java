@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.stations.database;
+package org.tymit.projectdonut.stations.database.mysql;
 
 import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;

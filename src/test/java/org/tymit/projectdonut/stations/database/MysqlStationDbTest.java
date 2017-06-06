@@ -7,6 +7,8 @@ import org.junit.Test;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.SchedulePoint;
+import org.tymit.projectdonut.stations.database.mysql.MysqlContract;
+import org.tymit.projectdonut.stations.database.mysql.MysqlStationDb;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.ArrayList;

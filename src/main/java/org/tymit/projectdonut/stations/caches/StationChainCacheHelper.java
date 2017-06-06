@@ -4,6 +4,7 @@ import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
+import org.tymit.projectdonut.stations.caches.postgresql.PostgresqlExternalCache;
 import org.tymit.projectdonut.utils.LocationUtils;
 
 import java.util.Arrays;
