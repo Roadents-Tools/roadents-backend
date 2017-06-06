@@ -8,6 +8,7 @@ import java.util.TimeZone;
  */
 public class TimePoint implements Comparable<TimePoint> {
 
+    public static final TimePoint NULL = new TimePoint(0);
     private static final long SECONDS_TO_MILLIS = 1000;
     private static final long MINUTES_TO_MILLIS = 60 * SECONDS_TO_MILLIS;
     private static final long HOURS_TO_MILLIS = 60 * MINUTES_TO_MILLIS;
@@ -16,7 +17,6 @@ public class TimePoint implements Comparable<TimePoint> {
     private static final long MONTHES_TO_MILLIS = 31 * DAYS_TO_MILLIS;
     private static final long YEARS_TO_MILLIS = 365 * DAYS_TO_MILLIS + DAYS_TO_MILLIS / 4;
     private static final long MIN_TIME = 31536000000L; //We don't allow for any time before 1971 for error checking
-
     private final String timeZone;
     private final long unixTime;
 
@@ -32,6 +32,11 @@ public class TimePoint implements Comparable<TimePoint> {
             throw new IllegalArgumentException("Unixtime too low. Did you pass seconds instead of milliseconds?");
         this.unixTime = unixTime;
         this.timeZone = timeZone;
+    }
+
+    private TimePoint(long unixTime) {
+        this.unixTime = unixTime;
+        this.timeZone = "GMT";
     }
 
     /**
@@ -148,6 +153,10 @@ public class TimePoint implements Comparable<TimePoint> {
 
     public long getUnixTime() {
         return unixTime;
+    }
+
+    public String getTimeZone() {
+        return timeZone;
     }
 
     public boolean isBefore(TimePoint other) {

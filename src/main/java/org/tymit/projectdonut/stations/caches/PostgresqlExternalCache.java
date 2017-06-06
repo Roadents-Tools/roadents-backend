@@ -66,7 +66,7 @@ public class PostgresqlExternalCache implements StationCacheInstance {
             double curange = LocationUtils.distanceBetween(center, stat.getCoordinates(), true);
             if (curange > range) range = curange;
         }
-        return cacheStations(center, range, new TimePoint(0, "GMT-8:00"), new TimeDelta(Long.MAX_VALUE), new ArrayList<>(stations));
+        return cacheStations(center, range, TimePoint.NULL, new TimeDelta(Long.MAX_VALUE), new ArrayList<>(stations));
     }
 
     @Override
@@ -75,7 +75,7 @@ public class PostgresqlExternalCache implements StationCacheInstance {
 
             //Null time values = all possible available schedule points.
             if (startTime == null && maxDelta == null) {
-                startTime = new TimePoint(0, "GMT-8:00");
+                startTime = TimePoint.NULL;
                 maxDelta = new TimeDelta(Long.MAX_VALUE);
             }
             return PostgresSqlSupport.storeArea(getConnection(), center, range, startTime, maxDelta, stations);
