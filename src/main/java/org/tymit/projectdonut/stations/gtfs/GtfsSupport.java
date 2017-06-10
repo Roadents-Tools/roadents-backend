@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.stations.updates;
+package org.tymit.projectdonut.stations.gtfs;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;

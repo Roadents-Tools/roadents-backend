@@ -1,9 +1,10 @@
-package org.tymit.projectdonut.stations.database;
+package org.tymit.projectdonut.stations.test;
 
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
+import org.tymit.projectdonut.stations.interfaces.StationDbInstance;
 import org.tymit.projectdonut.utils.LocationUtils;
 
 import java.util.ArrayList;

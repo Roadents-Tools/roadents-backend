@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.stations.updates;
+package org.tymit.projectdonut.stations.gtfs;
 
 import org.junit.Assert;
 import org.junit.Before;

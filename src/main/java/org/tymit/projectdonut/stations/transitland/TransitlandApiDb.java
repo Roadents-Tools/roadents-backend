@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.stations.database;
+package org.tymit.projectdonut.stations.transitland;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -10,8 +10,9 @@ import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.SchedulePoint;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
-import org.tymit.projectdonut.stations.caches.StationChainCacheHelper;
-import org.tymit.projectdonut.stations.updates.GtfsProvider;
+import org.tymit.projectdonut.stations.gtfs.GtfsProvider;
+import org.tymit.projectdonut.stations.helpers.StationChainCacheHelper;
+import org.tymit.projectdonut.stations.interfaces.StationDbInstance;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.net.SocketTimeoutException;

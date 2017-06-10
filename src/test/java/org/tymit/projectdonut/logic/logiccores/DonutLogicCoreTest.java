@@ -18,7 +18,7 @@ import org.tymit.projectdonut.model.time.SchedulePoint;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.StationRetriever;
-import org.tymit.projectdonut.stations.database.TestStationDb;
+import org.tymit.projectdonut.stations.test.TestStationDb;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 

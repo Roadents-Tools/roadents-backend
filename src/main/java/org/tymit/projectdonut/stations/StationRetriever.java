@@ -6,9 +6,9 @@ import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
-import org.tymit.projectdonut.stations.caches.StationChainCacheHelper;
-import org.tymit.projectdonut.stations.database.StationDbHelper;
-import org.tymit.projectdonut.stations.updates.StationDbUpdater;
+import org.tymit.projectdonut.stations.helpers.StationChainCacheHelper;
+import org.tymit.projectdonut.stations.helpers.StationDbHelper;
+import org.tymit.projectdonut.stations.helpers.StationDbUpdater;
 
 import java.util.Iterator;
 import java.util.List;

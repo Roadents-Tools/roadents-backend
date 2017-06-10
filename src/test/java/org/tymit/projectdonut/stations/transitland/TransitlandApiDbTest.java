@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.stations.database;
+package org.tymit.projectdonut.stations.transitland;
 
 import org.junit.After;
 import org.junit.Assert;

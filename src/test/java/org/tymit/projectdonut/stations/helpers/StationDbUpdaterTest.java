@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.stations.updates;
+package org.tymit.projectdonut.stations.helpers;
 
 import org.junit.After;
 import org.junit.Assert;

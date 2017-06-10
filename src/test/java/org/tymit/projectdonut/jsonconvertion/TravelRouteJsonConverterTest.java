@@ -14,7 +14,7 @@ import org.tymit.projectdonut.model.routing.TravelRoute;
 import org.tymit.projectdonut.model.routing.TravelRouteNode;
 import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.StationRetriever;
-import org.tymit.projectdonut.stations.updates.StationDbUpdater;
+import org.tymit.projectdonut.stations.helpers.StationDbUpdater;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.List;

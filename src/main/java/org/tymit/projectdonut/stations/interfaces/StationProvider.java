@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.stations.updates;
+package org.tymit.projectdonut.stations.interfaces;
 
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;

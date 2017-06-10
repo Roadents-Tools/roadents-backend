@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.stations.database.mysql;
+package org.tymit.projectdonut.stations.mysql;
 
 /**
  * Created by ilan on 3/7/17.

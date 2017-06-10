@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.stations.updates;
+package org.tymit.projectdonut.stations.gtfs;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.SchedulePoint;
+import org.tymit.projectdonut.stations.interfaces.StationProvider;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.io.File;

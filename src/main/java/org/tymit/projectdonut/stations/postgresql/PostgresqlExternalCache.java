@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.stations.caches.postgresql;
+package org.tymit.projectdonut.stations.postgresql;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -6,7 +6,7 @@ import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
-import org.tymit.projectdonut.stations.caches.StationCacheInstance;
+import org.tymit.projectdonut.stations.interfaces.StationCacheInstance;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 

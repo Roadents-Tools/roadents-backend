@@ -1,7 +1,9 @@
-package org.tymit.projectdonut.stations.updates;
+package org.tymit.projectdonut.stations.helpers;
 
 import org.tymit.projectdonut.model.location.TransStation;
-import org.tymit.projectdonut.stations.database.StationDbHelper;
+import org.tymit.projectdonut.stations.gtfs.GtfsProvider;
+import org.tymit.projectdonut.stations.interfaces.StationProvider;
+import org.tymit.projectdonut.stations.test.TestStationProvider;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.ArrayList;

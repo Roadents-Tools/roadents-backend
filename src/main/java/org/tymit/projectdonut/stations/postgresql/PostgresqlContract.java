@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.stations.caches.postgresql;
+package org.tymit.projectdonut.stations.postgresql;
 
 /**
  * Created by ilan on 3/7/17.
