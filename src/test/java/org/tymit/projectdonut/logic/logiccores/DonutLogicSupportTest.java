@@ -256,7 +256,7 @@ public class DonutLogicSupportTest {
 
         TestStationDb.setTestStations(testStations);
 
-        Set<TravelRouteNode> results = DonutLogicSupport.getWalkableStations(new StartPoint(CENTER), MAXDELTA);
+        Set<TravelRouteNode> results = DonutLogicSupport.getWalkableStations(new StartPoint(CENTER), TimePoint.NULL, MAXDELTA);
         Assert.assertEquals(expected, results);
     }
 

@@ -130,10 +130,10 @@ public final class DonutLogicSupport {
      * @return a set of nodes representing traveling from center directly to the possible stations
      */
     public static Set<TravelRouteNode> getAllPossibleStations(LocationPoint center, TimePoint startTime, TimeDelta maxDelta) {
-        if (!(center instanceof TransStation)) return getWalkableStations(center, maxDelta);
+        if (!(center instanceof TransStation)) return getWalkableStations(center, startTime, maxDelta);
         TransStation station = (TransStation) center;
 
-        Map<TransStation, TravelRouteNode> walkable = getWalkableStations(station, maxDelta).stream()
+        Map<TransStation, TravelRouteNode> walkable = getWalkableStations(station, startTime, maxDelta).stream()
                 .collect(ConcurrentHashMap::new, (map, node) -> map.put((TransStation) node.getPt(), node), ConcurrentHashMap::putAll);
 
         Map<TransStation, TravelRouteNode> arrivable = getAllChainsForStop(station).stream()
@@ -168,9 +168,15 @@ public final class DonutLogicSupport {
      * @param maxDelta the maximum walking time
      * @return nodes representing walking to all possible stations
      */
-    public static Set<TravelRouteNode> getWalkableStations(LocationPoint begin, TimeDelta maxDelta) {
-        return StationRetriever.getStations(begin.getCoordinates(), LocationUtils
-                .timeToWalkDistance(maxDelta.getDeltaLong(), true), null, null)
+    public static Set<TravelRouteNode> getWalkableStations(LocationPoint begin, TimePoint startTime, TimeDelta maxDelta) {
+        return StationRetriever.getStations(
+                begin.getCoordinates(),
+                LocationUtils.timeToWalkDistance(maxDelta.getDeltaLong(), true),
+                startTime,
+                maxDelta,
+                null,
+                null
+        )
                 .stream()
                 .map(point -> new TravelRouteNode.Builder()
                         .setWalkTime(LocationUtils.timeBetween(begin.getCoordinates(), point.getCoordinates()))
@@ -198,8 +204,15 @@ public final class DonutLogicSupport {
             return Collections.emptySet();
         }
 
-        Set<TravelRouteNode> rval = StationRetriever.getStations(trueStart, maxDelta, station
-                .getChain(), null)./*parallelS*/stream()
+        Set<TravelRouteNode> rval = StationRetriever.getStations(
+                station.getCoordinates(),
+                LocationUtils.timeToWalkDistance(maxDelta.getDeltaLong(), true),
+                trueStart,
+                maxDelta,
+                station.getChain(),
+                null
+        )
+                .stream()
                 .filter(fromChain -> !Arrays.equals(fromChain.getCoordinates(), station.getCoordinates()))
                 .map(DonutLogicSupport::getStationWithSchedule)
                 .filter(fromChain -> startTime.timeUntil(fromChain.getNextArrival(trueStart))
@@ -222,7 +235,7 @@ public final class DonutLogicSupport {
     public static TransStation getStationWithSchedule(TransStation station) {
         if (!(station.getSchedule() == null || station.getSchedule().isEmpty())) return station;
 
-        List<TransStation> trueStation = StationRetriever.getStations(station.getCoordinates(), 0.001, station.getChain(), null);
+        List<TransStation> trueStation = StationRetriever.getStations(station.getCoordinates(), 0, null, null, station.getChain(), null);
         if (trueStation.size() != 1 || trueStation.get(0).getSchedule() == null || trueStation.get(0).getSchedule().isEmpty()) {
             LoggingUtils.logError("DONUT", "Error in requery.\nData:\nList size: %d\nTrueStation: %s",
                     trueStation.size(),
@@ -238,7 +251,7 @@ public final class DonutLogicSupport {
      * @return TransStations for all chains at the location of orig
      */
     public static Set<TransStation> getAllChainsForStop(TransStation orig) {
-        List<TransStation> all = StationRetriever.getStations(orig.getCoordinates(), 0, null, null);
+        List<TransStation> all = StationRetriever.getStations(orig.getCoordinates(), 0, null, null, null, null);
         Set<TransStation> rval = new HashSet<>(all);
         rval.add(orig);
         return rval;

@@ -19,11 +19,6 @@ import java.util.List;
 public class StationRetriever {
 
 
-    @Deprecated
-    public static List<TransStation> getStations(double[] center, double range, TransChain chain, List<CostArgs> args) {
-        return getStations(center, range, null, null, chain, args);
-    }
-
     public static List<TransStation> getStations(double[] center, double range,
                                                  TimePoint startTime, TimeDelta maxDelta,
                                                  TransChain chain, List<CostArgs> args) {
@@ -46,11 +41,6 @@ public class StationRetriever {
             }
         }
         return allStations;
-    }
-
-    @Deprecated
-    public static List<TransStation> getStations(TimePoint startTime, TimeDelta range, TransChain chain, List<CostArgs> args) {
-        return getStations(null, -1, startTime, range, chain, args);
     }
 
     public static void setTestMode(boolean testMode) {
