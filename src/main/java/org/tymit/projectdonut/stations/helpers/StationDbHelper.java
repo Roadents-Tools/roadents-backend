@@ -59,26 +59,6 @@ public class StationDbHelper {
         TestStationDb.setTestStations(null);
     }
 
-    public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
-        return Arrays.stream(allDatabases)
-                .filter(StationDbInstance::isUp)
-                .filter(db -> db instanceof StationDbInstance.AreaDb)
-                .flatMap(db -> ((StationDbInstance.AreaDb) db).queryStations(center, range, chain)
-                        .stream())
-                .distinct()
-                .collect(Collectors.toList());
-    }
-
-    public List<TransStation> queryStations(TimePoint start, TimeDelta range, TransChain chain) {
-        return Arrays.stream(allDatabases)
-                .filter(StationDbInstance::isUp)
-                .filter(db -> db instanceof StationDbInstance.ScheduleDb)
-                .flatMap(db -> ((StationDbInstance.ScheduleDb) db).queryStations(start, range, chain)
-                        .stream())
-                .distinct()
-                .collect(Collectors.toList());
-    }
-
     public List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
         return Arrays.stream(allDatabases)
                 .filter(StationDbInstance::isUp)

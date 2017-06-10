@@ -28,7 +28,7 @@ public class TransitlandApiDbTest {
 
     @Test
     public void testRegion() {
-        List<TransStation> stations = instance.queryStations(TEST_COORDS, TEST_RANGE, null);
+        List<TransStation> stations = instance.queryStations(TEST_COORDS, TEST_RANGE, null, null, null);
         Assert.assertNotEquals(0, stations.size());
         stations.forEach(station -> {
             Assert.assertNotNull(station.getName());
@@ -43,7 +43,7 @@ public class TransitlandApiDbTest {
 
     @Test
     public void testChain() {
-        List<TransStation> stations = instance.queryStations(null, 0, TEST_CHAIN);
+        List<TransStation> stations = instance.queryStations(null, 0, null, null, TEST_CHAIN);
         Assert.assertNotEquals(0, stations.size());
         stations.forEach(station -> {
             Assert.assertEquals(TEST_CHAIN, station.getChain());

@@ -55,7 +55,6 @@ public class TestStationDb implements StationDbInstance.ComboDb {
         chainsToStations.clear();
     }
 
-    @Override
     public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
         List<TransStation> stationsToCheck = (chain != null) ? chainsToStations.get(chain) : chainsToStations
                 .values()
@@ -71,6 +70,9 @@ public class TestStationDb implements StationDbInstance.ComboDb {
 
     @Override
     public List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+
+        if (center == null || range < 0) return queryStations(startTime, maxDelta, chain);
+
         List<TransStation> stationsToCheck = (chain != null) ? chainsToStations.get(chain) : chainsToStations
                 .values()
                 .stream()
@@ -86,7 +88,6 @@ public class TestStationDb implements StationDbInstance.ComboDb {
                 .collect(Collectors.toList());
     }
 
-    @Override
     public List<TransStation> queryStations(TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
         List<TransStation> stationsToCheck = (chain != null) ? chainsToStations.get(chain) : chainsToStations
                 .values()

@@ -5,7 +5,6 @@ import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.pool.HikariPool;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
-import org.tymit.projectdonut.stations.interfaces.StationDbInstance;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.sql.Connection;
@@ -17,7 +16,7 @@ import java.util.Map;
 /**
  * Created by ilan on 7/9/16.
  */
-public class MysqlStationDb implements StationDbInstance.AreaDb {
+public class MysqlStationDb {
 
     public static final String[] DB_URLS = new String[] { "jdbc:mysql://127.0.0.1:3306/Donut" };
     private static final String USER = "donut";
@@ -72,7 +71,6 @@ public class MysqlStationDb implements StationDbInstance.AreaDb {
         }
     }
 
-    @Override
     public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
 
         Connection connection = getConnection();
@@ -89,17 +87,14 @@ public class MysqlStationDb implements StationDbInstance.AreaDb {
         return new ArrayList<>(queryOut.values());
     }
 
-    @Override
     public boolean putStations(List<TransStation> stations) {
         return MysqlSupport.insertOrUpdateStations(this::getConnection, stations);
     }
 
-    @Override
     public boolean isUp() {
         return isUp;
     }
 
-    @Override
     public void close() {
         connSource.close();
     }
