@@ -37,11 +37,16 @@ public class LocationUtils {
     }
 
     public static double timeToWalkDistance(long time, boolean miles) {
+        if (time < 1000) throw new IllegalArgumentException("Time too small! Did you accidentally pass in seconds?");
         double timeHours = time / 1000.0 / 60.0 / 60.0;
         return (miles) ? AVG_WALKING_SPEED_MPH * timeHours / SAFETY_FACTOR : AVG_WALKING_SPEED_KPH * timeHours / SAFETY_FACTOR;
     }
 
     public static double milesToMeters(double miles){
         return miles * 1000 * AVG_WALKING_SPEED_KPH/AVG_WALKING_SPEED_MPH;
+    }
+
+    public static double metersToMiles(double meters) {
+        return meters / 1000 * AVG_WALKING_SPEED_MPH / AVG_WALKING_SPEED_KPH;
     }
 }
