@@ -42,8 +42,8 @@ dependencies {
     compile 'com.squareup.retrofit2:retrofit:2.1.0'
     compile 'com.moodysalem:LatLongToTimezoneMaven:1.1'
     compile group: 'org.postgresql', name: 'postgresql', version: '42.0.0'
-
     //AWS. TODO: Figure out how to split Spring from main code
+    compile group: 'com.amazonaws', name: 'aws-java-sdk-dynamodb', version: '1.11.140'
     compile 'com.amazonaws:aws-lambda-java-core:1.1.0'
     compile 'com.amazonaws:aws-lambda-java-events:1.1.0'
 

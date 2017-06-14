@@ -50,19 +50,22 @@ public class GtfsProvider implements StationProvider {
     }
 
     private File zipFile;
+    private String source;
     private Map<TransChain, List<TransStation>> cache;
     private boolean isWorking = true;
     private boolean deleteOnCache = false;
 
     public GtfsProvider(String fileName) {
-        zipFile = new File(fileName);
+        this(new File(fileName));
     }
 
     public GtfsProvider(File file) {
         zipFile = file;
+        source = file.getName();
     }
 
     public GtfsProvider(URL url) {
+        source = url.toString();
         zipFile = new File(url.getFile().replaceAll("/", "__"));
         try {
             zipFile.delete();
@@ -83,6 +86,10 @@ public class GtfsProvider implements StationProvider {
     private static void disableApacheLogging() {
         Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
         root.setLevel(Level.OFF);
+    }
+
+    public String getSource() {
+        return source;
     }
 
     @Override
