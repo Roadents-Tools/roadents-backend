@@ -22,7 +22,7 @@ import java.util.List;
  */
 public class PostgresqlExternalCache implements StationCacheInstance {
 
-    public static final String[] DB_URLS = new String[] { "jdbc:postgresql://127.0.0.1:5432/Donut" };
+    public static final String[] DB_URLS = new String[] { "jdbc:postgresql://donutdb.c3ovzbdvtevz.us-west-2.rds.amazonaws.com:5432/Donut" };
     private static final String USER = "donut";
     private static final String PASS = "donutpass";
     private HikariDataSource connSource;
@@ -79,30 +79,30 @@ public class PostgresqlExternalCache implements StationCacheInstance {
                 startTime = TimePoint.NULL;
                 maxDelta = new TimeDelta(Long.MAX_VALUE);
             }
-            return PostgresSqlSupport.storeArea(getConnection(), center, range, startTime, maxDelta, stations);
+            return PostgresSqlSupport.storeArea(this::getConnection, center, range, startTime, maxDelta, stations);
         } catch (SQLException e) {
             LoggingUtils.logError(e);
             return false;
         }
     }
 
-    private Connection getConnection() {
+    @Override
+    public List<TransStation> getCachedStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+        try {
+            return PostgresSqlSupport.getInformation(this::getConnection, center, range, startTime, maxDelta, chain);
+        } catch (Exception e) {
+            LoggingUtils.logError(e);
+            return Collections.emptyList();
+        }
+    }
+
+    public Connection getConnection() {
         try {
             return connSource.getConnection();
         } catch (SQLException e) {
             LoggingUtils.logError(e);
             isUp = false;
             return null;
-        }
-    }
-
-    @Override
-    public List<TransStation> getCachedStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
-        try {
-            return PostgresSqlSupport.getInformation(getConnection(), center, range, startTime, maxDelta, chain);
-        } catch (Exception e) {
-            LoggingUtils.logError(e);
-            return Collections.emptyList();
         }
     }
 

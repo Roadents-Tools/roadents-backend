@@ -22,22 +22,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
  * Created by ilan on 3/28/17.
  */
 public class PostgresSqlSupport {
-
-    private static final String[] SCHEDULE_DAY_FIELDS = new String[] {
-            PostgresqlContract.SCHEDULE_SUNDAY_VALID_KEY,
-            PostgresqlContract.SCHEDULE_MONDAY_VALID_KEY,
-            PostgresqlContract.SCHEDULE_TUESDAY_VALID_KEY,
-            PostgresqlContract.SCHEDULE_WEDNESDAY_VALID_KEY,
-            PostgresqlContract.SCHEDULE_THURSDAY_VALID_KEY,
-            PostgresqlContract.SCHEDULE_FRIDAY_VALID_KEY,
-            PostgresqlContract.SCHEDULE_SATURDAY_VALID_KEY,
-    };
 
 
     private static final String LAT_COL_NAME = "statlatman";
@@ -57,11 +48,12 @@ public class PostgresSqlSupport {
     /**
      * INFORMATION RETRIEVAL
      **/
-    public static List<TransStation> getInformation(Connection con,
+    public static List<TransStation> getInformation(Supplier<Connection> connectionGenerator,
                                                     double[] center, double range,
                                                     TimePoint startTime, TimeDelta maxDelta,
                                                     TransChain chain
     ) throws SQLException {
+        Connection con = connectionGenerator.get();
         if (!isValidQuery(con, center, range, startTime, maxDelta, chain))
             return Collections.emptyList();
         Statement stm = con.createStatement();
@@ -71,12 +63,12 @@ public class PostgresSqlSupport {
         Map<Integer, Map<Integer, List<SchedulePoint>>> chainStationSchedule = new HashMap<>();
         while (rs.isBeforeFirst()) rs.next();
         do {
-            int statId = rs.getInt(PostgresqlContract.COST_STATION_KEY);
+            int statId = rs.getInt(PostgresqlContract.CostTable.COST_STATION_KEY);
             if (!idToStations.containsKey(statId)) {
                 TransStation nstat = new TransStation(rs.getString(STAT_NAM_KEY), new double[] { rs.getDouble(LAT_COL_NAME), rs.getDouble(LNG_COL_NAME) });
                 idToStations.put(statId, nstat);
             }
-            int chainId = rs.getInt(PostgresqlContract.COST_CHAIN_KEY);
+            int chainId = rs.getInt(PostgresqlContract.CostTable.COST_CHAIN_KEY);
             if (!idToChain.containsKey(chainId)) {
                 TransChain nchn = new TransChain(rs.getString(CHN_NAM_KEY));
                 idToChain.put(chainId, nchn);
@@ -84,20 +76,21 @@ public class PostgresSqlSupport {
             chainStationSchedule.putIfAbsent(chainId, new HashMap<>());
             chainStationSchedule.get(chainId)
                     .putIfAbsent(statId, new ArrayList<>());
+            int validDays = rs.getByte(PostgresqlContract.ScheduleTable.PACKED_VALID_KEY);
             SchedulePoint nsched = new SchedulePoint(
                     rs.getInt(HOUR_COL_NAME),
                     rs.getInt(MINUTE_COL_NAME),
                     rs.getInt(SECOND_COL_NAME),
                     new boolean[] {
-                            rs.getBoolean(PostgresqlContract.SCHEDULE_SUNDAY_VALID_KEY),
-                            rs.getBoolean(PostgresqlContract.SCHEDULE_MONDAY_VALID_KEY),
-                            rs.getBoolean(PostgresqlContract.SCHEDULE_TUESDAY_VALID_KEY),
-                            rs.getBoolean(PostgresqlContract.SCHEDULE_WEDNESDAY_VALID_KEY),
-                            rs.getBoolean(PostgresqlContract.SCHEDULE_THURSDAY_VALID_KEY),
-                            rs.getBoolean(PostgresqlContract.SCHEDULE_FRIDAY_VALID_KEY),
-                            rs.getBoolean(PostgresqlContract.SCHEDULE_SATURDAY_VALID_KEY)
+                            (validDays & 1) != 0,
+                            (validDays & 2) != 0,
+                            (validDays & 4) != 0,
+                            (validDays & 8) != 0,
+                            (validDays & 16) != 0,
+                            (validDays & 32) != 0,
+                            (validDays & 64) != 0,
                     },
-                    rs.getLong(PostgresqlContract.SCHEDULE_FUZZ_KEY)
+                    rs.getLong(PostgresqlContract.ScheduleTable.FUZZ_KEY)
             );
             chainStationSchedule.get(chainId).get(statId).add(nsched);
         } while (rs.next());
@@ -110,6 +103,7 @@ public class PostgresSqlSupport {
                                 .get(statid)));
             }
         }
+        con.close();
         return new ArrayList<>(rval);
     }
 
@@ -129,42 +123,40 @@ public class PostgresSqlSupport {
                         "FROM %s, %s, %s, %s WHERE %s.%s=%s.%s AND %s.%s=%s.%s AND %s.%s = %s.%s ",
 
                 //ALIASES
-                PostgresqlContract.STATION_TABLE_NAME, PostgresqlContract.STATION_LATLNG_KEY, LAT_COL_NAME,
-                PostgresqlContract.STATION_TABLE_NAME, PostgresqlContract.STATION_LATLNG_KEY, LNG_COL_NAME,
-                PostgresqlContract.SCHEDULE_TABLE_NAME, PostgresqlContract.SCHEDULE_TIME_KEY, HOUR_COL_NAME,
-                PostgresqlContract.SCHEDULE_TABLE_NAME, PostgresqlContract.SCHEDULE_TIME_KEY, MINUTE_COL_NAME,
-                PostgresqlContract.SCHEDULE_TABLE_NAME, PostgresqlContract.SCHEDULE_TIME_KEY, SECOND_COL_NAME,
-                PostgresqlContract.STATION_TABLE_NAME, PostgresqlContract.STATION_NAME_KEY, STAT_NAM_KEY,
-                PostgresqlContract.CHAIN_TABLE_NAME, PostgresqlContract.CHAIN_NAME_KEY, CHN_NAM_KEY,
+                PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.LATLNG_KEY, LAT_COL_NAME,
+                PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.LATLNG_KEY, LNG_COL_NAME,
+                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.TIME_KEY, HOUR_COL_NAME,
+                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.TIME_KEY, MINUTE_COL_NAME,
+                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.TIME_KEY, SECOND_COL_NAME,
+                PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.NAME_KEY, STAT_NAM_KEY,
+                PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.ChainTable.NAME_KEY, CHN_NAM_KEY,
 
                 //FROM
-                PostgresqlContract.SCHEDULE_TABLE_NAME, PostgresqlContract.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.STATION_TABLE_NAME, PostgresqlContract.CHAIN_TABLE_NAME,
+                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.CostTable.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.ChainTable.TABLE_NAME,
 
                 //JOIN
-                PostgresqlContract.SCHEDULE_TABLE_NAME, PostgresqlContract.SCHEDULE_COST_ID_KEY, PostgresqlContract.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.COST_ID_KEY,
-                PostgresqlContract.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.COST_STATION_KEY, PostgresqlContract.STATION_TABLE_NAME, PostgresqlContract.STATION_ID_KEY,
-                PostgresqlContract.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.COST_CHAIN_KEY, PostgresqlContract.CHAIN_TABLE_NAME, PostgresqlContract.CHAIN_ID_KEY
+                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.COST_ID_KEY, PostgresqlContract.CostTable.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.CostTable.COST_ID_KEY,
+                PostgresqlContract.CostTable.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.CostTable.COST_STATION_KEY, PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.ID_KEY,
+                PostgresqlContract.CostTable.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.CostTable.COST_CHAIN_KEY, PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.ChainTable.ID_KEY
         ));
         if (startTime != null && maxDelta != null) {
-            builder.append(String.format("AND %s.%s=true AND (%s.%s, %s.%s * INTERVAL \'1 ms\') OVERLAPS (\'%d:%d:%d\', INTERVAL '%d milliseconds') ",
-                    PostgresqlContract.SCHEDULE_TABLE_NAME, SCHEDULE_DAY_FIELDS[startTime
-                            .getDayOfWeek()],
-                    PostgresqlContract.SCHEDULE_TABLE_NAME, PostgresqlContract.SCHEDULE_TIME_KEY,
-                    PostgresqlContract.SCHEDULE_TABLE_NAME, PostgresqlContract.SCHEDULE_FUZZ_KEY,
-                    startTime.getHour(), startTime.getMinute(), startTime.getSecond(), maxDelta
-                            .getDeltaLong()
+            builder.append(String.format("AND (%s.%s & %d::bit(7) != B'0000000') AND (%s.%s, %s.%s * INTERVAL \'1 ms\') OVERLAPS (\'%d:%d:%d\', INTERVAL '%d milliseconds') ",
+                    PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.PACKED_VALID_KEY, 1 << startTime
+                            .getDayOfWeek(),
+                    PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.TIME_KEY,
+                    PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.FUZZ_KEY,
+                    startTime.getHour(), startTime.getMinute(), startTime.getSecond(), maxDelta.getDeltaLong()
             ));
         }
         if (center != null && range >= 0) {
             builder.append(String.format("AND ST_DWITHIN(%s.%s, ST_POINT(%f, %f)::geography, %f) ",
-                    PostgresqlContract.STATION_TABLE_NAME, PostgresqlContract.STATION_LATLNG_KEY, center[0], center[1], LocationUtils
+                    PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.LATLNG_KEY, center[0], center[1], LocationUtils
                             .milesToMeters(range)
             ));
         }
         if (chain != null) {
             builder.append(String.format("AND %s.%s=%s ",
-                    PostgresqlContract.CHAIN_TABLE_NAME, PostgresqlContract.CHAIN_NAME_KEY, chain
-                            .getName()
+                    PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.ChainTable.NAME_KEY, chain.getName()
             ));
         }
         System.out.println(builder.toString());
@@ -182,11 +174,11 @@ public class PostgresSqlSupport {
                         "WHERE ST_DWithin(ST_POINT(%f, %f)::geography, %s, %f) " +
                         "AND %s <= to_timestamp(%d) " +
                         "AND %s + %s >= to_timestamp(%d)",
-                PostgresqlContract.RANGE_ID_KEY, PostgresqlContract.RANGE_TABLE_NAME,
-                center[0], center[1], PostgresqlContract.RANGE_LAT_KEY, LocationUtils
+                PostgresqlContract.RangeTable.ID_KEY, PostgresqlContract.RangeTable.TABLE_NAME,
+                center[0], center[1], PostgresqlContract.RangeTable.LAT_KEY, LocationUtils
                         .milesToMeters(range),
-                PostgresqlContract.RANGE_TIME_KEY, startTime.getUnixTime(),
-                PostgresqlContract.RANGE_TIME_KEY, PostgresqlContract.RANGE_FUZZ_KEY,
+                PostgresqlContract.RangeTable.TIME_KEY, startTime.getUnixTime(),
+                PostgresqlContract.RangeTable.TIME_KEY, PostgresqlContract.RangeTable.FUZZ_KEY,
                 startTime.plus(maxDelta).getUnixTime()
         ));
         return rs.next();
@@ -195,12 +187,13 @@ public class PostgresSqlSupport {
     /**
      * INFORMATION STORING
      **/
-    public static boolean storeArea(Connection con,
+    public static boolean storeArea(Supplier<Connection> conGenerator,
                                     double[] center, double range,
                                     TimePoint startTime, TimeDelta maxDelta,
                                     Collection<? extends TransStation> stations
     ) throws SQLException {
 
+        Connection con = conGenerator.get();
         long deltlong = (MAX_POSTGRES_INTERVAL_MILLI > maxDelta.getDeltaLong()) ? maxDelta
                 .getDeltaLong() : MAX_POSTGRES_INTERVAL_MILLI;
         Statement stm = con.createStatement();
@@ -213,8 +206,8 @@ public class PostgresSqlSupport {
                 .distinct()
                 .map(TransChain::getName)
                 .map(chainName -> String.format("INSERT INTO %s(%s) VALUES ('%s') ON CONFLICT(%s) DO NOTHING;",
-                        PostgresqlContract.CHAIN_TABLE_NAME, PostgresqlContract.CHAIN_NAME_KEY, chainName
-                                .replace("'", "`"), PostgresqlContract.CHAIN_NAME_KEY)
+                        PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.ChainTable.NAME_KEY, chainName
+                                .replace("'", "`"), PostgresqlContract.ChainTable.NAME_KEY)
                 )
                 .filter(Objects::nonNull)
                 .forEach((LoggingUtils.WrappedConsumer<String>) (sql1) -> {
@@ -232,7 +225,7 @@ public class PostgresSqlSupport {
                 .map(TransStation::stripSchedule)
                 .distinct()
                 .map(station -> String.format("INSERT INTO %s(%s, %s) VALUES (\'%s\', ST_POINT(%f,%f)::geography) ON CONFLICT DO NOTHING;",
-                        PostgresqlContract.STATION_TABLE_NAME, PostgresqlContract.STATION_NAME_KEY, PostgresqlContract.STATION_LATLNG_KEY,
+                        PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.NAME_KEY, PostgresqlContract.StationTable.LATLNG_KEY,
                         station.getName()
                                 .replace("'", "`"), station.getCoordinates()[0], station
                                 .getCoordinates()[1])
@@ -263,30 +256,31 @@ public class PostgresSqlSupport {
         String query = String.format("INSERT INTO %s(%s, %s, %s, %s) " +
                         "VALUES (ST_POINT(%f,%f)::geography, %f, to_timestamp(%d), INTERVAL '%d seconds') " +
                         "ON CONFLICT(%s, %s) DO UPDATE SET %s=%f, %s=to_timestamp(%d), %s=INTERVAL '%d seconds'",
-                PostgresqlContract.RANGE_TABLE_NAME, PostgresqlContract.RANGE_LAT_KEY, PostgresqlContract.RANGE_BOX_KEY, PostgresqlContract.RANGE_TIME_KEY, PostgresqlContract.RANGE_FUZZ_KEY,
+                PostgresqlContract.RangeTable.TABLE_NAME, PostgresqlContract.RangeTable.LAT_KEY, PostgresqlContract.RangeTable.BOX_KEY, PostgresqlContract.RangeTable.TIME_KEY, PostgresqlContract.RangeTable.FUZZ_KEY,
                 center[0], center[1], (LocationUtils.milesToMeters(range) != Double.POSITIVE_INFINITY) ? LocationUtils
                         .milesToMeters(range) : 9e99, startTime.getUnixTime(), deltlong / 1000,
-                PostgresqlContract.RANGE_LAT_KEY, PostgresqlContract.RANGE_TIME_KEY,
-                PostgresqlContract.RANGE_BOX_KEY, LocationUtils.milesToMeters(range),
-                PostgresqlContract.RANGE_TIME_KEY, startTime.getUnixTime(),
-                PostgresqlContract.RANGE_FUZZ_KEY, deltlong / 1000
+                PostgresqlContract.RangeTable.LAT_KEY, PostgresqlContract.RangeTable.TIME_KEY,
+                PostgresqlContract.RangeTable.BOX_KEY, LocationUtils.milesToMeters(range),
+                PostgresqlContract.RangeTable.TIME_KEY, startTime.getUnixTime(),
+                PostgresqlContract.RangeTable.FUZZ_KEY, deltlong / 1000
         );
         stm.execute(query);
 
         //And close
         stm.close();
+        con.close();
         return true;
     }
 
     private static Stream<String> createScheduleQuery(TransStation station) {
         return Stream.concat(
                 Stream.of(String.format("INSERT INTO %s(%s, %s) VALUES ((SELECT %s FROM %s WHERE %s='%s'), (SELECT %s FROM %s WHERE ST_Equals(%s::geometry, ST_POINT(%f,%f)::geography::geometry))) ON CONFLICT DO NOTHING;",
-                        PostgresqlContract.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.COST_CHAIN_KEY, PostgresqlContract.COST_STATION_KEY,
-                        PostgresqlContract.CHAIN_ID_KEY, PostgresqlContract.CHAIN_TABLE_NAME, PostgresqlContract.CHAIN_NAME_KEY, station
+                        PostgresqlContract.CostTable.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.CostTable.COST_CHAIN_KEY, PostgresqlContract.CostTable.COST_STATION_KEY,
+                        PostgresqlContract.ChainTable.ID_KEY, PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.ChainTable.NAME_KEY, station
                                 .getChain()
                                 .getName()
                                 .replace("'", "`"),
-                        PostgresqlContract.STATION_ID_KEY, PostgresqlContract.STATION_TABLE_NAME, PostgresqlContract.STATION_LATLNG_KEY, station
+                        PostgresqlContract.StationTable.ID_KEY, PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.LATLNG_KEY, station
                                 .getCoordinates()[0], station.getCoordinates()[1]
                 )),
                 station.getSchedule().stream().map(sched -> String.format(
@@ -298,31 +292,30 @@ public class PostgresSqlSupport {
                                 "WHERE %s.%s='%s' AND " +
                                 "ST_DWITHIN(%s.%s, ST_POINT(%f,%f)::geography, %d, FALSE)" +
                                 ") \n" +
-                                "INSERT INTO %s(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)\n" +
-                                "VALUES (%s, %s, %s, %s, %s, %s, %s, '%d:%d:%d', %d, (SELECT %s FROM kost LIMIT 1)) ON CONFLICT DO NOTHING;\n",
-                        PostgresqlContract.COST_ID_KEY,
-                        PostgresqlContract.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.COST_ID_KEY, PostgresqlContract.STATION_CHAIN_COST_TABLE_NAME,
-                        PostgresqlContract.CHAIN_TABLE_NAME, PostgresqlContract.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.COST_CHAIN_KEY, PostgresqlContract.CHAIN_TABLE_NAME, PostgresqlContract.CHAIN_ID_KEY,
-                        PostgresqlContract.STATION_TABLE_NAME, PostgresqlContract.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.COST_STATION_KEY, PostgresqlContract.STATION_TABLE_NAME, PostgresqlContract.STATION_ID_KEY,
-                        PostgresqlContract.CHAIN_TABLE_NAME, PostgresqlContract.CHAIN_NAME_KEY, station
-                                .getChain()
+                                "INSERT INTO %s(%s, %s, %s, %s)\n" +
+                                "VALUES (B'%s', '%d:%d:%d', %d, (SELECT %s FROM kost LIMIT 1)) ON CONFLICT DO NOTHING;\n",
+                        PostgresqlContract.CostTable.COST_ID_KEY,
+                        PostgresqlContract.CostTable.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.CostTable.COST_ID_KEY, PostgresqlContract.CostTable.STATION_CHAIN_COST_TABLE_NAME,
+                        PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.CostTable.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.CostTable.COST_CHAIN_KEY, PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.ChainTable.ID_KEY,
+                        PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.CostTable.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.CostTable.COST_STATION_KEY, PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.ID_KEY,
+                        PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.ChainTable.NAME_KEY, station.getChain()
                                 .getName()
                                 .replace("'", "`"),
-                        PostgresqlContract.STATION_TABLE_NAME, PostgresqlContract.STATION_LATLNG_KEY, station
-                                .getCoordinates()[0], station.getCoordinates()[1], ERROR_MARGIN,
-                        PostgresqlContract.SCHEDULE_TABLE_NAME, PostgresqlContract.SCHEDULE_SUNDAY_VALID_KEY, PostgresqlContract.SCHEDULE_MONDAY_VALID_KEY,
-                        PostgresqlContract.SCHEDULE_TUESDAY_VALID_KEY, PostgresqlContract.SCHEDULE_WEDNESDAY_VALID_KEY, PostgresqlContract.SCHEDULE_THURSDAY_VALID_KEY,
-                        PostgresqlContract.SCHEDULE_FRIDAY_VALID_KEY, PostgresqlContract.SCHEDULE_SATURDAY_VALID_KEY, PostgresqlContract.SCHEDULE_TIME_KEY,
-                        PostgresqlContract.SCHEDULE_FUZZ_KEY, PostgresqlContract.SCHEDULE_COST_ID_KEY,
-                        sched.getValidDays()[0] ? "true" : "false", sched.getValidDays()[1] ? "true" : "false", sched
-                                .getValidDays()[2] ? "true" : "false",
-                        sched.getValidDays()[3] ? "true" : "false", sched.getValidDays()[4] ? "true" : "false", sched
-                                .getValidDays()[5] ? "true" : "false",
-                        sched.getValidDays()[6] ? "true" : "false", sched.getHour(), sched
-                                .getMinute(), sched.getSecond(), sched.getFuzz(),
-                        PostgresqlContract.COST_ID_KEY
+                        PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.LATLNG_KEY, station.getCoordinates()[0], station
+                                .getCoordinates()[1], ERROR_MARGIN,
+                        PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.PACKED_VALID_KEY, PostgresqlContract.ScheduleTable.TIME_KEY, PostgresqlContract.ScheduleTable.FUZZ_KEY, PostgresqlContract.ScheduleTable.COST_ID_KEY,
+                        booleanArrToBitString(sched.getValidDays()), sched.getHour(), sched.getMinute(), sched.getSecond(), sched
+                                .getFuzz(),
+                        PostgresqlContract.CostTable.COST_ID_KEY
                 ))
         );
+    }
 
+    private static String booleanArrToBitString(boolean[] bols) {
+        StringBuilder builder = new StringBuilder();
+        for (boolean bol : bols) {
+            builder.append(bol ? '1' : '0');
+        }
+        return builder.toString();
     }
 }
