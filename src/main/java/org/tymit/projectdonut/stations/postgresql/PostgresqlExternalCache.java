@@ -7,6 +7,7 @@ import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.interfaces.StationCacheInstance;
+import org.tymit.projectdonut.stations.interfaces.StationDbInstance;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
@@ -20,7 +21,7 @@ import java.util.List;
 /**
  * Created by ilan on 3/31/17.
  */
-public class PostgresqlExternalCache implements StationCacheInstance {
+public class PostgresqlExternalCache implements StationCacheInstance, StationDbInstance.ComboDb {
 
     public static final String[] DB_URLS = new String[] { "jdbc:postgresql://donutdb.c3ovzbdvtevz.us-west-2.rds.amazonaws.com:5432/Donut" };
     private static final String USER = "donut";
@@ -45,11 +46,26 @@ public class PostgresqlExternalCache implements StationCacheInstance {
         config.setJdbcUrl(url);
         config.setUsername(USER);
         config.setPassword(PASS);
-        config.setMaximumPoolSize(10);
+        config.setMaximumPoolSize(1);
         return config;
     }
 
-    public boolean storeStations(Collection<? extends TransStation> stations) throws SQLException {
+    public Connection getConnection() {
+        try {
+            return connSource.getConnection();
+        } catch (SQLException e) {
+            LoggingUtils.logError(e);
+            isUp = false;
+            return null;
+        }
+    }
+
+    @Override
+    public boolean putStations(List<TransStation> stations) {
+        return storeStations(stations);
+    }
+
+    public boolean storeStations(Collection<? extends TransStation> stations) {
         double[] center = new double[] { 0, 0 };
         double range = -1;
         int size = 0;
@@ -96,21 +112,16 @@ public class PostgresqlExternalCache implements StationCacheInstance {
         }
     }
 
-    public Connection getConnection() {
-        try {
-            return connSource.getConnection();
-        } catch (SQLException e) {
-            LoggingUtils.logError(e);
-            isUp = false;
-            return null;
-        }
-    }
-
     public boolean isUp() {
         return isUp;
     }
 
     public void close() {
         connSource.close();
+    }
+
+    @Override
+    public List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+        return getCachedStations(center, range, startTime, maxDelta, chain);
     }
 }
