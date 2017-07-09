@@ -1,9 +1,10 @@
-package org.tymit.projectdonut.locations.providers;
+package org.tymit.projectdonut.locations.gmaps;
 
 import okhttp3.ResponseBody;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.tymit.projectdonut.locations.interfaces.LocationProvider;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.utils.LocationUtils;

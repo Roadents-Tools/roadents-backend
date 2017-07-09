@@ -1,5 +1,8 @@
-package org.tymit.projectdonut.locations.providers;
+package org.tymit.projectdonut.locations.helpers;
 
+import org.tymit.projectdonut.locations.foursquare.FoursquareLocationsProvider;
+import org.tymit.projectdonut.locations.interfaces.LocationProvider;
+import org.tymit.projectdonut.locations.test.TestLocationProvider;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
 

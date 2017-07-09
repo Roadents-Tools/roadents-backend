@@ -1,5 +1,6 @@
-package org.tymit.projectdonut.locations.caches;
+package org.tymit.projectdonut.locations.memory;
 
+import org.tymit.projectdonut.locations.interfaces.LocationCacheInstance;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.utils.LocationUtils;

@@ -1,9 +1,10 @@
-package org.tymit.projectdonut.locations.providers;
+package org.tymit.projectdonut.locations.foursquare;
 
 import okhttp3.ResponseBody;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.tymit.projectdonut.locations.interfaces.LocationProvider;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.utils.LocationUtils;
@@ -25,7 +26,7 @@ import java.util.stream.IntStream;
 /**
  * Created by ilan on 12/18/16.
  */
-public class FoursquareLocationsProvider implements LocationProvider{
+public class FoursquareLocationsProvider implements LocationProvider {
 
     public static final String[][] API_ID_KEYS = new String[][]{
         new String[]{"NTJ2WDYNSATDGFBVF45QEHXSJWM5SXEHTGABU05LYHMRJXQD",  "PJ22A4QHXL5IT4FPY3E22SZWFXRCQXRPAVRGKFTB32RZZKZE"}

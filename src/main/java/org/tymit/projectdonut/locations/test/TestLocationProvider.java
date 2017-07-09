@@ -1,6 +1,7 @@
-package org.tymit.projectdonut.locations.providers;
+package org.tymit.projectdonut.locations.test;
 
 import org.junit.Assert;
+import org.tymit.projectdonut.locations.interfaces.LocationProvider;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.utils.LocationUtils;
