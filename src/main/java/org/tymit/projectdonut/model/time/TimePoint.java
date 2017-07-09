@@ -8,7 +8,7 @@ import java.util.TimeZone;
  */
 public class TimePoint implements Comparable<TimePoint> {
 
-    public static final TimePoint NULL = new TimePoint(0);
+    public static final TimePoint NULL = new TimePoint(0, "GMT", true);
     private static final long SECONDS_TO_MILLIS = 1000;
     private static final long MINUTES_TO_MILLIS = 60 * SECONDS_TO_MILLIS;
     private static final long HOURS_TO_MILLIS = 60 * MINUTES_TO_MILLIS;
@@ -28,15 +28,14 @@ public class TimePoint implements Comparable<TimePoint> {
      * @param timeZone the timezone to use
      */
     public TimePoint(long unixTime, String timeZone) {
-        if (unixTime < MIN_TIME)
+        this(unixTime, timeZone, false);
+    }
+
+    private TimePoint(long unixTime, String timeZone, boolean allowUnderflow) {
+        if (unixTime < MIN_TIME && !allowUnderflow)
             throw new IllegalArgumentException("Unixtime too low. Did you pass seconds instead of milliseconds?");
         this.unixTime = unixTime;
         this.timeZone = timeZone;
-    }
-
-    private TimePoint(long unixTime) {
-        this.unixTime = unixTime;
-        this.timeZone = "GMT";
     }
 
     /**
@@ -71,7 +70,7 @@ public class TimePoint implements Comparable<TimePoint> {
         if (dayOfMonth < 0 || dayOfMonth > 31) throw new IllegalArgumentException("Day of month invalid.");
         int dayDiff = dayOfMonth - getDayOfMonth();
         long millidiff = dayDiff * DAYS_TO_MILLIS;
-        return new TimePoint(unixTime + millidiff, timeZone);
+        return new TimePoint(unixTime + millidiff, timeZone, true);
     }
 
     public int getDayOfMonth() {
@@ -82,7 +81,7 @@ public class TimePoint implements Comparable<TimePoint> {
         if (dayOfWeek < 0 || dayOfWeek > 7) throw new IllegalArgumentException("Day of week invalid.");
         int dayDiff = dayOfWeek - getDayOfWeek();
         long millidiff = dayDiff * DAYS_TO_MILLIS;
-        return new TimePoint(unixTime + millidiff, timeZone);
+        return new TimePoint(unixTime + millidiff, timeZone, true);
     }
 
     public int getDayOfWeek() {
@@ -94,7 +93,7 @@ public class TimePoint implements Comparable<TimePoint> {
         if (hour < 0 || hour > 23) throw new IllegalArgumentException("Hour invalid.");
         int hourDiff = hour - getHour();
         long milliDiff = hourDiff * HOURS_TO_MILLIS;
-        return new TimePoint(unixTime + milliDiff, timeZone);
+        return new TimePoint(unixTime + milliDiff, timeZone, true);
     }
 
     public int getHour() {
@@ -104,7 +103,7 @@ public class TimePoint implements Comparable<TimePoint> {
     public TimePoint withMinute(int minute) {
         int minDiff = minute - getMinute();
         long milliDiff = minDiff * MINUTES_TO_MILLIS;
-        return new TimePoint(unixTime + milliDiff, timeZone);
+        return new TimePoint(unixTime + milliDiff, timeZone, true);
     }
 
     public int getMinute() {
@@ -115,7 +114,7 @@ public class TimePoint implements Comparable<TimePoint> {
         if (second < 0 || second > 60) throw new IllegalArgumentException("Second invalid.");
         int secDiff = second - getSecond();
         long milliDiff = secDiff * SECONDS_TO_MILLIS;
-        return new TimePoint(unixTime + milliDiff, timeZone);
+        return new TimePoint(unixTime + milliDiff, timeZone, true);
     }
 
     public int getSecond() {
@@ -124,7 +123,7 @@ public class TimePoint implements Comparable<TimePoint> {
 
     public TimePoint withMilliseconds(int milliseconds) {
         long millidiff = milliseconds - getMilliseconds();
-        return new TimePoint(unixTime + millidiff, timeZone);
+        return new TimePoint(unixTime + millidiff, timeZone, true);
     }
 
     public long getMilliseconds() {
@@ -132,19 +131,19 @@ public class TimePoint implements Comparable<TimePoint> {
     }
 
     public TimePoint addWeek() {
-        return new TimePoint(unixTime + WEEKS_TO_MILLIS, timeZone);
+        return new TimePoint(unixTime + WEEKS_TO_MILLIS, timeZone, true);
     }
 
     public TimePoint addDay() {
-        return new TimePoint(unixTime + DAYS_TO_MILLIS, timeZone);
+        return new TimePoint(unixTime + DAYS_TO_MILLIS, timeZone, true);
     }
 
     public TimePoint plus(TimeDelta delta) {
-        return new TimePoint(unixTime + delta.getDeltaLong(), timeZone);
+        return new TimePoint(unixTime + delta.getDeltaLong(), timeZone, true);
     }
 
     public TimePoint minus(TimeDelta delta) {
-        return new TimePoint(unixTime - delta.getDeltaLong(), timeZone);
+        return new TimePoint(unixTime - delta.getDeltaLong(), timeZone, true);
     }
 
     public TimeDelta timeUntil(TimePoint other) {
