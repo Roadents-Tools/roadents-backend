@@ -163,10 +163,10 @@ public class PostgresSqlSupport {
         return builder.toString();
     }
 
-    public static boolean isValidQuery(Connection con,
-                                       double[] center, double range,
-                                       TimePoint startTime, TimeDelta maxDelta,
-                                       TransChain chain
+    private static boolean isValidQuery(Connection con,
+                                        double[] center, double range,
+                                        TimePoint startTime, TimeDelta maxDelta,
+                                        TransChain chain
     ) throws SQLException {
         if (center == null || startTime == null) return false;
         Statement stm = con.createStatement();

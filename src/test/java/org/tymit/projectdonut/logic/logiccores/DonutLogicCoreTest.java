@@ -5,7 +5,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.tymit.projectdonut.locations.LocationRetriever;
-import org.tymit.projectdonut.locations.providers.TestLocationProvider;
+import org.tymit.projectdonut.locations.test.TestLocationProvider;
 import org.tymit.projectdonut.logic.ApplicationRunner;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationPoint;
