@@ -2,6 +2,7 @@ package org.tymit.projectdonut.locations.caches;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.tymit.projectdonut.locations.memory.MemoryMapLocationCache;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
 
