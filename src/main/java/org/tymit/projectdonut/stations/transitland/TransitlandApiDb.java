@@ -207,7 +207,7 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
 
     private CompletableFuture<Boolean> seedStations(double[] center, double range) {
         return CompletableFuture.supplyAsync(() -> {
-            Stream<List<TransStation>> srcStream = getFeedsInArea(center, range, null)
+            Stream<List<TransStation>> srcStream = getFeedsInArea(center, range, null, null)
                     .parallelStream()
                     .map(url -> new GtfsProvider(url)
                             .getUpdatedStations()
@@ -221,7 +221,7 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
         });
     }
 
-    public List<URL> getFeedsInArea(double[] center, double range, Map<String, String> restrictions) {
+    public List<URL> getFeedsInArea(double[] center, double range, Map<String, String> restrict, Map<String, String> avoid) {
         String url = BASE_FEED_URL + "?per_page=500";
         if (center != null && range >= 0) {
             double latVal1 = center[0] - range * MILES_TO_LAT;
@@ -241,11 +241,15 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
             List<URL> rval = new ArrayList<>(len);
             for (int i = 0; i < len; i++) {
                 JSONObject curobj = feeds.getJSONObject(i);
-                boolean works = restrictions == null ||
-                        restrictions.keySet()
-                                .stream()
-                                .allMatch(key -> curobj.get(key).equals(restrictions.get(key)));
+                System.out.println(curobj.toString(1));
+                boolean works = (restrict == null || restrict.keySet()
+                        .stream()
+                        .allMatch(key -> curobj.get(key).equals(restrict.get(key))))
+                        && (avoid == null || avoid.keySet()
+                        .stream()
+                        .noneMatch(key -> curobj.get(key).equals(avoid.get(key))));
                 if (works) rval.add(new URL(curobj.getString("url")));
+                else System.out.printf("%s got filtered.\n", curobj.toString());
             }
             return rval;
         } catch (Exception e) {
