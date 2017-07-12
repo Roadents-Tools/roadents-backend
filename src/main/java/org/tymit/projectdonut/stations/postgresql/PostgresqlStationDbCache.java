@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * Created by ilan on 3/31/17.
  */
-public class PostgresqlExternalCache implements StationCacheInstance, StationDbInstance.ComboDb {
+public class PostgresqlStationDbCache implements StationCacheInstance, StationDbInstance.ComboDb {
 
     public static final String[] DB_URLS = new String[] { "jdbc:postgresql://donutdb.c3ovzbdvtevz.us-west-2.rds.amazonaws.com:5432/Donut" };
     private static final String USER = "donut";
@@ -29,7 +29,7 @@ public class PostgresqlExternalCache implements StationCacheInstance, StationDbI
     private HikariDataSource connSource;
     private boolean isUp;
 
-    public PostgresqlExternalCache(String url) {
+    public PostgresqlStationDbCache(String url) {
 
         isUp = true;
         try {
@@ -62,7 +62,21 @@ public class PostgresqlExternalCache implements StationCacheInstance, StationDbI
 
     @Override
     public boolean putStations(List<TransStation> stations) {
-        return storeStations(stations);
+        try {
+            return PostgresSqlSupport.storeStations(this::getConnection, stations);
+        } catch (SQLException e) {
+            LoggingUtils.logError(e);
+            isUp = false;
+            return false;
+        }
+    }
+
+    public boolean isUp() {
+        return isUp;
+    }
+
+    public void close() {
+        connSource.close();
     }
 
     public boolean storeStations(Collection<? extends TransStation> stations) {
@@ -105,23 +119,20 @@ public class PostgresqlExternalCache implements StationCacheInstance, StationDbI
     @Override
     public List<TransStation> getCachedStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
         try {
-            return PostgresSqlSupport.getInformation(this::getConnection, center, range, startTime, maxDelta, chain);
+            return PostgresSqlSupport.getInformation(this::getConnection, center, range, startTime, maxDelta, chain, true);
         } catch (Exception e) {
             LoggingUtils.logError(e);
             return Collections.emptyList();
         }
     }
 
-    public boolean isUp() {
-        return isUp;
-    }
-
-    public void close() {
-        connSource.close();
-    }
-
     @Override
     public List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
-        return getCachedStations(center, range, startTime, maxDelta, chain);
+        try {
+            return PostgresSqlSupport.getInformation(this::getConnection, center, range, startTime, maxDelta, chain, false);
+        } catch (Exception e) {
+            LoggingUtils.logError(e);
+            return Collections.emptyList();
+        }
     }
 }

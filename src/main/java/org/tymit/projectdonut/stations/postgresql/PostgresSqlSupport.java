@@ -51,10 +51,10 @@ public class PostgresSqlSupport {
     public static List<TransStation> getInformation(Supplier<Connection> connectionGenerator,
                                                     double[] center, double range,
                                                     TimePoint startTime, TimeDelta maxDelta,
-                                                    TransChain chain
+                                                    TransChain chain, boolean checkRange
     ) throws SQLException {
         Connection con = connectionGenerator.get();
-        if (!isValidQuery(con, center, range, startTime, maxDelta, chain))
+        if (checkRange && !isValidQuery(con, center, range, startTime, maxDelta, chain))
             return Collections.emptyList();
         Statement stm = con.createStatement();
         ResultSet rs = stm.executeQuery(buildQuery(center, range, startTime, maxDelta, chain));
@@ -187,6 +187,70 @@ public class PostgresSqlSupport {
     /**
      * INFORMATION STORING
      **/
+
+    public static boolean storeStations(Supplier<Connection> conGenerator, Collection<? extends TransStation> stations
+    ) throws SQLException {
+        Connection con = conGenerator.get();
+        Statement stm = con.createStatement();
+
+        //Insert the chains into the database in a batch
+        AtomicInteger ctprev = new AtomicInteger(0);
+        stations.stream()
+                .map(TransStation::getChain)
+                .filter(Objects::nonNull)
+                .distinct()
+                .map(TransChain::getName)
+                .map(chainName -> String.format("INSERT INTO %s(%s) VALUES ('%s') ON CONFLICT(%s) DO NOTHING;",
+                        PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.ChainTable.NAME_KEY, chainName
+                                .replace("'", "`"), PostgresqlContract.ChainTable.NAME_KEY)
+                )
+                .filter(Objects::nonNull)
+                .forEach((LoggingUtils.WrappedConsumer<String>) (sql1) -> {
+                    stm.addBatch(sql1);
+                    if (ctprev.incrementAndGet() >= BATCH_SIZE) {
+                        ctprev.getAndSet(0);
+                        stm.executeBatch();
+                    }
+                });
+        if (ctprev.get() != 0) stm.executeBatch();
+
+        //Then the stations using a batch
+        ctprev.set(0);
+        stations.stream()
+                .map(TransStation::stripSchedule)
+                .distinct()
+                .map(station -> String.format("INSERT INTO %s(%s, %s) VALUES (\'%s\', ST_POINT(%f,%f)::geography) ON CONFLICT DO NOTHING;",
+                        PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.NAME_KEY, PostgresqlContract.StationTable.LATLNG_KEY,
+                        station.getName()
+                                .replace("'", "`"), station.getCoordinates()[0], station
+                                .getCoordinates()[1])
+                )
+                .forEach((LoggingUtils.WrappedConsumer<String>) (sql1) -> {
+                    stm.addBatch(sql1);
+                    if (ctprev.incrementAndGet() >= BATCH_SIZE) {
+                        ctprev.getAndSet(0);
+                        stm.executeBatch();
+                    }
+                });
+
+        //Insert schedule information
+        ctprev.set(0);
+        stations.stream()
+                .flatMap(PostgresSqlSupport::createScheduleQuery)
+                .forEach((LoggingUtils.WrappedConsumer<String>) (sql) -> {
+                    stm.addBatch(sql);
+                    if (ctprev.incrementAndGet() >= BATCH_SIZE) {
+                        ctprev.getAndSet(0);
+                        stm.executeBatch();
+                    }
+                });
+        if (ctprev.get() != 0) stm.executeBatch();
+
+        stm.close();
+        con.close();
+        return true;
+    }
+
     public static boolean storeArea(Supplier<Connection> conGenerator,
                                     double[] center, double range,
                                     TimePoint startTime, TimeDelta maxDelta,
