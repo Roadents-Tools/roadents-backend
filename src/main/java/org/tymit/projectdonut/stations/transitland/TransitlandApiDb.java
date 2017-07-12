@@ -249,7 +249,6 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
                         .stream()
                         .noneMatch(key -> curobj.get(key).equals(avoid.get(key))));
                 if (works) rval.add(new URL(curobj.getString("url")));
-                else System.out.printf("%s got filtered.\n", curobj.toString());
             }
             return rval;
         } catch (Exception e) {
