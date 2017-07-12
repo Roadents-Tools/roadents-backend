@@ -110,7 +110,7 @@ public class GtfsProvider implements StationProvider {
             isWorking = false;
             return Collections.emptyMap();
         }
-        return new ConcurrentHashMap<>(cache);
+        return cache;
     }
 
     @Override
