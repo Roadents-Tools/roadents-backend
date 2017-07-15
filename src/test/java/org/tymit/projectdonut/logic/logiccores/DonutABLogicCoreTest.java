@@ -13,7 +13,6 @@ import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.routing.TravelRoute;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
-import org.tymit.projectdonut.stations.StationRetriever;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.List;
@@ -31,13 +30,12 @@ public class DonutABLogicCoreTest {
     private static final List<DestinationLocation> testDestinations = Lists.newArrayList(
             new DestinationLocation("D1", randType, AMES)
     );
+    private static final TimePoint startTime = new TimePoint(1495713600000L, "GMT");
     private static boolean runTest = false;
-    TimePoint startTime = new TimePoint(1495713600L * 1000L, "GMT");
 
     @Before
     public void setup() {
         LoggingUtils.setPrintImmediate(true);
-        StationRetriever.setTestMode(true);
     }
 
     @Test

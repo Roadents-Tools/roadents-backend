@@ -86,7 +86,7 @@ public class GoogleTimeCostProvider extends TimeCostProvider implements BulkCost
                     rval[i][j] = new TimeDelta(-1);
                 } else {
                     long deltaVal = resultObj.getJSONObject("duration").getLong("value");
-                    rval[i][j] = new TimeDelta(deltaVal);
+                    rval[i][j] = new TimeDelta(deltaVal * 1000L);
                 }
             }
         }
