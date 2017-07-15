@@ -84,7 +84,7 @@ public class MoleLogicCore implements LogicCore {
                 .filter(index -> deltas[index] != null && deltas[index].getDeltaLong() > 0)
 
                 //Get the dests surrounding each node
-                .flatMap(index -> MoleLogicCoreSupport.callDonutForRouteAtIndex(index, baseroute, deltas, type)
+                .flatMap(index -> MoleLogicCoreSupport.callDonutForRouteAtIndex(index, baseroute, deltas[index], type)
                         .parallelStream())
 
                 //Collect the optimal routes to each destination, since the same dest could have multiple routes

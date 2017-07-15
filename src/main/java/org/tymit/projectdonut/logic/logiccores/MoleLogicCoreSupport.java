@@ -27,10 +27,14 @@ import java.util.stream.Collectors;
  */
 public class MoleLogicCoreSupport {
 
-    public static TransStation getStationWithSchedule(TransStation station) {
-        return DonutLogicSupport.getStationWithSchedule(station);
-    }
-
+    /**
+     * Calculates the amount of time we can truly use to travel during each node in a route.
+     *
+     * @param route    the route to use
+     * @param maxDelta the maximum amount of time we can arrive after route's original end time
+     * @return an array of time deltas where each delta represents the available time at the node at that specific index
+     * in the route
+     */
     public static TimeDelta[] getTrueDeltasPerNode(TravelRoute route, TimeDelta maxDelta) {
 
         final int routeLen = route.getRoute().size();
@@ -49,11 +53,21 @@ public class MoleLogicCoreSupport {
                 TransStation prevStation = (TransStation) route.getRoute().get(i - 1).getPt();
                 TravelRouteNode optimalNode = getLatestNodeConnecting(prevStation, curStation, route.getTimeAtNode(i - 1), maxTime);
                 optimalCache[i] = optimalNode;
+
+                //The usable time = the added time from choosing the optimalNode over the curNode plus the amount of time
+                //we are waiting anyway.
                 rval[i] = optimalNode.getTotalTimeToArrive()
                         .minus(curNode.getTotalTimeToArrive())
                         .plus(optimalNode.getWaitTimeFromPrev());
+
+                //We are going into the past of an alternate timeline!
                 maxTime = route.getTimeAtNode(i - 1).plus(optimalNode.getTotalTimeToArrive());
             } else {
+
+                // We need to be able to arrive in time to catch the bus, so we only can leave until then.
+                // Technically not guranteed optimal, since there can be some hypothetical time between current route
+                // and optimal route that maximizes wait time from i+1 to i+2, but for the sake of compute time this is
+                // good enough.
                 long maxWait = Math.max(
                         optimalCache[i + 1].getWaitTimeFromPrev().getDeltaLong(),
                         route.getRoute().get(i + 1).getWaitTimeFromPrev().getDeltaLong()
@@ -66,10 +80,21 @@ public class MoleLogicCoreSupport {
         return rval;
     }
 
+    /**
+     * Gets the transit time between 2 stations closest to a given maximum time.
+     *
+     * @param st1     the station to start at
+     * @param st2     the station to end at
+     * @param base    the time we begin at st1
+     * @param maxTime the maximum time we are allowed to arrive at st2
+     * @return a TravelRouteNode representing travelling from st1 to st2,
+     * arriving at the latest possible time before maxTime
+     */
     public static TravelRouteNode getLatestNodeConnecting(TransStation st1, TransStation st2, TimePoint base, TimePoint maxTime) {
 
         TimeDelta maxDelta = base.timeUntil(maxTime);
 
+        //Create an easily searchable set of all chains containing st2
         Set<TransChain> st2Chains = StationRetriever.getStations(st2.getCoordinates(), 2, base, maxDelta, null, null)
                 .stream()
                 .map(TransStation::getChain)
@@ -79,7 +104,8 @@ public class MoleLogicCoreSupport {
         return StationRetriever.getStations(st1.getCoordinates(), 2, base, maxDelta, null, null).stream()
                 .map(TransStation::getChain)
                 .distinct()
-                .filter(st2Chains::contains)
+                .filter(st2Chains::contains) //First get all chains containing both st1 and st2
+
                 .map(chain1 -> {
                     TimePoint st1arrive = chain1.getSchedule(st1).getNextArrival(base);
                     TimePoint st2arrive = chain1.getSchedule(st2).getNextArrival(st1arrive);
@@ -88,18 +114,29 @@ public class MoleLogicCoreSupport {
                             .setWaitTime(base.timeUntil(st1arrive).getDeltaLong())
                             .setTravelTime(st1arrive.timeUntil(st2arrive).getDeltaLong())
                             .build();
-                })
+                }) //Then we build nodes for these chains
+
+                .filter(node -> base.plus(node.getTotalTimeToArrive()).timeUntil(maxTime).getDeltaLong() >= 0)
                 .min(Comparator.comparing(node -> base.plus(node.getTotalTimeToArrive()).timeUntil(maxTime)))
-                .orElse(null);
+                .orElse(null); // And finally compare
     }
 
-    public static List<TravelRoute> callDonutForRouteAtIndex(int index, TravelRoute route, TimeDelta[] deltas, LocationType type) {
+    /**
+     * Calls the Donut core for a route at a specific node in the route.
+     *
+     * @param index the index of the node in the route, with 0 being the starting node
+     * @param route the route to retrieve the node from
+     * @param delta the max time delta to use
+     * @param type  the type to search for
+     * @return a list of routes split from route at index ending in locations of type type
+     */
+    public static List<TravelRoute> callDonutForRouteAtIndex(int index, TravelRoute route, TimeDelta delta, LocationType type) {
 
         TravelRouteNode node = route.getRoute().get(index);
 
         Map<String, Object> donutParams = new ConcurrentHashMap<>();
         donutParams.put(DonutLogicCore.TYPE_TAG, type.getEncodedname());
-        donutParams.put(DonutLogicCore.TIME_DELTA_TAG, deltas[index].getDeltaLong());
+        donutParams.put(DonutLogicCore.TIME_DELTA_TAG, delta.getDeltaLong());
         donutParams.put(DonutLogicCore.LAT_TAG, node.getPt().getCoordinates()[0]);
         donutParams.put(DonutLogicCore.LONG_TAG, node.getPt().getCoordinates()[1]);
         donutParams.put(DonutLogicCore.START_TIME_TAG, route.getTimeAtNode(index));
@@ -120,6 +157,14 @@ public class MoleLogicCoreSupport {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Builds a route from a to b. Mainly a helper method in case other optimizations are necessary.
+     *
+     * @param a         the point to start at
+     * @param b         the point to end at
+     * @param startTime the time to start at
+     * @return the route from a to b starting at time startTime
+     */
     public static TravelRoute buildRoute(LocationPoint a, LocationPoint b, TimePoint startTime) {
         CostArgs arg = new CostArgs()
                 .setCostTag("routes")
