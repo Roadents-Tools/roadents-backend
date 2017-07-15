@@ -1,7 +1,7 @@
 package org.tymit.projectdonut.stations;
 
-import org.tymit.projectdonut.costs.CostArgs;
 import org.tymit.projectdonut.costs.CostCalculator;
+import org.tymit.projectdonut.costs.arguments.CostArgs;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;

@@ -1,6 +1,8 @@
 package org.tymit.projectdonut.costs;
 
-import org.tymit.projectdonut.costs.providers.CostProviderHelper;
+import org.tymit.projectdonut.costs.arguments.BulkCostArgs;
+import org.tymit.projectdonut.costs.arguments.CostArgs;
+import org.tymit.projectdonut.costs.helpers.CostProviderHelper;
 
 import java.util.Map;
 

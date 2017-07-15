@@ -1,7 +1,7 @@
 package org.tymit.projectdonut.costs.providers.routing;
 
-import org.tymit.projectdonut.costs.CostArgs;
-import org.tymit.projectdonut.costs.providers.CostProvider;
+import org.tymit.projectdonut.costs.arguments.CostArgs;
+import org.tymit.projectdonut.costs.interfaces.CostProvider;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;

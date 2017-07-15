@@ -1,7 +1,7 @@
 package org.tymit.projectdonut.logic.logiccores;
 
-import org.tymit.projectdonut.costs.BulkCostArgs;
 import org.tymit.projectdonut.costs.CostCalculator;
+import org.tymit.projectdonut.costs.arguments.BulkCostArgs;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.routing.TravelRoute;

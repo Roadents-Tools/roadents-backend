@@ -1,6 +1,6 @@
-package org.tymit.projectdonut.costs.providers;
+package org.tymit.projectdonut.costs.interfaces;
 
-import org.tymit.projectdonut.costs.CostArgs;
+import org.tymit.projectdonut.costs.arguments.CostArgs;
 
 /**
  * Created by ilan on 7/7/16.

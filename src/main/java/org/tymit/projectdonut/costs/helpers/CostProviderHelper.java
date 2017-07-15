@@ -1,8 +1,10 @@
-package org.tymit.projectdonut.costs.providers;
+package org.tymit.projectdonut.costs.helpers;
 
 import com.google.common.collect.Sets;
-import org.tymit.projectdonut.costs.BulkCostArgs;
-import org.tymit.projectdonut.costs.CostArgs;
+import org.tymit.projectdonut.costs.arguments.BulkCostArgs;
+import org.tymit.projectdonut.costs.arguments.CostArgs;
+import org.tymit.projectdonut.costs.interfaces.BulkCostProvider;
+import org.tymit.projectdonut.costs.interfaces.CostProvider;
 import org.tymit.projectdonut.costs.providers.distance.DistanceCostProvider;
 import org.tymit.projectdonut.costs.providers.routing.DonutRouteCostProvider;
 import org.tymit.projectdonut.costs.providers.timing.GoogleTimeCostProvider;

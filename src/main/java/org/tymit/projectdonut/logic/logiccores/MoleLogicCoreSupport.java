@@ -1,7 +1,7 @@
 package org.tymit.projectdonut.logic.logiccores;
 
-import org.tymit.projectdonut.costs.CostArgs;
 import org.tymit.projectdonut.costs.CostCalculator;
+import org.tymit.projectdonut.costs.arguments.CostArgs;
 import org.tymit.projectdonut.logic.ApplicationRunner;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;

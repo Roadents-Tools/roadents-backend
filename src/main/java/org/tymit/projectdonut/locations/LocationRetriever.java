@@ -1,7 +1,7 @@
 package org.tymit.projectdonut.locations;
 
-import org.tymit.projectdonut.costs.CostArgs;
 import org.tymit.projectdonut.costs.CostCalculator;
+import org.tymit.projectdonut.costs.arguments.CostArgs;
 import org.tymit.projectdonut.locations.helpers.LocationCacheHelper;
 import org.tymit.projectdonut.locations.helpers.LocationProviderHelper;
 import org.tymit.projectdonut.model.location.DestinationLocation;

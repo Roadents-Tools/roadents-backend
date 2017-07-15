@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.costs;
+package org.tymit.projectdonut.costs.arguments;
 
 import com.google.common.collect.Sets;
 
