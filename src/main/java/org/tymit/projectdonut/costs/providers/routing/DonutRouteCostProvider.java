@@ -40,8 +40,8 @@ public class DonutRouteCostProvider extends RouteCostProvider implements BulkCos
         donutRoutingArgs.put("longitude", a.getCoordinates()[1]);
         donutRoutingArgs.put("starttime", startTime.getUnixTime());
         for (int i = 0; i < b.size(); i++) {
-            donutRoutingArgs.put("latitude" + i, b.get(i).getCoordinates()[0]);
-            donutRoutingArgs.put("longitude" + i, b.get(i).getCoordinates()[1]);
+            donutRoutingArgs.put("latitude" + (i + 2), b.get(i).getCoordinates()[0]);
+            donutRoutingArgs.put("longitude" + (i + 2), b.get(i).getCoordinates()[1]);
         }
 
         Map<String, List<Object>> callVal = ApplicationRunner.runApplication("DONUTAB", donutRoutingArgs);
