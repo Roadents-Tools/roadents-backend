@@ -37,13 +37,6 @@ public class StationDbHelper {
             allDatabases = new StationDbInstance[]{new TestStationDb()};
             return;
         }
-
-        /*StationDbInstance[] allDbs = new StationDbInstance[MysqlStationDb.DB_URLS.length + 1];
-        allDbs[0] = new TransitlandApiDb();
-        for (int i = 1; i < MysqlStationDb.DB_URLS.length + 1; i++) {
-            allDbs[i] = new MysqlStationDb(MysqlStationDb.DB_URLS[i - 1]);
-        }
-        allDatabases = allDbs;*/
         allDatabases = new StationDbInstance[] { new TransitlandApiDb() };
     }
 
