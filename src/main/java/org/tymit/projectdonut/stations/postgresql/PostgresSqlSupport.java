@@ -103,7 +103,6 @@ public class PostgresSqlSupport {
                                 .get(statid)));
             }
         }
-        con.close();
         return new ArrayList<>(rval);
     }
 
@@ -247,7 +246,6 @@ public class PostgresSqlSupport {
         if (ctprev.get() != 0) stm.executeBatch();
 
         stm.close();
-        con.close();
         return true;
     }
 
@@ -332,7 +330,6 @@ public class PostgresSqlSupport {
 
         //And close
         stm.close();
-        con.close();
         return true;
     }
 

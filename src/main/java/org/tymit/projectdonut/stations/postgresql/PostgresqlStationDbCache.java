@@ -1,7 +1,5 @@
 package org.tymit.projectdonut.stations.postgresql;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
@@ -12,6 +10,7 @@ import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,7 +25,7 @@ public class PostgresqlStationDbCache implements StationCacheInstance, StationDb
     public static final String[] DB_URLS = new String[] { "jdbc:postgresql://donutdb.c3ovzbdvtevz.us-west-2.rds.amazonaws.com:5432/Donut" };
     private static final String USER = "donut";
     private static final String PASS = "donutpass";
-    private HikariDataSource connSource;
+    private final Connection con;
     private boolean isUp;
 
     public PostgresqlStationDbCache(String url) {
@@ -34,34 +33,29 @@ public class PostgresqlStationDbCache implements StationCacheInstance, StationDb
         isUp = true;
         try {
             Class.forName("org.postgresql.Driver");
-            connSource = new HikariDataSource(initSource(url));
         } catch (Exception e) {
             LoggingUtils.logError(e);
             isUp = false;
         }
-    }
 
-    private HikariConfig initSource(String url) {
-        HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(url);
-        config.setUsername(USER);
-        config.setPassword(PASS);
-        config.setMaximumPoolSize(1);
-        return config;
-    }
-
-    public Connection getConnection() {
+        Connection tempcon;
         try {
-            return connSource.getConnection();
+            tempcon = DriverManager.getConnection(url, USER, PASS);
         } catch (SQLException e) {
             LoggingUtils.logError(e);
             isUp = false;
-            return null;
+            tempcon = null;
         }
+        con = tempcon;
+    }
+
+    private Connection getConnection() {
+        return con;
     }
 
     @Override
     public boolean putStations(List<TransStation> stations) {
+        if (!isUp) return false;
         try {
             return PostgresSqlSupport.storeStations(this::getConnection, stations);
         } catch (SQLException e) {
@@ -75,11 +69,8 @@ public class PostgresqlStationDbCache implements StationCacheInstance, StationDb
         return isUp;
     }
 
-    public void close() {
-        connSource.close();
-    }
-
     public boolean storeStations(Collection<? extends TransStation> stations) {
+        if (!isUp) return false;
         double[] center = new double[] { 0, 0 };
         double range = -1;
         int size = 0;
@@ -102,15 +93,15 @@ public class PostgresqlStationDbCache implements StationCacheInstance, StationDb
 
     @Override
     public boolean cacheStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, List<TransStation> stations) {
+        if (!isUp) return false;
         try {
-
             //Null time values = all possible available schedule points.
             if (startTime == null && maxDelta == null) {
                 startTime = TimePoint.NULL;
                 maxDelta = new TimeDelta(Long.MAX_VALUE);
             }
             return PostgresSqlSupport.storeArea(this::getConnection, center, range, startTime, maxDelta, stations);
-        } catch (SQLException e) {
+        } catch (Exception e) {
             LoggingUtils.logError(e);
             return false;
         }
@@ -118,6 +109,7 @@ public class PostgresqlStationDbCache implements StationCacheInstance, StationDb
 
     @Override
     public List<TransStation> getCachedStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+        if (!isUp) return Collections.emptyList();
         try {
             return PostgresSqlSupport.getInformation(this::getConnection, center, range, startTime, maxDelta, chain, true);
         } catch (Exception e) {
@@ -126,8 +118,18 @@ public class PostgresqlStationDbCache implements StationCacheInstance, StationDb
         }
     }
 
+    public void close() {
+        isUp = false;
+        try {
+            con.close();
+        } catch (Exception e) {
+            LoggingUtils.logError(e);
+        }
+    }
+
     @Override
     public List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+        if (!isUp) return Collections.emptyList();
         try {
             return PostgresSqlSupport.getInformation(this::getConnection, center, range, startTime, maxDelta, chain, false);
         } catch (Exception e) {

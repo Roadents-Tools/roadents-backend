@@ -45,7 +45,6 @@ public class PostgresqlLocationSupport {
 
         rs.close();
         stm.close();
-        con.close();
 
         return rval;
     }
@@ -113,7 +112,6 @@ public class PostgresqlLocationSupport {
 
 
         stm.close();
-        con.close();
 
         return true;
     }

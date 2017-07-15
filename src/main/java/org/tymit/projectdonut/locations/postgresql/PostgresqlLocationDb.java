@@ -1,13 +1,13 @@
 package org.tymit.projectdonut.locations.postgresql;
 
 import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
 import org.tymit.projectdonut.locations.interfaces.LocationProvider;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -20,7 +20,7 @@ public class PostgresqlLocationDb implements LocationProvider {
     public static final String[] DB_URLS = new String[] { "jdbc:postgresql://donutdb.c3ovzbdvtevz.us-west-2.rds.amazonaws.com:5432/Donut" };
     private static final String USER = "donut";
     private static final String PASS = "donutpass";
-    private HikariDataSource connSource;
+    private Connection con;
     private boolean isUp;
 
     public PostgresqlLocationDb(String url) {
@@ -28,11 +28,20 @@ public class PostgresqlLocationDb implements LocationProvider {
         isUp = true;
         try {
             Class.forName("org.postgresql.Driver");
-            connSource = new HikariDataSource(initSource(url));
         } catch (Exception e) {
             LoggingUtils.logError(e);
             isUp = false;
         }
+
+        Connection tempcon;
+        try {
+            tempcon = DriverManager.getConnection(url, USER, PASS);
+        } catch (SQLException e) {
+            LoggingUtils.logError(e);
+            isUp = false;
+            tempcon = null;
+        }
+        con = tempcon;
     }
 
     private HikariConfig initSource(String url) {
@@ -45,13 +54,7 @@ public class PostgresqlLocationDb implements LocationProvider {
     }
 
     public Connection getConnection() {
-        try {
-            return connSource.getConnection();
-        } catch (SQLException e) {
-            LoggingUtils.logError(e);
-            isUp = false;
-            return null;
-        }
+        return con;
     }
 
     @Override
@@ -70,6 +73,10 @@ public class PostgresqlLocationDb implements LocationProvider {
     }
 
     public void close() {
-        connSource.close();
+        try {
+            con.close();
+        } catch (SQLException e) {
+            LoggingUtils.logError(e);
+        }
     }
 }
