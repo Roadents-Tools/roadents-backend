@@ -11,4 +11,6 @@ public interface LocationProvider {
     boolean isValidType(LocationType type);
 
     List<DestinationLocation> queryLocations(double[] center, double range, LocationType type);
+
+    void close();
 }

@@ -63,6 +63,11 @@ public class MemoryMapLocationCache implements LocationCacheInstance {
         ranges.clear();
     }
 
+    @Override
+    public void close() {
+        clear();
+    }
+
     private static String generateTag(double[] center, LocationType type) {
         return center[0] + type.getEncodedname() + center[1];
     }

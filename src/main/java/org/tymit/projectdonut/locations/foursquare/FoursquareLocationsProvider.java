@@ -109,6 +109,11 @@ public class FoursquareLocationsProvider implements LocationProvider {
         }
     }
 
+    @Override
+    public void close() {
+
+    }
+
     private void buildCategoryMap() {
         Call<ResponseBody> result = rest.getCategories("20161218",API_ID_KEYS[apiInd][0], API_ID_KEYS[apiInd][1]);
 

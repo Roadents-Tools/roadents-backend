@@ -17,5 +17,5 @@ public interface StationProvider {
 
     Map<TransChain, List<TransStation>> getUpdatedStations();
 
-    boolean close();
+    void close();
 }

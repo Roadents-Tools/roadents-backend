@@ -56,8 +56,7 @@ public class TestStationProvider implements StationProvider {
     }
 
     @Override
-    public boolean close() {
-        return true;
+    public void close() {
     }
 
     private Map<TransChain, List<TransStation>> initStations(String timeCalled) {

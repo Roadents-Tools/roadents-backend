@@ -70,4 +70,10 @@ public class StationDbHelper {
                 .collect(Collectors.toSet())
                 .contains(true);
     }
+
+    public void closeAllDatabases() {
+        for (StationDbInstance instance : allDatabases) {
+            instance.close();
+        }
+    }
 }

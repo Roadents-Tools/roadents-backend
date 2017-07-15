@@ -47,6 +47,11 @@ public class TestLocationProvider implements LocationProvider {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public void close() {
+
+    }
+
     private static List<DestinationLocation> buildNullLocations(double[] center, double range, LocationType type) {
 
         List<DestinationLocation> rval = new ArrayList<>(DEFAULT_POINTS_PER_QUERY);

@@ -152,5 +152,9 @@ public class StationDbUpdater {
         return CompletableFuture.supplyAsync(this::updateStations);
     }
 
-
+    public void closeAllProviders() {
+        for (StationProvider provider : providers) {
+            provider.close();
+        }
+    }
 }

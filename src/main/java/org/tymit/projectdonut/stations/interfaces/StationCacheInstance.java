@@ -15,4 +15,6 @@ public interface StationCacheInstance {
 
 
     List<TransStation> getCachedStations(double[] center, double range, TimePoint start, TimeDelta maxDelta, TransChain chain);
+
+    void close();
 }

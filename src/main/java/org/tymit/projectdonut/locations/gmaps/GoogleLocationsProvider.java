@@ -84,6 +84,10 @@ public class GoogleLocationsProvider implements LocationProvider {
         }
     }
 
+    @Override
+    public void close() {
+    }
+
     private static List<DestinationLocation> getLocationsFromGglJson(JSONArray arr, LocationType type) {
         int size = arr.length();
 

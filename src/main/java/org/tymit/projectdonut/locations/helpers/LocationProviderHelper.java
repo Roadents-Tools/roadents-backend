@@ -70,4 +70,10 @@ public class LocationProviderHelper {
         }
         return null;
     }
+
+    public void closeAllProviders() {
+        for (LocationProvider prov : allProviders) {
+            prov.close();
+        }
+    }
 }

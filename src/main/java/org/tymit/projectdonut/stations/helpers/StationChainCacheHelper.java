@@ -59,10 +59,10 @@ public class StationChainCacheHelper {
 
     public boolean cacheStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, Stream<List<TransStation>> stations) {
         if (isTest) return true;
-        return !stations
+        return stations
                 .map(src -> cacheStations(center, range, startTime, maxDelta, src))
                 .distinct()
-                .anyMatch(b -> !b);
+                .allMatch(Boolean::booleanValue);
     }
 
     public boolean cacheStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, List<TransStation> stations) {
@@ -101,5 +101,11 @@ public class StationChainCacheHelper {
                 .map(cache -> cache.cacheStations(finalCenter, finalRange, startTime, maxDelta, stations))
                 .anyMatch(Boolean::booleanValue);
 
+    }
+
+    public void closeAllCaches() {
+        for (StationCacheInstance instance : allStationInstances) {
+            instance.close();
+        }
     }
 }

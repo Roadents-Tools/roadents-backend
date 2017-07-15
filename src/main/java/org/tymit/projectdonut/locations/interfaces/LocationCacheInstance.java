@@ -17,4 +17,6 @@ public interface LocationCacheInstance {
     int getSize();
 
     void clear();
+
+    void close();
 }

@@ -114,10 +114,9 @@ public class GtfsProvider implements StationProvider {
     }
 
     @Override
-    public boolean close() {
+    public void close() {
         cache.clear();
         cache = null;
-        return true;
     }
 
     private void cacheData() {

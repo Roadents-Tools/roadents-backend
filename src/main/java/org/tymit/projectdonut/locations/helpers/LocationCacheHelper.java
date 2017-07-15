@@ -40,4 +40,10 @@ public class LocationCacheHelper {
     public void cacheLocations(double[] center, double range, LocationType type, List<DestinationLocation> locations) {
         allInstances[0].cacheLocations(center, range, type, locations);
     }
+
+    public void closeAllCaches() {
+        for (LocationCacheInstance instance : allInstances) {
+            instance.close();
+        }
+    }
 }
