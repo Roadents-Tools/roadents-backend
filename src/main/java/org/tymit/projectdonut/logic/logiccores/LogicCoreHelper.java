@@ -32,7 +32,10 @@ public class LogicCoreHelper {
     }
 
     private static LogicCore[] initializeCoresList() {
-        return new LogicCore[] { new DonutLogicCore(), new DonutABLogicCore(), new MoleLogicCore(), new WeaselLogicCore() };
+        return new LogicCore[] {
+                new DonutLogicCore(), new DonutABLogicCore(), new DonutRangeLogicCore(),
+                new MoleLogicCore(), new WeaselLogicCore()
+        };
     }
 
     public Map<String, List<Object>> runCore(String coreTag, Map<String, Object> args) {
