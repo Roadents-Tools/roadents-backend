@@ -26,13 +26,10 @@ public class TravelRouteJsonConverter implements JsonConverter<TravelRoute> {
     private static final String START_TIME_TAG = "starttime";
     private static final String END_TAG = "dest";
     private static final String ROUTE_TAG = "route";
-    private static final String STATION_LAT_TAG = "latitude";
-    private static final String STATION_LONG_TAG = "longitude";
-    private static final String STATION_NAME_TAG = "stationName";
-    private static final String STATION_CHAIN_TAG = "trainBusName";
 
     private final StartPointJsonConverter startConverter = new StartPointJsonConverter();
     private final DestinationJsonConverter destConverter = new DestinationJsonConverter();
+    private final TravelRouteNodeJsonConverter nodeConverter = new TravelRouteNodeJsonConverter();
 
     @Override
     public String toJson(TravelRoute input) {
@@ -47,17 +44,15 @@ public class TravelRouteJsonConverter implements JsonConverter<TravelRoute> {
 
     private JSONArray convertRoute(TravelRoute input) {
 
-        TravelRouteNodeJsonConverter conv = new TravelRouteNodeJsonConverter();
+        return input.getRoute().stream()
+                .map(nodeConverter::toJson)
+                .map(JSONObject::new)
+                .collect(JSONArray::new, JSONArray::put, (jsonArray, jsonArray2) -> {
+                    for (int i = 0, len = jsonArray2.length(); i < len; i++) {
+                        jsonArray.put(jsonArray2.getJSONObject(i));
+                    }
+                });
 
-        List<TravelRouteNode> route = input.getRoute();
-
-        JSONArray routeJson = new JSONArray();
-
-        for (TravelRouteNode node : route) {
-            routeJson.put(new JSONObject(conv.toJson(node)));
-        }
-
-        return routeJson;
     }
 
     @Override

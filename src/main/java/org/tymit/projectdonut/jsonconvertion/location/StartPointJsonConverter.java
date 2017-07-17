@@ -1,6 +1,5 @@
 package org.tymit.projectdonut.jsonconvertion.location;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.tymit.projectdonut.jsonconvertion.JsonConverter;
 import org.tymit.projectdonut.model.location.StartPoint;
@@ -10,22 +9,22 @@ import org.tymit.projectdonut.model.location.StartPoint;
  */
 public class StartPointJsonConverter implements JsonConverter<StartPoint> {
 
-    private static final String COORDS_TAG = "startpoint";
+    private static final String LATITUDE_TAG = "latitude";
+    private static final String LONGITUDE_TAG = "longitude";
 
     @Override
     public String toJson(StartPoint input) {
         JSONObject obj = new JSONObject();
-        JSONArray arr = new JSONArray();
-        for (double coord : input.getCoordinates()) arr.put(coord);
-        obj.put(COORDS_TAG, arr);
+        obj.put(LATITUDE_TAG, input.getCoordinates()[0]);
+        obj.put(LONGITUDE_TAG, input.getCoordinates()[1]);
         return obj.toString();
     }
 
     @Override
     public StartPoint fromJson(String json) {
         JSONObject obj = new JSONObject(json);
-        double lat = obj.getJSONArray(COORDS_TAG).getDouble(0);
-        double lonj = obj.getJSONArray(COORDS_TAG).getDouble(1);
+        double lat = obj.getDouble(LATITUDE_TAG);
+        double lonj = obj.getDouble(LONGITUDE_TAG);
         return new StartPoint(new double[]{lat, lonj});
     }
 }
