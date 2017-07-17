@@ -1,4 +1,4 @@
-package org.tymit.restcontroller.testdisplay;
+package org.tymit.displayers.testdisplay.listtestdisplayer;
 
 import org.tymit.projectdonut.model.routing.TravelRoute;
 import org.tymit.projectdonut.utils.LocationUtils;

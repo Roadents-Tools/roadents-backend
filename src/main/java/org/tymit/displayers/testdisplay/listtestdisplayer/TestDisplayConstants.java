@@ -1,4 +1,4 @@
-package org.tymit.restcontroller.testdisplay;
+package org.tymit.displayers.testdisplay.listtestdisplayer;
 
 /**
  * Created by ilan on 1/3/17.

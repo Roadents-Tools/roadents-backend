@@ -1,4 +1,4 @@
-package org.tymit.restcontroller;
+package org.tymit.displayers.restcontroller;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

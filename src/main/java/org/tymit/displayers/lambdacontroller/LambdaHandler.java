@@ -1,30 +1,33 @@
-package org.tymit.restcontroller;
+package org.tymit.displayers.lambdacontroller;
 
+
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.tymit.projectdonut.jsonconvertion.location.DestinationJsonConverter;
+import org.tymit.displayers.testdisplay.listtestdisplayer.TestDisplayer;
 import org.tymit.projectdonut.jsonconvertion.routing.TravelRouteJsonConverter;
 import org.tymit.projectdonut.logic.ApplicationRunner;
-import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.routing.TravelRoute;
 import org.tymit.projectdonut.utils.LoggingUtils;
-import org.tymit.restcontroller.testdisplay.TestDisplayer;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Created by ilan on 7/15/16.
+ * Created by ilan on 6/4/17.
  */
-
-@RestController
-public class DonutController {
+public class LambdaHandler implements RequestStreamHandler {
 
     private static final String TAG = "DONUT";
     private static final String START_TIME_TAG = "starttime";
@@ -35,11 +38,15 @@ public class DonutController {
     private static final String TEST_TAG = "test";
     private static final String HUMAN_READABLE_TAG = "display";
 
-    @RequestMapping("/routes")
-    public String getRoutes(@RequestParam Map<String, String> urlArgs) {
+    @Override
+    public void handleRequest(InputStream input, OutputStream output, Context context) throws IOException {
+
 
         LoggingUtils.setPrintImmediate(true);
-        LoggingUtils.logMessage("DonutController", "/routes called with args %s", urlArgs.toString());
+
+        Map<String, String> urlArgs = parseUrlArgs(input);
+
+        LoggingUtils.logMessage("DonutLambda", "/routes called with args %s", urlArgs.toString());
         long callTime = System.currentTimeMillis();
 
         String tag = urlArgs.getOrDefault("tag", TAG);
@@ -62,7 +69,7 @@ public class DonutController {
         Map<String, List<Object>> results = null;
         try {
             results = ApplicationRunner.runApplication(tag, args);
-        } catch (Exception e){
+        } catch (Exception e) {
             LoggingUtils.logError(e);
         }
 
@@ -71,7 +78,7 @@ public class DonutController {
             results.put("ERRORS", new ArrayList<>());
             results.get("ERRORS").add(new Exception("Null results set."));
         }
-        if (results.containsKey("ERRORS")){
+        if (results.containsKey("ERRORS")) {
             results.get("ERRORS").forEach(errObj -> LoggingUtils.logError((Exception) errObj));
         }
         String rval;
@@ -96,53 +103,45 @@ public class DonutController {
         }
         long endTime = System.currentTimeMillis();
         long diffTime = endTime - callTime;
-        LoggingUtils.logMessage("DonutController", "Got %d routes in %f seconds.", results.get("ROUTES")
-                .size(), diffTime / 1000.0);
+        LoggingUtils.logMessage(
+                "DonutLambda",
+                "Got %d routes in %f seconds.",
+                results.get("ROUTES").size(),
+                diffTime / 1000.0
+        );
+
+        outputData(rval, output);
+
+    }
+
+    private static Map<String, String> parseUrlArgs(InputStream inputStream) {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        Map<String, String> rval = new ConcurrentHashMap<>();
+        StringBuilder inputStringBuilder = reader.lines()
+                .collect(
+                        StringBuilder::new,
+                        StringBuilder::append,
+                        StringBuilder::append
+                );
+        JSONObject event = new JSONObject(inputStringBuilder.toString());
+        if (event.get("queryStringParameters") == null) throw new IllegalArgumentException("Got no parameters.");
+        JSONObject qps = (JSONObject) event.get("queryStringParameters");
+        for (Object keyObj : qps.keySet()) {
+            String key = (String) keyObj;
+            rval.put(key, qps.getString(key));
+        }
         return rval;
-
     }
 
-    @RequestMapping("/destinations")
-    public String getDests(@RequestParam Map<String, String> urlArgs) {
-
-        LoggingUtils.setPrintImmediate(true);
-        LoggingUtils.logMessage("DonutController", "/destinations called with args %s", urlArgs.toString());
-        long callTime = System.currentTimeMillis();
-
-
-        String tag = urlArgs.getOrDefault("tag", TAG);
-        Map<String, Object> args = new HashMap<>();
-
-        long startTime = (urlArgs.containsKey(START_TIME_TAG))
-                ? 1000L * Long.valueOf(urlArgs.get(START_TIME_TAG))
-                : System.currentTimeMillis();
-        args.put(START_TIME_TAG, startTime);
-
-        args.put(LAT_TAG, Double.valueOf(urlArgs.get(LAT_TAG)));
-        args.put(LONG_TAG, Double.valueOf(urlArgs.get(LONG_TAG)));
-        args.put(TIME_DELTA_TAG, 1000L * Long.valueOf(urlArgs.get(TIME_DELTA_TAG)));
-        args.put(TYPE_TAG, urlArgs.get(TYPE_TAG));
-        boolean test = Boolean.valueOf(urlArgs.get(TEST_TAG));
-        args.put(TEST_TAG, test);
-        DestinationJsonConverter converter = new DestinationJsonConverter();
-        JSONArray dests = ApplicationRunner.runApplication(tag, args)
-                .get("DESTS")
-                .parallelStream()
-                .map(destObj -> (DestinationLocation) destObj)
-                .map(converter::toJson)
-                .map(JSONObject::new)
-                .collect(JSONArray::new, JSONArray::put, (r, r2) -> {
-                    for (int i = 0, r2len = r2.length(); i < r2len; i++) {
-                        r.put(r2.getJSONObject(i));
-                    }
-                });
-
-
-        long endTime = System.currentTimeMillis();
-        long diffTime = endTime - callTime;
-        LoggingUtils.logMessage("DonutController", "Got %d dest in %f seconds.", dests.length(), diffTime / 1000.0);
-        return dests.toString();
+    private static void outputData(String rawOutputJson, OutputStream outputStream) throws IOException {
+        JSONObject responseJson = new JSONObject();
+        JSONObject headerJson = new JSONObject();
+        headerJson.put("content", "application/html");
+        responseJson.put("headers", headerJson);
+        responseJson.put("body", rawOutputJson);
+        responseJson.put("statusCode", "200");
+        OutputStreamWriter writer = new OutputStreamWriter(outputStream);
+        writer.write(responseJson.toString());
+        writer.close();
     }
-
-
 }
