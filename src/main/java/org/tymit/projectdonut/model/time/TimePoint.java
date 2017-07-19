@@ -46,6 +46,12 @@ public class TimePoint implements Comparable<TimePoint> {
         return getCalendar().get(Calendar.YEAR);
     }
 
+    public TimePoint withYear(int year) {
+        Calendar cal = getCalendar();
+        cal.set(Calendar.YEAR, year);
+        return new TimePoint(cal.getTimeInMillis(), timeZone, true);
+    }
+
     private Calendar getCalendar() {
         Calendar cal = Calendar.getInstance(TimeZone.getTimeZone(timeZone));
         cal.setTimeInMillis(unixTime);
