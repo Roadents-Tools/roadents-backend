@@ -26,6 +26,7 @@ import java.util.Objects;
 import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -46,8 +47,8 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
     private static final String SCHEDULE_FORMAT = "origin_departure_between=%d:%d,%d:%d&date=%d-%d-%d";
     private static final String STOP_ID_URL = "http://transit.land/api/v1/stops?per_page=" + MAX_QUERY_SIZE + "&onestop_id=%s";
 
-    private static final double MILES_TO_LAT = 1.0 / 69.5;
-    private static final double MILES_TO_LONG = 1 / 69.5;
+    private static final double MILES_TO_LAT = 1.0 / 70;
+    private static final double MILES_TO_LONG = 1.0 / 70;
 
     private boolean isUp;
 
@@ -177,7 +178,11 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
 
     private JSONObject callUrl(String url) {
         OkHttpClient client;
-        client = new OkHttpClient();
+        client = new OkHttpClient.Builder()
+                .connectTimeout(120, TimeUnit.SECONDS)
+                .readTimeout(120, TimeUnit.SECONDS)
+                .writeTimeout(120, TimeUnit.SECONDS)
+                .build();
 
 
         Request request = new Request.Builder()

@@ -56,8 +56,22 @@ public class DonutRangeLogicCore implements LogicCore {
         return output;
     }
 
-    private static Map<LocationPoint, TimeDelta> runRangeFinder(StartPoint start, TimePoint startTime, TimeDelta maxDelta) {
+    public static Map<LocationPoint, TimeDelta> runRangeFinder(StartPoint start, TimePoint startTime, TimeDelta maxDelta) {
         Set<TravelRoute> stationRoutes = DonutLogicSupport.buildStationRouteList(start, startTime, maxDelta);
+
+        Map<LocationPoint, TimeDelta> rval = new HashMap<>();
+        for (TravelRoute route : stationRoutes) {
+            for (TravelRouteNode node : route.getRoute()) {
+                rval.put(node.getPt(), maxDelta.minus(route.getTotalTimeAtNode(node)));
+            }
+        }
+
+        return rval;
+    }
+
+    public static Map<LocationPoint, TimeDelta> runDisplayRangeFinder(StartPoint start, TimePoint startTime, TimeDelta maxDelta) {
+
+        Set<TravelRoute> stationRoutes = DonutLogicSupport.buildStationRouteListDisplay(start, startTime, maxDelta);
 
         Map<LocationPoint, TimeDelta> rval = new HashMap<>();
         for (TravelRoute route : stationRoutes) {

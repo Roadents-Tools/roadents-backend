@@ -123,6 +123,42 @@ public final class DonutLogicSupport {
     }
 
     /**
+     * Builds a list of possible routes to stations given initial requirements. Assuming we start at initialPoint
+     * at time startTime, each of the returned routes will be to a station no more than maxDelta time away.
+     *
+     * @param initialPoint the location we are starting from
+     * @param startTime    the time we begin looking for stations
+     * @param maxDelta     the maximum time we are allowed to walk away from each station.
+     * @return the possible routes
+     */
+    public static Set<TravelRoute> buildStationRouteListDisplay(StartPoint initialPoint, TimePoint startTime, TimeDelta maxDelta) {
+        Map<String, TravelRoute> rval = new ConcurrentHashMap<>();
+        TravelRoute startRoute = new TravelRoute(initialPoint, startTime);
+        rval.put(getLocationTag(initialPoint), startRoute);
+        List<TravelRoute> currentLayer = new ArrayList<>(Sets.newHashSet(startRoute));
+
+        Function<TravelRoute, Stream<TravelRoute>> unfilteredLayerBuilder = buildNextDisplayLayerFunction(startTime, maxDelta);
+        while (!currentLayer.isEmpty()) {
+            List<TravelRoute> nextLayer = currentLayer.stream()
+                    .flatMap(unfilteredLayerBuilder)
+                    .filter(nextDisplayLayerFilter(maxDelta, rval))
+                    .peek(newRoute -> rval.put(getLocationTag(newRoute.getCurrentEnd()), newRoute))
+                    .collect(Collectors.toList());
+
+            LoggingUtils.logMessage("DONUT", "Next display recursive layer size: %d", nextLayer.size());
+            currentLayer = nextLayer;
+        }
+        return new HashSet<>(rval.values());
+    }
+
+    public static Function<TravelRoute, Stream<TravelRoute>> buildNextDisplayLayerFunction(TimePoint startTime, TimeDelta maxDelta) {
+        long fakeDelta = maxDelta.getDeltaLong() * 2L + 3600000L;
+        return route -> getAllPossibleStations(route.getCurrentEnd(), startTime.plus(route.getTotalTime()), new TimeDelta(fakeDelta))
+                .stream()
+                .map(node -> route.clone().addNode(node));
+    }
+
+    /**
      * Get all possible stations directly travelable to from a given point. It does not calculate in-between stops.
      * @param center the point to start from
      * @param startTime the time to start at
@@ -268,6 +304,20 @@ public final class DonutLogicSupport {
             return currentInMap.getTotalTime().getDeltaLong() > route.getTotalTime().getDeltaLong();
         };
     }
+
+    public static Predicate<TravelRoute> nextDisplayLayerFilter(TimeDelta maxDelta, Map<String, TravelRoute> currentRoutes) {
+        return route -> {
+            if (isMiddleMan(route)) return false; //TODO: Not bandaid the middleman issue
+            if (route.getRoute()
+                    .stream()
+                    .anyMatch(node -> node.getWalkTimeFromPrev().getDeltaLong() > maxDelta.getDeltaLong()))
+                return false;
+            TravelRoute currentInMap = currentRoutes.get(getLocationTag(route.getCurrentEnd()));
+            return currentInMap == null || currentInMap.getTotalTime().getDeltaLong() > route.getTotalTime()
+                    .getDeltaLong();
+        };
+    }
+
 
     /**
      * Checks to see if a travelroute suffered from the middleman issue.
