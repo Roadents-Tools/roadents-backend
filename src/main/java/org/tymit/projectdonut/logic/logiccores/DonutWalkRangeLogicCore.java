@@ -4,7 +4,6 @@ import com.google.common.collect.Lists;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.routing.TravelRoute;
-import org.tymit.projectdonut.model.routing.TravelRouteNode;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.utils.LoggingUtils;
@@ -18,14 +17,14 @@ import java.util.Set;
 /**
  * Created by ilan on 7/16/17.
  */
-public class DonutRangeLogicCore implements LogicCore {
+public class DonutWalkRangeLogicCore implements LogicCore {
 
     public static final String START_TIME_TAG = "starttime";
     public static final String LAT_TAG = "latitude";
     public static final String LONG_TAG = "longitude";
     public static final String TYPE_TAG = "type";
     public static final String TIME_DELTA_TAG = "timedelta";
-    private static final String TAG = "DONUTRANGE";
+    private static final String TAG = "DONUTWALKRANGE";
     private static final String AREA_MAP = "area_map";
 
     @Override
@@ -40,7 +39,7 @@ public class DonutRangeLogicCore implements LogicCore {
         TimeDelta maxTimeDelta = new TimeDelta(maxUnixTimeDelta);
 
         //Run the core
-        Map<LocationPoint, TimeDelta> ranges = runRangeFinder(
+        Map<LocationPoint, TimeDelta> ranges = runWalkRangeFinder(
                 new StartPoint(new double[] { startLat, startLong }),
                 startTime,
                 maxTimeDelta
@@ -56,31 +55,10 @@ public class DonutRangeLogicCore implements LogicCore {
         return output;
     }
 
-    public static Map<LocationPoint, TimeDelta> runRangeFinder(StartPoint start, TimePoint startTime, TimeDelta maxDelta) {
-        Set<TravelRoute> stationRoutes = DonutLogicSupport.buildStationRouteList(start, startTime, maxDelta);
+    public static Map<LocationPoint, TimeDelta> runWalkRangeFinder(StartPoint start, TimePoint startTime, TimeDelta maxDelta) {
+        Set<TravelRoute> stationRoutes = DonutWalkMaximumSupport.buildStationRouteList(start, startTime, maxDelta);
 
-        Map<LocationPoint, TimeDelta> rval = new HashMap<>();
-        for (TravelRoute route : stationRoutes) {
-            for (TravelRouteNode node : route.getRoute()) {
-                rval.put(node.getPt(), maxDelta.minus(route.getTotalTimeAtNode(node)));
-            }
-        }
-
-        return rval;
-    }
-
-    public static Map<LocationPoint, TimeDelta> runDisplayRangeFinder(StartPoint start, TimePoint startTime, TimeDelta maxDelta) {
-
-        Set<TravelRoute> stationRoutes = DonutLogicSupport.buildStationRouteListDisplay(start, startTime, maxDelta);
-
-        Map<LocationPoint, TimeDelta> rval = new HashMap<>();
-        for (TravelRoute route : stationRoutes) {
-            for (TravelRouteNode node : route.getRoute()) {
-                rval.put(node.getPt(), maxDelta.minus(route.getTotalTimeAtNode(node)));
-            }
-        }
-
-        return rval;
+        return DonutWalkMaximumSupport.generateDisplayGraph(stationRoutes, maxDelta);
     }
 
     @Override

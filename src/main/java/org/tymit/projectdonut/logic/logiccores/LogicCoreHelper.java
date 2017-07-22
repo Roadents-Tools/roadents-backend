@@ -33,7 +33,7 @@ public class LogicCoreHelper {
 
     private static LogicCore[] initializeCoresList() {
         return new LogicCore[] {
-                new DonutLogicCore(), new DonutABLogicCore(), new DonutRangeLogicCore(),
+                new DonutLogicCore(), new DonutABLogicCore(), new DonutWalkRangeLogicCore(),
                 new MoleLogicCore(), new WeaselLogicCore()
         };
     }
