@@ -60,15 +60,10 @@ public class TransStation implements LocationPoint {
     }
 
     public TimePoint getNextArrival(TimePoint start) {
-        TimePoint tp = schedule.parallelStream()
+        return schedule.parallelStream()
                 .map(sp -> sp.nextValidTime(start))
                 .min(Comparator.naturalOrder())
-                .get();
-        return tp;
-    }
-
-    public TransStation clone(List<SchedulePoint> newSchedule, TransChain newChain) {
-        return new TransStation(name, location, newSchedule, newChain);
+                .orElse(TimePoint.NULL);
     }
 
     @Override

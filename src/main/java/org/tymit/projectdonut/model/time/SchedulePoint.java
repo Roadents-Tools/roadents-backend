@@ -32,6 +32,12 @@ public class SchedulePoint {
         this.fuzz = fuzz;
     }
 
+    public TimeDelta minutesBefore(SchedulePoint other) {
+        TimePoint thisBase = nextValidTime(TimePoint.NULL.addDay());
+        TimePoint otherBase = other.nextValidTime(thisBase);
+        return thisBase.timeUntil(otherBase);
+    }
+
     public TimePoint nextValidTime(TimePoint base) {
         if (isValidTime(base)) return base;
         TimePoint rval = base.withHour(hour)

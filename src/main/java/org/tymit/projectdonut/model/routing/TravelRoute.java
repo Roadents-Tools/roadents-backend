@@ -32,6 +32,60 @@ public class TravelRoute {
         return startTime;
     }
 
+    public TimeDelta getTotalWalkTime() {
+        return getRoute().parallelStream()
+                .map(TravelRouteNode::getWalkTimeFromPrev)
+                .reduce(TimeDelta.NULL, TimeDelta::plus);
+    }
+
+    public TimeDelta getWalkTimeAtNode(TravelRouteNode node) {
+        int limit = getRoute().indexOf(node);
+        return getWalkTimeAtNodeIndex(limit);
+    }
+
+    public TimeDelta getWalkTimeAtNodeIndex(int nodeindex) {
+        return getRoute().stream()
+                .limit(nodeindex + 1)
+                .map(TravelRouteNode::getWalkTimeFromPrev)
+                .reduce(TimeDelta.NULL, TimeDelta::plus);
+    }
+
+    public TimeDelta getTotalWaitTime() {
+        return getRoute().parallelStream()
+                .map(TravelRouteNode::getWaitTimeFromPrev)
+                .reduce(TimeDelta.NULL, TimeDelta::plus);
+    }
+
+    public TimeDelta getWaitTimeAtNode(TravelRouteNode node) {
+        int limit = getRoute().indexOf(node);
+        return getWaitTimeAtNodeIndex(limit);
+    }
+
+    public TimeDelta getWaitTimeAtNodeIndex(int nodeindex) {
+        return getRoute().stream()
+                .limit(nodeindex + 1)
+                .map(TravelRouteNode::getWaitTimeFromPrev)
+                .reduce(TimeDelta.NULL, TimeDelta::plus);
+    }
+
+    public TimeDelta getTotalTravelTime() {
+        return getRoute().parallelStream()
+                .map(TravelRouteNode::getTravelTimeFromPrev)
+                .reduce(TimeDelta.NULL, TimeDelta::plus);
+    }
+
+    public TimeDelta getTravelTimeAtNode(TravelRouteNode node) {
+        int limit = getRoute().indexOf(node);
+        return getTravelTimeAtNodeIndex(limit);
+    }
+
+    public TimeDelta getTravelTimeAtNodeIndex(int nodeindex) {
+        return getRoute().stream()
+                .limit(nodeindex + 1)
+                .map(TravelRouteNode::getTravelTimeFromPrev)
+                .reduce(TimeDelta.NULL, TimeDelta::plus);
+    }
+
     public TimeDelta getTotalTime() {
         return getRoute().parallelStream()
                 .map(TravelRouteNode::getTotalTimeToArrive)
@@ -72,7 +126,7 @@ public class TravelRoute {
         if (end != null) return end.getPt();
         if (routeNodes.size() > 0)
             return routeNodes.get(routeNodes.size() - 1).getPt();
-        return routeNodes.get(0).getPt();
+        return getStart();
     }
 
     @Override

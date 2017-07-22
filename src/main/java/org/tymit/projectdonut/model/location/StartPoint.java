@@ -7,9 +7,9 @@ import java.util.Arrays;
  */
 public class StartPoint implements LocationPoint {
 
-    private final String name = "Start Point";
+    private static final String name = "Start Point";
 
-    private final LocationType type = new LocationType("Start Point", "startpt");
+    private static final LocationType type = new LocationType("Start Point", "startpt");
 
     private final double[] coords;
 

@@ -140,7 +140,7 @@ public class GtfsProvider implements StationProvider {
             cache.putIfAbsent(chain, new ArrayList<>());
 
             Set<TransStation> stationsInChain = stations.get(tripId).keySet().stream()
-                    .map(station -> station.clone(stations.get(tripId).get(station), chain))
+                    .map(station -> station.withSchedule(chain, stations.get(tripId).get(station)))
                     .collect(Collectors.toSet());
 
             cache.put(chain, new ArrayList<>(stationsInChain));

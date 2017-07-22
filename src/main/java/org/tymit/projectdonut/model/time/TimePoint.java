@@ -38,14 +38,6 @@ public class TimePoint implements Comparable<TimePoint> {
         this.timeZone = timeZone;
     }
 
-    /**
-     * Gets the year that this TimePoint represents.
-     * @return the year component of this TimePoint
-     */
-    public int getYear() {
-        return getCalendar().get(Calendar.YEAR);
-    }
-
     public TimePoint withYear(int year) {
         Calendar cal = getCalendar();
         cal.set(Calendar.YEAR, year);
@@ -56,14 +48,6 @@ public class TimePoint implements Comparable<TimePoint> {
         Calendar cal = Calendar.getInstance(TimeZone.getTimeZone(timeZone));
         cal.setTimeInMillis(unixTime);
         return cal;
-    }
-
-    /**
-     * Gets the month component of this TimePoint.
-     * @return the month component of this TimePoint. The valid range is 1 for January to 12 for December.
-     */
-    public int getMonth() {
-        return getCalendar().get(Calendar.MONTH) + 1;
     }
 
     /**
@@ -164,6 +148,10 @@ public class TimePoint implements Comparable<TimePoint> {
         return timeZone;
     }
 
+    public TimePoint withTimeZone(String timeZone) {
+        return new TimePoint(unixTime, timeZone);
+    }
+
     public boolean isBefore(TimePoint other) {
         return other.getUnixTime() > unixTime;
     }
@@ -183,6 +171,34 @@ public class TimePoint implements Comparable<TimePoint> {
         TimePoint timePoint = (TimePoint) o;
 
         return getUnixTime() == timePoint.getUnixTime() && timeZone.equals(timePoint.timeZone);
+    }
+
+    @Override
+    public String toString() {
+        String dateTimeString = String.format("%d-%d-%d %d:%d:%d:%d", getYear(), getMonth(), getDayOfMonth(), getHour(), getMinute(), getSecond(), getMilliseconds());
+        return "TimePoint{ " +
+                "datetime=" + dateTimeString + ", " +
+                "unixTime=" + unixTime + ", " +
+                "timeZone='" + timeZone + '\'' +
+                '}';
+    }
+
+    /**
+     * Gets the year that this TimePoint represents.
+     *
+     * @return the year component of this TimePoint
+     */
+    public int getYear() {
+        return getCalendar().get(Calendar.YEAR);
+    }
+
+    /**
+     * Gets the month component of this TimePoint.
+     *
+     * @return the month component of this TimePoint. The valid range is 1 for January to 12 for December.
+     */
+    public int getMonth() {
+        return getCalendar().get(Calendar.MONTH) + 1;
     }
 
     @Override
