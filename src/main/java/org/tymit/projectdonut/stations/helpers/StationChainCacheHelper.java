@@ -5,6 +5,7 @@ import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.interfaces.StationCacheInstance;
+import org.tymit.projectdonut.stations.memory.FatMemoryCache;
 import org.tymit.projectdonut.utils.LocationUtils;
 
 import java.util.Arrays;
@@ -31,10 +32,9 @@ public class StationChainCacheHelper {
 
     private void initializeStationInstanceList() {
         if (isTest) allStationInstances = new StationCacheInstance[0];
-        /*allStationInstances = Arrays.stream(PostgresqlStationDbCache.DB_URLS)
-                .map(PostgresqlStationDbCache::new)
-                .collect(Collectors.toList())
-                .toArray(new StationCacheInstance[0]);*/
+        allStationInstances = new StationCacheInstance[] {
+                new FatMemoryCache()
+        };
     }
 
     public static void setTestMode(boolean testMode) {
@@ -99,8 +99,7 @@ public class StationChainCacheHelper {
 
         return Arrays.stream(allStationInstances)
                 .parallel()
-                .map(cache -> cache.cacheStations(finalCenter, finalRange, startTime, maxDelta, stations))
-                .anyMatch(Boolean::booleanValue);
+                .anyMatch(cache -> cache.cacheStations(finalCenter, finalRange, startTime, maxDelta, stations));
 
     }
 
