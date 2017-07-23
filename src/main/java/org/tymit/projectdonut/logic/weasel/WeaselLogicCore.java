@@ -4,6 +4,7 @@ import org.tymit.projectdonut.costs.CostCalculator;
 import org.tymit.projectdonut.costs.arguments.BulkCostArgs;
 import org.tymit.projectdonut.logic.helpers.LogicCoreHelper;
 import org.tymit.projectdonut.logic.interfaces.LogicCore;
+import org.tymit.projectdonut.logic.utils.StreamUtils;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.routing.TravelRoute;
@@ -53,7 +54,7 @@ public class WeaselLogicCore implements LogicCore {
 
         Map<DestinationLocation, TravelRoute> routeMap = unfilteredRouteObjList.stream()
                 .map(obj -> (TravelRoute) obj)
-                .collect(ConcurrentHashMap::new, (map, rt) -> map.put(rt.getDestination(), rt), ConcurrentHashMap::putAll);
+                .collect(StreamUtils.collectWithKeys(TravelRoute::getDestination));
 
         Set<BulkCostArgs> ags = locs.stream()
                 .map(pt -> new BulkCostArgs()

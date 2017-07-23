@@ -2,6 +2,7 @@ package org.tymit.projectdonut.logic.donutdisplay;
 
 import com.google.common.collect.Sets;
 import org.tymit.projectdonut.logic.donut.DonutLogicSupport;
+import org.tymit.projectdonut.logic.utils.StreamUtils;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransStation;
@@ -94,11 +95,11 @@ public class DonutWalkMaximumSupport {
         TransStation station = (TransStation) center;
 
         Map<TransStation, TravelRouteNode> walkable = getWalkableStations(station, maxDelta).stream()
-                .collect(ConcurrentHashMap::new, (map, node) -> map.put((TransStation) node.getPt(), node), ConcurrentHashMap::putAll);
+                .collect(StreamUtils.collectWithKeys(node -> (TransStation) node.getPt()));
 
         Map<TransStation, TravelRouteNode> arrivable = DonutLogicSupport.getAllChainsForStop(station).stream()
                 .flatMap(station1 -> getArrivableStations(station1, startTime).stream())
-                .collect(ConcurrentHashMap::new, (map, node) -> map.put((TransStation) node.getPt(), node), ConcurrentHashMap::putAll);
+                .collect(StreamUtils.collectWithKeys(node -> (TransStation) node.getPt()));
 
         Set<TransStation> allPossibleStations = new HashSet<>();
         allPossibleStations.addAll(walkable.keySet());

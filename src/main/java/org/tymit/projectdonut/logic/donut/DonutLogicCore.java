@@ -1,6 +1,7 @@
 package org.tymit.projectdonut.logic.donut;
 
 import org.tymit.projectdonut.logic.interfaces.LogicCore;
+import org.tymit.projectdonut.logic.utils.StreamUtils;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.model.location.StartPoint;
@@ -103,7 +104,7 @@ public class DonutLogicCore implements LogicCore {
         //Filter and correct the dest routes
         Map<DestinationLocation, TravelRoute> destToShortest = destRoutes.stream()
                 .filter(rt -> !DonutLogicSupport.isMiddleMan(rt))
-                .collect(DonutLogicSupport.OPTIMAL_ROUTES_FOR_DESTINATIONS);
+                .collect(StreamUtils.OPTIMAL_ROUTES_FOR_DESTINATIONS);
 
         LoggingUtils.logMessage(getClass().getName(), "Got %d -> %d filtered routes.", destRoutes
                 .size(), destToShortest.size());

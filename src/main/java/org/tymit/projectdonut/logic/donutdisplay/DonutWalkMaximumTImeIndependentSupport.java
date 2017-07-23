@@ -1,6 +1,7 @@
 package org.tymit.projectdonut.logic.donutdisplay;
 
 import org.tymit.projectdonut.logic.donut.DonutLogicSupport;
+import org.tymit.projectdonut.logic.utils.StreamUtils;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransStation;
@@ -99,7 +100,7 @@ public class DonutWalkMaximumTImeIndependentSupport {
                 .stream()
                 .filter(fromChain -> !Arrays.equals(fromChain.getCoordinates(), station.getCoordinates()))
                 .map(DonutLogicSupport::getStationWithSchedule)
-                .collect(HashMap::new, (map, stationKey) -> map.put(stationKey, maxDelta), HashMap::putAll);
+                .collect(StreamUtils.collectWithValues(stationkey -> maxDelta));
         LoggingUtils.logMessage(TAG, "Returing %d stations.", rval.size());
         return rval;
     }
