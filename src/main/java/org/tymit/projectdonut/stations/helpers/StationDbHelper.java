@@ -5,8 +5,8 @@ import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.interfaces.StationDbInstance;
+import org.tymit.projectdonut.stations.postgresql.PostgresqlStationDbCache;
 import org.tymit.projectdonut.stations.test.TestStationDb;
-import org.tymit.projectdonut.stations.transitland.TransitlandApiDb;
 
 import java.util.Arrays;
 import java.util.List;
@@ -37,7 +37,9 @@ public class StationDbHelper {
             allDatabases = new StationDbInstance[]{new TestStationDb()};
             return;
         }
-        allDatabases = new StationDbInstance[] { new TransitlandApiDb() };
+        allDatabases = new StationDbInstance[] {
+                new PostgresqlStationDbCache(PostgresqlStationDbCache.DB_URLS[0])
+        };
     }
 
     public static StationDbHelper getHelper() {
