@@ -1,0 +1,17 @@
+service: project-donut-server
+
+
+provider:
+  name: aws
+  runtime: java8
+  
+package:
+  artifact: build/distributions/project-donut-server.zip
+
+functions:
+  Donut:
+    handler: org.tymit.displayers.lambdacontroller.LambdaHandler
+    events:
+      - http:
+          path: Donut
+          method: get
