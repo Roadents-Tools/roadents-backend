@@ -22,7 +22,10 @@ import java.util.List;
  */
 public class PostgresqlStationDbCache implements StationCacheInstance, StationDbInstance.ComboDb {
 
-    public static final String[] DB_URLS = new String[] { "jdbc:postgresql://donutdb.c3ovzbdvtevz.us-west-2.rds.amazonaws.com:5432/Donut" };
+    public static final String[] DB_URLS = new String[] {
+            "jdbc:postgresql://donutdb.c3ovzbdvtevz.us-west-2.rds.amazonaws.com:5432/DonutDump",
+            "jdbc:postgresql://192.168.1.71:5432/Donut"
+    };
     private static final String USER = "donut";
     private static final String PASS = "donutpass";
     private final Connection con;

@@ -8,6 +8,7 @@ import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.routing.TravelRoute;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
+import org.tymit.projectdonut.stations.StationRetriever;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.ArrayList;
@@ -83,6 +84,10 @@ public class DonutLogicCore implements LogicCore {
      * @return all possible destinations mapped to the best route to get there
      */
     public Map<DestinationLocation, TravelRoute> runDonut(StartPoint center, TimePoint startTime, TimeDelta maxTimeDelta, LocationType type) {
+
+        //Prepare the stations.
+        double effectiveRange = maxTimeDelta.getDeltaLong() / (1000 * 60);  //Average 1 mile per minute.
+        StationRetriever.prepareArea(center.getCoordinates(), effectiveRange, startTime, maxTimeDelta);
 
         //Get the station routes
         Set<TravelRoute> stationRoutes = DonutLogicSupport.buildStationRouteList(center, startTime, maxTimeDelta);

@@ -48,4 +48,13 @@ public class StationRetriever {
         StationDbHelper.setTestMode(testMode);
         StationChainCacheHelper.setTestMode(testMode);
     }
+
+    public static void prepareArea(double[] center, double range, TimePoint startTime, TimeDelta maxDelta) {
+        List<TransStation> allStations = StationChainCacheHelper.getHelper()
+                .getCachedStations(center, range, startTime, maxDelta, null);
+        if (allStations == null || allStations.isEmpty()) {
+            allStations = StationDbHelper.getHelper().queryStations(center, range, startTime, maxDelta, null);
+            StationChainCacheHelper.getHelper().cacheStations(center, range, startTime, maxDelta, allStations);
+        }
+    }
 }

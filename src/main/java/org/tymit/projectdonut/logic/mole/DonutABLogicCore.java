@@ -10,6 +10,7 @@ import org.tymit.projectdonut.model.routing.TravelRoute;
 import org.tymit.projectdonut.model.routing.TravelRouteNode;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
+import org.tymit.projectdonut.stations.StationRetriever;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
@@ -19,7 +20,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 
 /**
@@ -71,7 +71,7 @@ public class DonutABLogicCore implements LogicCore {
             List<Object> errs = new ArrayList<>(LoggingUtils.getErrors());
             output.put("ERRORS", errs);
         }
-        output.put(ROUTE_LIST_TAG, destsToRoutes.stream().collect(Collectors.toList()));
+        output.put(ROUTE_LIST_TAG, new ArrayList<>(destsToRoutes));
         return output;
     }
 
@@ -81,6 +81,19 @@ public class DonutABLogicCore implements LogicCore {
     }
 
     public List<TravelRoute> runDonutRouting(StartPoint start, TimePoint startTime, List<DestinationLocation> ends) {
+
+        //Prepare the call
+        for (LocationPoint end : ends) {
+            double centerlag = (start.getCoordinates()[0] + end.getCoordinates()[0]) / 2;
+            double centerlng = (start.getCoordinates()[1] + end.getCoordinates()[1]) / 2;
+            final double[] center = new double[] { centerlag, centerlng };
+            final double range = Math.max(
+                    LocationUtils.distanceBetween(center, start.getCoordinates(), true),
+                    LocationUtils.distanceBetween(center, end.getCoordinates(), true)
+            );
+            final TimeDelta maxDelta = new TimeDelta(LocationUtils.timeBetween(start.getCoordinates(), end.getCoordinates()));
+            StationRetriever.prepareArea(center, range, startTime, maxDelta);
+        }
 
         TimeDelta maxTimeDelta = ends.stream()
                 .map(end -> LocationUtils.timeBetween(start.getCoordinates(), end.getCoordinates()))

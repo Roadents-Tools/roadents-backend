@@ -8,6 +8,8 @@ import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.routing.TravelRoute;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
+import org.tymit.projectdonut.stations.StationRetriever;
+import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.ArrayList;
@@ -77,6 +79,11 @@ public class MoleLogicCore implements LogicCore {
     }
 
     private Map<DestinationLocation, TravelRoute> runTowardsCore(TravelRoute baseroute, TimeDelta maxDelta, LocationType type) {
+
+        double[] start = baseroute.getStart().getCoordinates();
+        double[] end = baseroute.getDestination().getCoordinates();
+        double range = LocationUtils.distanceBetween(start, end, true) + maxDelta.getDeltaLong() * 45. / (3600000);
+        StationRetriever.prepareArea(start, range, baseroute.getStartTime(), maxDelta.plus(baseroute.getTotalTime()));
 
         TimeDelta[] deltas = MoleLogicCoreSupport.getTrueDeltasPerNode(baseroute, maxDelta);
 

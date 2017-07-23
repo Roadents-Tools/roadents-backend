@@ -122,6 +122,10 @@ public class TravelRoute {
         return startTime.plus(getTotalTimeAtNode(nodeIndex));
     }
 
+    public TimePoint getEndTime() {
+        return startTime.plus(getTotalTime());
+    }
+
     public LocationPoint getCurrentEnd() {
         if (end != null) return end.getPt();
         if (routeNodes.size() > 0)
