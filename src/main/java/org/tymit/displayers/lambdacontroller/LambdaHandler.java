@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Created by ilan on 6/4/17.
@@ -43,8 +44,21 @@ public class LambdaHandler implements RequestStreamHandler {
 
 
         LoggingUtils.setPrintImmediate(true);
+        Map<String, String> urlArgs = null;
 
-        Map<String, String> urlArgs = parseUrlArgs(input);
+        try {
+            urlArgs = parseUrlArgs(input);
+            if (!urlArgs.containsKey(LAT_TAG)
+                    || !urlArgs.containsKey(LONG_TAG)
+                    || !urlArgs.containsKey(TYPE_TAG)
+                    || !urlArgs.containsKey(TIME_DELTA_TAG)) {
+                throw new Exception();
+            }
+        } catch (Exception e) {
+            LoggingUtils.logError(e);
+            outputArgsError(urlArgs, output);
+            return;
+        }
 
         LoggingUtils.logMessage("DonutLambda", "/routes called with args %s", urlArgs.toString());
         long callTime = System.currentTimeMillis();
@@ -52,34 +66,42 @@ public class LambdaHandler implements RequestStreamHandler {
         String tag = urlArgs.getOrDefault("tag", TAG);
         Map<String, Object> args = new HashMap<>();
 
-        long startTime = (urlArgs.containsKey(START_TIME_TAG))
-                ? 1000L * Long.valueOf(urlArgs.get(START_TIME_TAG))
-                : System.currentTimeMillis();
-        args.put(START_TIME_TAG, startTime);
+        try {
 
-        args.put(LAT_TAG, Double.valueOf(urlArgs.get(LAT_TAG)));
-        args.put(LONG_TAG, Double.valueOf(urlArgs.get(LONG_TAG)));
-        args.put(TIME_DELTA_TAG, 1000L * Long.valueOf(urlArgs.get(TIME_DELTA_TAG)));
-        args.put(TYPE_TAG, urlArgs.get(TYPE_TAG));
+            long startTime = (urlArgs.containsKey(START_TIME_TAG))
+                    ? 1000L * Long.valueOf(urlArgs.get(START_TIME_TAG))
+                    : System.currentTimeMillis();
+            args.put(START_TIME_TAG, startTime);
+            args.put(LAT_TAG, Double.valueOf(urlArgs.get(LAT_TAG)));
+            args.put(LONG_TAG, Double.valueOf(urlArgs.get(LONG_TAG)));
+            args.put(TIME_DELTA_TAG, 1000L * Long.valueOf(urlArgs.get(TIME_DELTA_TAG)));
+        } catch (NumberFormatException e) {
+            outputArgsError(urlArgs, output);
+        }
+
         boolean test = Boolean.valueOf(urlArgs.get(TEST_TAG));
         args.put(TEST_TAG, test);
+        args.put(TYPE_TAG, urlArgs.get(TYPE_TAG));
         boolean humanReadable = Boolean.valueOf(urlArgs.getOrDefault(HUMAN_READABLE_TAG, "false"));
-        TravelRouteJsonConverter converter = new TravelRouteJsonConverter();
+
 
         Map<String, List<Object>> results = null;
         try {
             results = ApplicationRunner.runApplication(tag, args);
         } catch (Exception e) {
             LoggingUtils.logError(e);
+            outputInternalErrors(Stream.of(e), output);
         }
 
-        if (results == null) {
+        if (results == null || !results.containsKey("ROUTES")) {
             results = new HashMap<>();
             results.put("ERRORS", new ArrayList<>());
             results.get("ERRORS").add(new Exception("Null results set."));
         }
         if (results.containsKey("ERRORS")) {
             results.get("ERRORS").forEach(errObj -> LoggingUtils.logError((Exception) errObj));
+            outputInternalErrors(results.get("ERRORS").stream().map(obj -> (Exception) obj), output);
+            return;
         }
         String rval;
         if (humanReadable) {
@@ -89,7 +111,8 @@ public class LambdaHandler implements RequestStreamHandler {
                     .collect(Collectors.toList());
             rval = TestDisplayer.buildDisplay(routes);
         } else {
-            rval = results
+            TravelRouteJsonConverter converter = new TravelRouteJsonConverter();
+            JSONArray routesArray = results
                     .get("ROUTES")
                     .parallelStream()
                     .map(routeObj -> (TravelRoute) routeObj)
@@ -98,8 +121,10 @@ public class LambdaHandler implements RequestStreamHandler {
                         for (int i = 0; i < r2.length(); i++) {
                             r.put(r2.getJSONObject(i));
                         }
-                    })
-                    .toString();
+                    });
+            JSONObject rvalObj = new JSONObject();
+            rvalObj.put("routes", routesArray);
+            rval = rvalObj.toString();
         }
         long endTime = System.currentTimeMillis();
         long diffTime = endTime - callTime;
@@ -125,7 +150,7 @@ public class LambdaHandler implements RequestStreamHandler {
                 );
         JSONObject event = new JSONObject(inputStringBuilder.toString());
         if (event.get("queryStringParameters") == null) throw new IllegalArgumentException("Got no parameters.");
-        JSONObject qps = (JSONObject) event.get("queryStringParameters");
+        JSONObject qps = event.getJSONObject("queryStringParameters");
         for (Object keyObj : qps.keySet()) {
             String key = (String) keyObj;
             rval.put(key, qps.getString(key));
@@ -136,10 +161,47 @@ public class LambdaHandler implements RequestStreamHandler {
     private static void outputData(String rawOutputJson, OutputStream outputStream) throws IOException {
         JSONObject responseJson = new JSONObject();
         JSONObject headerJson = new JSONObject();
-        headerJson.put("content", "application/html");
+        headerJson.put("content", "application/json");
         responseJson.put("headers", headerJson);
         responseJson.put("body", rawOutputJson);
         responseJson.put("statusCode", "200");
+        OutputStreamWriter writer = new OutputStreamWriter(outputStream);
+        writer.write(responseJson.toString());
+        writer.close();
+    }
+
+    private static void outputArgsError(Map<String, String> urlArgs, OutputStream output) throws IOException {
+        JSONObject headerJson = new JSONObject()
+                .put("content", "application/json");
+        JSONObject bodyJson = new JSONObject()
+                .put("message", "Could not parse method arguments.")
+                .put("arguments", urlArgs == null ? "Null" : urlArgs.toString());
+        JSONObject responseJson = new JSONObject()
+                .put("headers", headerJson)
+                .put("body", bodyJson)
+                .put("statusCode", "400");
+        OutputStreamWriter writer = new OutputStreamWriter(output);
+        writer.write(responseJson.toString());
+        writer.close();
+    }
+
+    private static void outputInternalErrors(Stream<Exception> errors, OutputStream outputStream) throws IOException {
+        JSONObject responseJson = new JSONObject();
+        JSONObject headerJson = new JSONObject();
+        headerJson.put("content", "application/json");
+        responseJson.put("headers", headerJson);
+        JSONArray exceptionArr = errors
+                .map(ex -> new JSONObject().put("Type", ex.getClass().getName()).put("Message", ex.getMessage()))
+                .collect(JSONArray::new, JSONArray::put, (ar1, ar2) -> {
+                    for (int i = 0, len = ar2.length(); i < len; i++) {
+                        ar1.put(ar2.getJSONObject(i));
+                    }
+                });
+        JSONObject bodyObj = new JSONObject()
+                .put("message", "Internal exceptions occured.")
+                .put("errors", exceptionArr);
+        responseJson.put("body", bodyObj);
+        responseJson.put("statusCode", "400");
         OutputStreamWriter writer = new OutputStreamWriter(outputStream);
         writer.write(responseJson.toString());
         writer.close();
