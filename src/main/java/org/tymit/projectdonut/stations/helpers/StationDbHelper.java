@@ -1,5 +1,7 @@
 package org.tymit.projectdonut.stations.helpers;
 
+import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
@@ -52,7 +54,18 @@ public class StationDbHelper {
         TestStationDb.setTestStations(null);
     }
 
+    @Deprecated
     public List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+        return Arrays.stream(allDatabases)
+                .filter(StationDbInstance::isUp)
+                .filter(db -> db instanceof StationDbInstance.ComboDb)
+                .flatMap(db -> ((StationDbInstance.ComboDb) db).queryStations(center, range, startTime, maxDelta, chain)
+                        .stream())
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    public List<TransStation> queryStations(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
         return Arrays.stream(allDatabases)
                 .filter(StationDbInstance::isUp)
                 .filter(db -> db instanceof StationDbInstance.ComboDb)

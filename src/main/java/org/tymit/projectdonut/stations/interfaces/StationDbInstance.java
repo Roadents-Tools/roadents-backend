@@ -1,5 +1,7 @@
 package org.tymit.projectdonut.stations.interfaces;
 
+import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
@@ -22,6 +24,9 @@ public interface StationDbInstance {
 
         List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain);
 
+        default List<TransStation> queryStations(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+            return queryStations(center.getCoordinates(), range.inMiles(), startTime, maxDelta, chain);
+        }
     }
 }
 
