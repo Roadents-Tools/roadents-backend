@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.logic.logiccores;
+package org.tymit.projectdonut.logic.mole;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -7,6 +7,7 @@ import org.junit.Test;
 import org.tymit.projectdonut.locations.LocationRetriever;
 import org.tymit.projectdonut.locations.test.TestLocationProvider;
 import org.tymit.projectdonut.logic.ApplicationRunner;
+import org.tymit.projectdonut.logic.donut.DonutLogicSupport;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;

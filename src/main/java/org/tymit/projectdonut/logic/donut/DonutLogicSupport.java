@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.logic.logiccores;
+package org.tymit.projectdonut.logic.donut;
 
 import com.google.common.collect.Sets;
 import org.tymit.projectdonut.locations.LocationRetriever;

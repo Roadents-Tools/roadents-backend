@@ -1,7 +1,7 @@
 package org.tymit.projectdonut.logic;
 
 import org.tymit.projectdonut.locations.LocationRetriever;
-import org.tymit.projectdonut.logic.logiccores.LogicCoreHelper;
+import org.tymit.projectdonut.logic.helpers.LogicCoreHelper;
 import org.tymit.projectdonut.stations.StationRetriever;
 import org.tymit.projectdonut.utils.LoggingUtils;
 

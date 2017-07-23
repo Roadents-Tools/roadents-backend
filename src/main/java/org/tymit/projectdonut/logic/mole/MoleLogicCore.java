@@ -1,5 +1,7 @@
-package org.tymit.projectdonut.logic.logiccores;
+package org.tymit.projectdonut.logic.mole;
 
+import org.tymit.projectdonut.logic.donut.DonutLogicSupport;
+import org.tymit.projectdonut.logic.interfaces.LogicCore;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.model.location.StartPoint;

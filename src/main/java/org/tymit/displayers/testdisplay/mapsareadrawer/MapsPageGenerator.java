@@ -1,6 +1,6 @@
 package org.tymit.displayers.testdisplay.mapsareadrawer;
 
-import org.tymit.projectdonut.logic.logiccores.DonutWalkMaximumTImeIndependentSupport;
+import org.tymit.projectdonut.logic.donutdisplay.DonutWalkMaximumTImeIndependentSupport;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.time.TimeDelta;

@@ -1,7 +1,9 @@
-package org.tymit.projectdonut.logic.logiccores;
+package org.tymit.projectdonut.logic.weasel;
 
 import org.tymit.projectdonut.costs.CostCalculator;
 import org.tymit.projectdonut.costs.arguments.BulkCostArgs;
+import org.tymit.projectdonut.logic.helpers.LogicCoreHelper;
+import org.tymit.projectdonut.logic.interfaces.LogicCore;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.routing.TravelRoute;

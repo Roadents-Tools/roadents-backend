@@ -1,6 +1,7 @@
-package org.tymit.projectdonut.logic.logiccores;
+package org.tymit.projectdonut.logic.donutdisplay;
 
 import com.google.common.collect.Lists;
+import org.tymit.projectdonut.logic.interfaces.LogicCore;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.routing.TravelRoute;

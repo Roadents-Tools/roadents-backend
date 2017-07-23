@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.logic.logiccores;
+package org.tymit.projectdonut.logic.mole;
 
 import com.google.common.collect.Lists;
 import org.junit.Assert;

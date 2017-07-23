@@ -1,8 +1,9 @@
-package org.tymit.projectdonut.logic.logiccores;
+package org.tymit.projectdonut.logic.mole;
 
 import org.tymit.projectdonut.costs.CostCalculator;
 import org.tymit.projectdonut.costs.arguments.CostArgs;
 import org.tymit.projectdonut.logic.ApplicationRunner;
+import org.tymit.projectdonut.logic.donut.DonutLogicCore;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.model.location.TransChain;

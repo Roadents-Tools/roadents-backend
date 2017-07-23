@@ -1,7 +1,13 @@
-package org.tymit.projectdonut.logic.logiccores;
+package org.tymit.projectdonut.logic.helpers;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.tymit.projectdonut.logic.donut.DonutLogicCore;
+import org.tymit.projectdonut.logic.donutdisplay.DonutWalkRangeLogicCore;
+import org.tymit.projectdonut.logic.interfaces.LogicCore;
+import org.tymit.projectdonut.logic.mole.DonutABLogicCore;
+import org.tymit.projectdonut.logic.mole.MoleLogicCore;
+import org.tymit.projectdonut.logic.weasel.WeaselLogicCore;
 
 import java.util.List;
 import java.util.Map;

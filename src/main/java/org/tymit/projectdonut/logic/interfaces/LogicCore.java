@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.logic.logiccores;
+package org.tymit.projectdonut.logic.interfaces;
 
 import java.util.List;
 import java.util.Map;
