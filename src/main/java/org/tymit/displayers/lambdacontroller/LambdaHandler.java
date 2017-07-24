@@ -18,6 +18,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -191,7 +192,11 @@ public class LambdaHandler implements RequestStreamHandler {
         headerJson.put("content", "application/json");
         responseJson.put("headers", headerJson);
         JSONArray exceptionArr = errors
-                .map(ex -> new JSONObject().put("Type", ex.getClass().getName()).put("Message", ex.getMessage()))
+                .map(ex -> new JSONObject()
+                        .put("Type", ex.getClass().getName())
+                        .put("Message", ex.getMessage())
+                        .put("Stacktrace", Arrays.toString(ex.getStackTrace()))
+                )
                 .collect(JSONArray::new, JSONArray::put, (ar1, ar2) -> {
                     for (int i = 0, len = ar2.length(); i < len; i++) {
                         ar1.put(ar2.getJSONObject(i));
