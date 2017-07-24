@@ -140,4 +140,15 @@ public class PostgresqlStationDbCache implements StationCacheInstance, StationDb
             return Collections.emptyList();
         }
     }
+
+    @Override
+    public List<TransStation> queryStrippedStations(double[] center, double range, int limit) {
+        if (!isUp) return Collections.emptyList();
+        try {
+            return PostgresSqlSupport.getStrippedStations(this::getConnection, center, range, limit);
+        } catch (Exception e) {
+            LoggingUtils.logError(e);
+            return Collections.emptyList();
+        }
+    }
 }

@@ -230,4 +230,6 @@ public final class PostgresqlContract {
         }
 
     }
+
+    public static final String JOIN_VIEW_NAME = "main_join_view";
 }

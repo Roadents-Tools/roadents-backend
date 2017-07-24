@@ -43,6 +43,21 @@ public class StationRetriever {
         return allStations;
     }
 
+    public static List<TransStation> getStrippedStations(double[] center, double range, int limit, List<CostArgs> args) {
+        List<TransStation> allStations = StationDbHelper.getHelper().queryStrippedStations(center, range, limit);
+
+        if (args == null || args.size() == 0) return allStations;
+        Iterator<TransStation> stationIterator = allStations.iterator();
+        while (stationIterator.hasNext()) {
+            for (CostArgs arg : args) {
+                arg.setSubject(stationIterator.next());
+                if (!CostCalculator.isWithinCosts(arg))
+                    stationIterator.remove();
+            }
+        }
+        return allStations;
+    }
+
     public static void setTestMode(boolean testMode) {
         StationDbUpdater.setTestMode(testMode);
         StationDbHelper.setTestMode(testMode);

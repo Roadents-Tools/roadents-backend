@@ -5,7 +5,9 @@ import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Created by ilan on 7/7/16.
@@ -22,6 +24,13 @@ public interface StationDbInstance {
 
         List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain);
 
+        default List<TransStation> queryStrippedStations(double[] center, double range, int limit) {
+            if (center == null || range <= 0 || limit == 0) return Collections.emptyList();
+            if (limit < 0) return queryStations(center, range, null, null, null);
+            return queryStations(center, range, null, null, null).stream()
+                    .limit(limit)
+                    .collect(Collectors.toList());
+        }
     }
 }
 

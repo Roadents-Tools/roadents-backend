@@ -17,6 +17,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -43,11 +44,68 @@ public class PostgresSqlSupport {
     private static final long MAX_POSTGRES_INTERVAL_MILLI = 1000L * 60L * 60L * 24L * 365L * 10L;
     private static final long BATCH_SIZE = 300;
     private static final long ERROR_MARGIN = 1; //meters
+    private static final double MAX_NO_REQUERY = LocationUtils.metersToMiles(500);
+
 
 
     /**
      * INFORMATION RETRIEVAL
      **/
+
+    public static List<TransStation> getStrippedStations(Supplier<Connection> connectionSupplier,
+                                                         double[] center, double range, int limit
+    ) throws SQLException {
+        if (range <= MAX_NO_REQUERY) {
+            return getStrippedStationsSingle(connectionSupplier, center, range, limit);
+        }
+
+        double effectiverange = MAX_NO_REQUERY;
+        List<TransStation> rval = getStrippedStationsSingle(connectionSupplier, center, effectiverange, limit);
+        while (rval.size() < limit && effectiverange <= range) {
+            if (range / effectiverange <= 2) {
+                effectiverange *= 2;
+            } else {
+                effectiverange = range;
+            }
+            rval = getStrippedStationsSingle(connectionSupplier, center, effectiverange, limit);
+        }
+
+        return rval;
+    }
+
+    private static List<TransStation> getStrippedStationsSingle(Supplier<Connection> connectionSupplier,
+                                                                double[] center, double range, int limit
+    ) throws SQLException {
+        Connection con = connectionSupplier.get();
+        Statement stm = con.createStatement();
+        String query = String.format(
+                "SELECT ST_X(%s::geometry) AS %s, ST_Y(%s::geometry) AS %s, %s " +
+                        "FROM %s " +
+                        "WHERE ST_DWITHIN(%s, ST_POINT(%f, %f)::geography, %f) " +
+                        "LIMIT %d",
+                PostgresqlContract.StationTable.LATLNG_KEY, LAT_COL_NAME,
+                PostgresqlContract.StationTable.LATLNG_KEY, LNG_COL_NAME,
+                PostgresqlContract.StationTable.NAME_KEY,
+                PostgresqlContract.StationTable.TABLE_NAME,
+                PostgresqlContract.StationTable.LATLNG_KEY, center[0], center[1], LocationUtils.milesToMeters(range),
+                limit
+        );
+
+        LoggingUtils.logMessage("Postgres", query);
+        ResultSet rs = stm.executeQuery(query);
+        List<TransStation> rval = new LinkedList<>();
+        while (rs.isBeforeFirst()) rs.next();
+        do {
+            String name = rs.getString(PostgresqlContract.StationTable.NAME_KEY);
+            double lat = rs.getDouble(LAT_COL_NAME);
+            double lng = rs.getDouble(LNG_COL_NAME);
+            rval.add(new TransStation(name, new double[] { lat, lng }));
+        } while (rs.next());
+
+        LoggingUtils.logMessage("Postgres", "Got %d stripped stations.", rval.size());
+        return rval;
+    }
+
     public static List<TransStation> getInformation(Supplier<Connection> connectionGenerator,
                                                     double[] center, double range,
                                                     TimePoint startTime, TimeDelta maxDelta,
@@ -76,19 +134,22 @@ public class PostgresSqlSupport {
             chainStationSchedule.putIfAbsent(chainId, new HashMap<>());
             chainStationSchedule.get(chainId)
                     .putIfAbsent(statId, new ArrayList<>());
-            int validDays = rs.getByte(PostgresqlContract.ScheduleTable.PACKED_VALID_KEY);
+            int validDays = rs.getInt(PostgresqlContract.ScheduleTable.PACKED_VALID_KEY);
             SchedulePoint nsched = new SchedulePoint(
                     rs.getInt(HOUR_COL_NAME),
                     rs.getInt(MINUTE_COL_NAME),
                     rs.getInt(SECOND_COL_NAME),
+
+                    //New view system returns packed valid as number.
+                    //TODO: Fix either the view or the field.
                     new boolean[] {
                             (validDays & 1) != 0,
-                            (validDays & 2) != 0,
-                            (validDays & 4) != 0,
-                            (validDays & 8) != 0,
-                            (validDays & 16) != 0,
-                            (validDays & 32) != 0,
-                            (validDays & 64) != 0,
+                            (validDays / 10 & 1) != 0,
+                            (validDays / 100 & 1) != 0,
+                            (validDays / 1000 & 1) != 0,
+                            (validDays / 10000 & 1) != 0,
+                            (validDays / 100000 & 1) != 0,
+                            (validDays / 1000000 & 1) != 0,
                     },
                     rs.getLong(PostgresqlContract.ScheduleTable.FUZZ_KEY)
             );
@@ -111,54 +172,37 @@ public class PostgresSqlSupport {
                                      TransChain chain
     ) {
         StringBuilder builder = new StringBuilder();
-        builder.append(String.format("SELECT " +
-                        "ST_X(%s.%s::geometry) AS %s, " +
-                        "ST_Y(%s.%s::geometry) AS %s, " +
-                        "EXTRACT(HOUR FROM %s.%s) AS %s, " +
-                        "EXTRACT(MINUTE FROM %s.%s) AS %s, " +
-                        "EXTRACT(SECOND FROM %s.%s) AS %s, " +
-                        "%s.%s AS %s, " +
-                        "%s.%s AS %s, *" +
-                        "FROM %s, %s, %s, %s WHERE %s.%s=%s.%s AND %s.%s=%s.%s AND %s.%s = %s.%s ",
-
-                //ALIASES
-                PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.LATLNG_KEY, LAT_COL_NAME,
-                PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.LATLNG_KEY, LNG_COL_NAME,
-                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.TIME_KEY, HOUR_COL_NAME,
-                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.TIME_KEY, MINUTE_COL_NAME,
-                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.TIME_KEY, SECOND_COL_NAME,
-                PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.NAME_KEY, STAT_NAM_KEY,
-                PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.ChainTable.NAME_KEY, CHN_NAM_KEY,
-
-                //FROM
-                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.CostTable.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.ChainTable.TABLE_NAME,
-
-                //JOIN
-                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.COST_ID_KEY, PostgresqlContract.CostTable.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.CostTable.COST_ID_KEY,
-                PostgresqlContract.CostTable.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.CostTable.COST_STATION_KEY, PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.ID_KEY,
-                PostgresqlContract.CostTable.STATION_CHAIN_COST_TABLE_NAME, PostgresqlContract.CostTable.COST_CHAIN_KEY, PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.ChainTable.ID_KEY
-        ));
+        builder.append("SELECT * FROM " + PostgresqlContract.JOIN_VIEW_NAME + " ");
+        if ((startTime != null && maxDelta != null) || (center != null && range >= 0) || chain != null) {
+            builder.append("WHERE ");
+        }
+        if (center != null && range >= 0) {
+            if (range == 0) range = 0.001;
+            if (!builder.toString().endsWith("WHERE ")) {
+                builder.append(" AND ");
+            }
+            builder.append(String.format(" ST_DWITHIN(%s, ST_POINT(%f, %f)::geography, %f) ",
+                    PostgresqlContract.StationTable.LATLNG_KEY, center[0], center[1], LocationUtils.milesToMeters(range)
+            ));
+        }
         if (startTime != null && maxDelta != null) {
-            builder.append(String.format("AND (%s.%s & %d::bit(7) != B'0000000') AND (%s.%s, %s.%s * INTERVAL \'1 ms\') OVERLAPS (\'%d:%d:%d\', INTERVAL '%d milliseconds') ",
-                    PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.PACKED_VALID_KEY, 1 << startTime
-                            .getDayOfWeek(),
-                    PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.TIME_KEY,
-                    PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.FUZZ_KEY,
+            if (!builder.toString().endsWith("WHERE ")) {
+                builder.append(" AND ");
+            }
+            builder.append(String.format(" (%s, %s * INTERVAL \'1 ms\') OVERLAPS (\'%d:%d:%d\', INTERVAL '%d milliseconds') ",
+                    PostgresqlContract.ScheduleTable.TIME_KEY,
+                    PostgresqlContract.ScheduleTable.FUZZ_KEY,
                     startTime.getHour(), startTime.getMinute(), startTime.getSecond(), maxDelta.getDeltaLong()
             ));
         }
-        if (center != null && range >= 0) {
-            builder.append(String.format("AND ST_DWITHIN(%s.%s, ST_POINT(%f, %f)::geography, %f) ",
-                    PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.LATLNG_KEY, center[0], center[1], LocationUtils
-                            .milesToMeters(range)
-            ));
-        }
         if (chain != null) {
-            builder.append(String.format("AND %s.%s=%s ",
-                    PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.ChainTable.NAME_KEY, chain.getName()
+            if (!builder.toString().endsWith("WHERE ")) {
+                builder.append(" AND ");
+            }
+            builder.append(String.format(" %s=\'%s\' ",
+                    CHN_NAM_KEY, chain.getName().replace("'", "`")
             ));
         }
-        System.out.println(builder.toString());
         return builder.toString();
     }
 

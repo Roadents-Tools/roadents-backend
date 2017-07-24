@@ -9,6 +9,7 @@ import org.tymit.projectdonut.stations.postgresql.PostgresqlStationDbCache;
 import org.tymit.projectdonut.stations.test.TestStationDb;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -62,6 +63,16 @@ public class StationDbHelper {
                         .stream())
                 .distinct()
                 .collect(Collectors.toList());
+    }
+
+    public List<TransStation> queryStrippedStations(double[] center, double range, int limit) {
+        if (center == null || range <= 0 || limit == 0) return Collections.emptyList();
+        return Arrays.stream(allDatabases)
+                .filter(StationDbInstance::isUp)
+                .filter(db -> db instanceof StationDbInstance.ComboDb)
+                .findAny()
+                .map(db -> ((StationDbInstance.ComboDb) db).queryStrippedStations(center, range, limit))
+                .orElse(Collections.emptyList());
     }
 
     public boolean putStations(List<TransStation> stations) {
