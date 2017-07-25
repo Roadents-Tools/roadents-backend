@@ -47,6 +47,7 @@ public class TransChain {
         return getStations().stream().anyMatch(st -> Arrays.equals(st.getCoordinates(), coords));
     }
 
+    @Deprecated
     public Set<TransStation> getStations() {
         return stations;
     }
