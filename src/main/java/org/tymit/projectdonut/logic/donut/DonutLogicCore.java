@@ -1,5 +1,6 @@
 package org.tymit.projectdonut.logic.donut;
 
+import com.moodysalem.TimezoneMapper;
 import org.tymit.projectdonut.logic.interfaces.LogicCore;
 import org.tymit.projectdonut.logic.utils.StreamUtils;
 import org.tymit.projectdonut.model.location.DestinationLocation;
@@ -8,7 +9,6 @@ import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.routing.TravelRoute;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
-import org.tymit.projectdonut.stations.StationRetriever;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.ArrayList;
@@ -38,10 +38,10 @@ public class DonutLogicCore implements LogicCore {
     public Map<String, List<Object>> performLogic(Map<String, Object> args) {
 
         //Get the args
-        long startUnixTime = (long) args.get(START_TIME_TAG);
-        TimePoint startTime = new TimePoint(startUnixTime, "America/Los_Angeles");
         double startLat = (double) args.get(LAT_TAG);
         double startLong = (double) args.get(LONG_TAG);
+        long startUnixTime = (long) args.get(START_TIME_TAG);
+        TimePoint startTime = new TimePoint(startUnixTime, TimezoneMapper.tzNameAt(startLat, startLong));
         long maxUnixTimeDelta = (long) args.get(TIME_DELTA_TAG);
         TimeDelta maxTimeDelta = new TimeDelta(maxUnixTimeDelta);
         LocationType type = new LocationType((String) args.get(TYPE_TAG), (String) args.get(TYPE_TAG));
@@ -87,7 +87,6 @@ public class DonutLogicCore implements LogicCore {
 
         //Prepare the stations.
         double effectiveRange = maxTimeDelta.getDeltaLong() / (1000 * 60);  //Average 1 mile per minute.
-        StationRetriever.prepareArea(center.getCoordinates(), effectiveRange, startTime, maxTimeDelta);
 
         //Get the station routes
         Set<TravelRoute> stationRoutes = DonutLogicSupport.buildStationRouteList(center, startTime, maxTimeDelta);
@@ -111,8 +110,16 @@ public class DonutLogicCore implements LogicCore {
                 .filter(rt -> !DonutLogicSupport.isMiddleMan(rt))
                 .collect(StreamUtils.OPTIMAL_ROUTES_FOR_DESTINATIONS);
 
-        LoggingUtils.logMessage(getClass().getName(), "Got %d -> %d filtered routes.", destRoutes
-                .size(), destToShortest.size());
+        LoggingUtils.logMessage(
+                getClass().getName(),
+                "Got %d -> %d filtered routes. Of those, %d are nonzero degree.",
+                destRoutes.size(), destToShortest.size(),
+                destToShortest.values()
+                        .stream()
+                        .map(TravelRoute::getRoute)
+                        .filter(route -> route.size() > 2)
+                        .count()
+        );
         return destToShortest;
     }
 }
