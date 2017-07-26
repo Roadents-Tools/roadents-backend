@@ -10,9 +10,13 @@ import org.tymit.projectdonut.stations.helpers.StationChainCacheHelper;
 import org.tymit.projectdonut.stations.helpers.StationDbHelper;
 import org.tymit.projectdonut.stations.helpers.StationDbUpdater;
 import org.tymit.projectdonut.stations.memory.ChainStore;
+import org.tymit.projectdonut.stations.memory.StationToChainStore;
+import org.tymit.projectdonut.utils.LocationUtils;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Created by ilan on 7/7/16.
@@ -24,9 +28,17 @@ public class StationRetriever {
                                                  TimePoint startTime, TimeDelta maxDelta,
                                                  TransChain chain, List<CostArgs> args) {
 
-        if (center == null && startTime == null && chain != null) {
-            return getChain(chain, args);
+        if (chain != null && center == null) {
+            return getChain(chain, args).stream()
+                    .filter(station -> startTime.timeUntil(station.getNextArrival(startTime)).getDeltaLong() <= maxDelta
+                            .getDeltaLong())
+                    .collect(Collectors.toList());
         }
+
+        if (startTime == null && maxDelta == null && center != null && range <= .0001) {
+            return getChainsForStation(center, args);
+        }
+
         List<TransStation> allStations = StationChainCacheHelper.getHelper()
                 .getCachedStations(center, range, startTime, maxDelta, chain);
         if (allStations == null || allStations.isEmpty()) {
@@ -60,6 +72,31 @@ public class StationRetriever {
                     .queryStations(null, -1, null, null, transChain);
             ChainStore.getStore().putChain(transChain, allStations);
         }
+
+        if (args == null || args.size() == 0) return allStations;
+        Iterator<TransStation> stationIterator = allStations.iterator();
+        while (stationIterator.hasNext()) {
+            for (CostArgs arg : args) {
+                arg.setSubject(stationIterator.next());
+                if (!CostCalculator.isWithinCosts(arg))
+                    stationIterator.remove();
+            }
+        }
+        return allStations;
+    }
+
+    public static List<TransStation> getChainsForStation(double[] coords, List<CostArgs> args) {
+        List<TransStation> allStations = StationToChainStore.getInstance().getChainsForStation(coords[0], coords[1]);
+        if (allStations != null && !allStations.isEmpty()) return allStations;
+
+        allStations = StationDbHelper.getHelper()
+                .queryStations(coords, LocationUtils.metersToMiles(.1), null, null, null);
+        if (allStations != null && !allStations.isEmpty()) {
+            StationToChainStore.getInstance().putStation(coords[0], coords[1], allStations);
+        } else {
+            return Collections.emptyList();
+        }
+
 
         if (args == null || args.size() == 0) return allStations;
         Iterator<TransStation> stationIterator = allStations.iterator();

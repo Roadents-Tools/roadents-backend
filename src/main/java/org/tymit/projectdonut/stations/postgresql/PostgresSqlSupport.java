@@ -7,6 +7,7 @@ import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
+import org.tymit.projectdonut.utils.ProfilingUtils;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -40,12 +41,11 @@ public class PostgresSqlSupport {
     private static final String STAT_NAM_KEY = "statnm";
     private static final String CHN_NAM_KEY = "chanm";
 
-
     private static final long MAX_POSTGRES_INTERVAL_MILLI = 1000L * 60L * 60L * 24L * 365L * 10L;
     private static final long BATCH_SIZE = 300;
     private static final long ERROR_MARGIN = 1; //meters
-    private static final double MAX_NO_REQUERY = LocationUtils.metersToMiles(500);
-
+    public static final String TAG = "Postgres";
+    private static final double MAX_NO_REQUERY = LocationUtils.metersToMiles(250);
 
 
     /**
@@ -91,8 +91,12 @@ public class PostgresSqlSupport {
                 limit
         );
 
-        LoggingUtils.logMessage("Postgres", query);
+        LoggingUtils.logMessage(TAG, "Query type 1: %s", query);
+        ProfilingUtils.MethodTimer extm = ProfilingUtils.startTimer("getStrippedStations::query");
         ResultSet rs = stm.executeQuery(query);
+        extm.stop();
+
+        ProfilingUtils.MethodTimer ptm = ProfilingUtils.startTimer("getStrippedStations::parse");
         List<TransStation> rval = new LinkedList<>();
         while (rs.isBeforeFirst()) rs.next();
         do {
@@ -101,8 +105,8 @@ public class PostgresSqlSupport {
             double lng = rs.getDouble(LNG_COL_NAME);
             rval.add(new TransStation(name, new double[] { lat, lng }));
         } while (rs.next());
+        ptm.stop();
 
-        LoggingUtils.logMessage("Postgres", "Got %d stripped stations.", rval.size());
         return rval;
     }
 
@@ -111,14 +115,107 @@ public class PostgresSqlSupport {
                                                     TimePoint startTime, TimeDelta maxDelta,
                                                     TransChain chain, boolean checkRange
     ) throws SQLException {
+        if (center == null && startTime == null && chain != null) return getChain(connectionGenerator, chain);
         Connection con = connectionGenerator.get();
-        if (checkRange && !isValidQuery(con, center, range, startTime, maxDelta, chain))
-            return Collections.emptyList();
+        if (checkRange && !isValidQuery(con, center, range, startTime, maxDelta, chain)) return Collections.emptyList();
+
+
+        ProfilingUtils.MethodTimer qtm = ProfilingUtils.startTimer("getInformation::query");
         Statement stm = con.createStatement();
         ResultSet rs = stm.executeQuery(buildQuery(center, range, startTime, maxDelta, chain));
+        qtm.stop();
+
+        ProfilingUtils.MethodTimer ptm = ProfilingUtils.startTimer("getInformation::parse");
+        Set<TransStation> rval = parseJoinedViewRs(rs);
+        ptm.stop();
+        return new ArrayList<>(rval);
+    }
+
+    private static String buildQuery(double[] center, double range,
+                                     TimePoint startTime, TimeDelta maxDelta,
+                                     TransChain chain
+    ) {
+        ProfilingUtils.MethodTimer tm = ProfilingUtils.startTimer("buildQuery");
+        StringBuilder builder = new StringBuilder();
+        builder.append("SELECT * FROM " + PostgresqlContract.JOIN_VIEW_NAME + " ");
+        if ((startTime != null && maxDelta != null) || (center != null && range >= 0) || chain != null) {
+            builder.append("WHERE ");
+        }
+        if (chain != null) {
+            if (!builder.toString().endsWith("WHERE ")) {
+                builder.append(" AND ");
+            }
+            builder.append(String.format(" %s=\'%s\' ",
+                    CHN_NAM_KEY, chain.getName().replace("'", "`")
+            ));
+        }
+        if (center != null && range >= 0) {
+            if (range == 0) range = 0.001;
+            if (!builder.toString().endsWith("WHERE ")) {
+                builder.append(" AND ");
+            }
+            builder.append(String.format(" ST_DWITHIN(%s, ST_POINT(%f, %f)::geography, %f) ",
+                    PostgresqlContract.StationTable.LATLNG_KEY, center[0], center[1], LocationUtils.milesToMeters(range)
+            ));
+        }
+        if (startTime != null && maxDelta != null) {
+            if (!builder.toString().endsWith("WHERE ")) {
+                builder.append(" AND ");
+            }
+            builder.append(String.format(" (%s, %s * INTERVAL \'1 ms\') OVERLAPS (\'%d:%d:%d\', INTERVAL '%d milliseconds') ",
+                    PostgresqlContract.ScheduleTable.TIME_KEY,
+                    PostgresqlContract.ScheduleTable.FUZZ_KEY,
+                    startTime.getHour(), startTime.getMinute(), startTime.getSecond(), maxDelta.getDeltaLong()
+            ));
+        }
+        tm.stop();
+        return builder.toString();
+    }
+
+    private static boolean isValidQuery(Connection con,
+                                        double[] center, double range,
+                                        TimePoint startTime, TimeDelta maxDelta,
+                                        TransChain chain
+    ) throws SQLException {
+        if (center == null || startTime == null) return false;
+        Statement stm = con.createStatement();
+        ResultSet rs = stm.executeQuery(String.format("SELECT %s FROM %s " +
+                        "WHERE ST_DWithin(ST_POINT(%f, %f)::geography, %s, %f) " +
+                        "AND %s <= to_timestamp(%d) " +
+                        "AND %s + %s >= to_timestamp(%d)",
+                PostgresqlContract.RangeTable.ID_KEY, PostgresqlContract.RangeTable.TABLE_NAME,
+                center[0], center[1], PostgresqlContract.RangeTable.LAT_KEY, LocationUtils
+                        .milesToMeters(range),
+                PostgresqlContract.RangeTable.TIME_KEY, startTime.getUnixTime(),
+                PostgresqlContract.RangeTable.TIME_KEY, PostgresqlContract.RangeTable.FUZZ_KEY,
+                startTime.plus(maxDelta).getUnixTime()
+        ));
+        return rs.next();
+    }
+
+    public static List<TransStation> getChain(Supplier<Connection> connectionGenerator, TransChain chain) throws SQLException {
+        String query = String.format("SELECT * FROM %s WHERE %s=%s",
+                PostgresqlContract.JOIN_VIEW_NAME, CHN_NAM_KEY, chain.getName());
+
+        Connection con = connectionGenerator.get();
+
+        ProfilingUtils.MethodTimer qtm = ProfilingUtils.startTimer("getChain::query");
+        Statement stm = con.createStatement();
+        ResultSet rs = stm.executeQuery(query);
+        qtm.stop();
+
+        ProfilingUtils.MethodTimer ptm = ProfilingUtils.startTimer("getChain::parse");
+        Set<TransStation> rval = parseJoinedViewRs(rs);
+        ptm.stop();
+        return new ArrayList<>(rval);
+
+    }
+
+    public static Set<TransStation> parseJoinedViewRs(ResultSet rs) throws SQLException {
         Map<Integer, TransStation> idToStations = new HashMap<>();
         Map<Integer, TransChain> idToChain = new HashMap<>();
         Map<Integer, Map<Integer, List<SchedulePoint>>> chainStationSchedule = new HashMap<>();
+
         while (rs.isBeforeFirst()) rs.next();
         do {
             int statId = rs.getInt(PostgresqlContract.CostTable.COST_STATION_KEY);
@@ -164,67 +261,7 @@ public class PostgresSqlSupport {
                                 .get(statid)));
             }
         }
-        return new ArrayList<>(rval);
-    }
-
-    private static String buildQuery(double[] center, double range,
-                                     TimePoint startTime, TimeDelta maxDelta,
-                                     TransChain chain
-    ) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("SELECT * FROM " + PostgresqlContract.JOIN_VIEW_NAME + " ");
-        if ((startTime != null && maxDelta != null) || (center != null && range >= 0) || chain != null) {
-            builder.append("WHERE ");
-        }
-        if (center != null && range >= 0) {
-            if (range == 0) range = 0.001;
-            if (!builder.toString().endsWith("WHERE ")) {
-                builder.append(" AND ");
-            }
-            builder.append(String.format(" ST_DWITHIN(%s, ST_POINT(%f, %f)::geography, %f) ",
-                    PostgresqlContract.StationTable.LATLNG_KEY, center[0], center[1], LocationUtils.milesToMeters(range)
-            ));
-        }
-        if (startTime != null && maxDelta != null) {
-            if (!builder.toString().endsWith("WHERE ")) {
-                builder.append(" AND ");
-            }
-            builder.append(String.format(" (%s, %s * INTERVAL \'1 ms\') OVERLAPS (\'%d:%d:%d\', INTERVAL '%d milliseconds') ",
-                    PostgresqlContract.ScheduleTable.TIME_KEY,
-                    PostgresqlContract.ScheduleTable.FUZZ_KEY,
-                    startTime.getHour(), startTime.getMinute(), startTime.getSecond(), maxDelta.getDeltaLong()
-            ));
-        }
-        if (chain != null) {
-            if (!builder.toString().endsWith("WHERE ")) {
-                builder.append(" AND ");
-            }
-            builder.append(String.format(" %s=\'%s\' ",
-                    CHN_NAM_KEY, chain.getName().replace("'", "`")
-            ));
-        }
-        return builder.toString();
-    }
-
-    private static boolean isValidQuery(Connection con,
-                                        double[] center, double range,
-                                        TimePoint startTime, TimeDelta maxDelta,
-                                        TransChain chain
-    ) throws SQLException {
-        if (center == null || startTime == null) return false;
-        Statement stm = con.createStatement();
-        ResultSet rs = stm.executeQuery(String.format("SELECT %s FROM %s " +
-                        "WHERE ST_DWithin(ST_POINT(%f, %f)::geography, %s, %f) " +
-                        "AND %s <= to_timestamp(%d) " +
-                        "AND %s + %s >= to_timestamp(%d)",
-                PostgresqlContract.RangeTable.ID_KEY, PostgresqlContract.RangeTable.TABLE_NAME,
-                center[0], center[1], PostgresqlContract.RangeTable.LAT_KEY, LocationUtils
-                        .milesToMeters(range),
-                PostgresqlContract.RangeTable.TIME_KEY, startTime.getUnixTime(),
-                PostgresqlContract.RangeTable.TIME_KEY, PostgresqlContract.RangeTable.FUZZ_KEY,
-                startTime.plus(maxDelta).getUnixTime()
-        ));
-        return rs.next();
+        return rval;
     }
 
     /**
