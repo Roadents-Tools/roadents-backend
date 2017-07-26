@@ -189,60 +189,6 @@ public class DonutLogicSupportTest {
     }
 
     @Test
-    public void getAllPossibleStations() throws Exception {
-        //Constants
-        final int STATIONS = 5;
-
-        //Build test data
-        Set<TransStation> allStations = new HashSet<>();
-        Set<TransStation> testStations = new HashSet<>();
-        for (int walkableIndex = 0; walkableIndex < WALKABLEPTS.length; walkableIndex++) {
-            TransChain testChain = new TransChain("TEST CHAIN: " + walkableIndex);
-
-            List<SchedulePoint> walkableSchedule = new ArrayList<>();
-            for (int h = 0; h < 23; h++) {
-                for (int m = 0; m < 60; m += 10) {
-                    walkableSchedule.add(new SchedulePoint(h, m, 0, null, 60));
-                }
-            }
-            String walkableName = String.format("TEST STATION: %d,W", walkableIndex);
-            double[] walkableCoords = WALKABLEPTS[walkableIndex];
-            TransStation walkable = new TransStation(walkableName, walkableCoords, walkableSchedule, testChain);
-            allStations.add(walkable);
-            testStations.add(walkable);
-
-            for (int stationNum = 1; stationNum < STATIONS; stationNum++) {
-                List<SchedulePoint> arrivableSchedule = new ArrayList<>();
-                for (int h = 0; h < 24; h++) {
-                    for (int m = 0; m < 60; m += 10) {
-                        arrivableSchedule.add(new SchedulePoint(h, m + stationNum, 0, null, 60));
-                    }
-                }
-                String arrivableName = String.format("TEST STATION: %d, %d", walkableIndex, stationNum);
-                double[] coords = new double[] { ((stationNum + 1) * CENTER[0]) % 90 + walkableIndex, ((stationNum + 1) * CENTER[1]) % 180 + walkableIndex };
-                TransStation arrivable = new TransStation(arrivableName, coords, arrivableSchedule, testChain);
-                allStations.add(arrivable);
-            }
-
-        }
-        TestStationDb.setTestStations(allStations);
-
-        //Run method
-        Set<TravelRouteNode> fromStart = DonutLogicSupport.getAllPossibleStations(new StartPoint(CENTER), STARTTIME, MAXDELTA);
-        List<Set<TravelRouteNode>> fromWalkables = testStations.stream()
-                .map(station -> DonutLogicSupport.getAllPossibleStations(station, STARTTIME, MAXDELTA))
-                .collect(Collectors.toList());
-
-        //Check output
-        Assert.assertEquals(WALKABLEPTS.length, fromStart.size());
-
-        //We set it to STATIONS+WALKABLEPTS.length-1 because our generator
-        //creates stations in the same place for each chain, so each station
-        //has WALKABLEPTS.length-1 stations nearby.
-        fromWalkables.forEach(result -> Assert.assertEquals(STATIONS + WALKABLEPTS.length - 1, result.size()));
-    }
-
-    @Test
     public void getWalkableStations() throws Exception {
 
         Set<TravelRouteNode> expected = new HashSet<>(WALKABLEPTS.length);

@@ -2,7 +2,6 @@ package org.tymit.projectdonut.logic.donut;
 
 import com.google.common.collect.Sets;
 import org.tymit.projectdonut.locations.LocationRetriever;
-import org.tymit.projectdonut.logic.utils.StreamUtils;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.model.location.StartPoint;
@@ -17,6 +16,7 @@ import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -33,6 +33,10 @@ import java.util.stream.Stream;
  * Static utilities for the DonutLogicCore.
  */
 public final class DonutLogicSupport {
+
+    private static final int WALKING_LIMIT = 200;
+    private static final int CHAINS_PER_STOP_LIMIT = 100;
+    private static final String TAG = "DonutLogicSupport";
 
     /**
      * Utility classes cannot be initialized.
@@ -63,81 +67,41 @@ public final class DonutLogicSupport {
                     .peek(newRoute -> rval.put(getLocationTag(newRoute.getCurrentEnd()), newRoute))
                     .collect(Collectors.toList());
 
-            LoggingUtils.logMessage("DONUT", "Next recursive layer size: %d", nextLayer.size());
+            LoggingUtils.logMessage(TAG, "Next recursive layer size: %d", nextLayer.size());
             currentLayer = nextLayer;
         }
         return new HashSet<>(rval.values());
     }
 
     public static Function<TravelRoute, Stream<TravelRoute>> buildNextLayerFunction(TimePoint startTime, TimeDelta maxDelta) {
-        return route -> getAllPossibleStations(route.getCurrentEnd(), startTime.plus(route.getTotalTime()), maxDelta.minus(route
-                .getTotalTime()))
-                .stream()
-                .map(node -> route.clone().addNode(node));
+        return route -> {
+            TimePoint effectiveTime = startTime.plus(route.getTotalTime());
+            TimeDelta effectiveDelta = maxDelta.minus(route.getTotalTime());
+
+            //Version 2 iterator
+            //Steps:
+            //1. Get all walkable around current end.
+            //2. Get all arrivable around walkable.
+            //3. Pair the walkable with arrivable.
+            //   If a walkable has no arrivable, then it isn't paired and discarded.
+            //4. For each pair, construct the new routes.
+            //   This means that each new route actually has 2 new nodes, not 1.
+            return getWalkableStations(route.getCurrentEnd(), effectiveTime, effectiveDelta).stream()
+                    .flatMap(base -> getArrivalNodesForBase(base, effectiveTime, effectiveDelta)
+                            .map(aNode -> new TravelRouteNode[] { base, aNode })
+                    )
+                    .map(nodePair -> route.clone().addNode(nodePair[0]).addNode(nodePair[1]));
+        };
     }
 
-    /**
-     * Get all possible stations directly travelable to from a given point. It does not calculate in-between stops.
-     * @param center the point to start from
-     * @param startTime the time to start at
-     * @param maxDelta the maximum time to travel
-     * @return a set of nodes representing traveling from center directly to the possible stations
-     */
-    public static Set<TravelRouteNode> getAllPossibleStations(LocationPoint center, TimePoint startTime, TimeDelta maxDelta) {
-        if (!(center instanceof TransStation)) return getWalkableStations(center, startTime, maxDelta);
-        TransStation station = (TransStation) center;
-
-        Map<TransStation, TravelRouteNode> walkable = getWalkableStations(station, startTime, maxDelta).stream()
-                .collect(StreamUtils.collectWithKeys(node -> (TransStation) node.getPt()));
-
-        Map<TransStation, TravelRouteNode> arrivable = getAllChainsForStop(station).stream()
-                .flatMap(station1 -> getArrivableStations(station1, startTime, maxDelta).stream())
-                .collect(StreamUtils.collectWithKeys(node -> (TransStation) node.getPt()));
-
-        Set<TransStation> allPossibleStations = new HashSet<>();
-        allPossibleStations.addAll(walkable.keySet());
-        allPossibleStations.addAll(arrivable.keySet());
-
-        return allPossibleStations.stream()
-                .distinct()
-                .map(keyStation -> {
-                    if (walkable.containsKey(keyStation) && !arrivable.containsKey(keyStation)) {
-                        return walkable.get(keyStation);
-                    }
-                    if (!walkable.containsKey(keyStation) && arrivable.containsKey(keyStation)) {
-                        return arrivable.get(keyStation);
-                    }
-                    if (walkable.get(keyStation).getTotalTimeToArrive().getDeltaLong() <
-                            arrivable.get(keyStation).getTotalTimeToArrive().getDeltaLong()) {
-                        return walkable.get(keyStation);
-                    }
-                    return arrivable.get(keyStation);
-                })
-                .collect(Collectors.toSet());
-    }
-
-    /**
-     * Get all stations within a certain walking time.
-     * @param begin the location to start at
-     * @param maxDelta the maximum walking time
-     * @return nodes representing walking to all possible stations
-     */
-    public static Set<TravelRouteNode> getWalkableStations(LocationPoint begin, TimePoint startTime, TimeDelta maxDelta) {
-        return StationRetriever.getStations(
-                begin.getCoordinates(),
-                LocationUtils.timeToWalkDistance(maxDelta.getDeltaLong(), true),
-                startTime,
-                maxDelta,
-                null,
-                null
-        )
-                .stream()
-                .map(point -> new TravelRouteNode.Builder()
-                        .setWalkTime(LocationUtils.timeBetween(begin.getCoordinates(), point.getCoordinates()))
-                        .setPoint(point)
-                        .build()
-                )
-                .collect(Collectors.toSet());
+    public static Stream<TravelRouteNode> getArrivalNodesForBase(TravelRouteNode base, TimePoint startTime, TimeDelta effectiveDelta) {
+        TimeDelta truDelta = effectiveDelta.minus(base.getTotalTimeToArrive());
+        TimePoint truStart = startTime.plus(base.getTotalTimeToArrive());
+        TransStation pt = (TransStation) base.getPt();
+        Stream<TravelRouteNode> rval = getAllChainsForStop(pt, truStart, truDelta).stream()
+                .map(cstat -> getArrivableStations(cstat, truStart, truDelta))
+                .flatMap(Collection::stream);
+        return rval;
     }
 
     /**
@@ -158,14 +122,17 @@ public final class DonutLogicSupport {
             return Collections.emptySet();
         }
 
-        Set<TravelRouteNode> rval = StationRetriever.getStations(
+
+        List<TransStation> stats = StationRetriever.getStations(
                 station.getCoordinates(),
                 LocationUtils.timeToWalkDistance(maxDelta.getDeltaLong(), true),
                 trueStart,
                 maxDelta,
                 station.getChain(),
                 null
-        )
+        );
+
+        Set<TravelRouteNode> rval = stats
                 .stream()
                 .filter(fromChain -> !Arrays.equals(fromChain.getCoordinates(), station.getCoordinates()))
                 .map(DonutLogicSupport::getStationWithSchedule)
@@ -187,16 +154,54 @@ public final class DonutLogicSupport {
      * @return the station complete with schedule
      */
     public static TransStation getStationWithSchedule(TransStation station) {
-        if (!(station.getSchedule() == null || station.getSchedule().isEmpty())) return station;
+
+        if (station.getChain() == null || (station.getSchedule() != null && !station.getSchedule().isEmpty())) {
+            return station;
+        }
 
         List<TransStation> trueStation = StationRetriever.getStations(station.getCoordinates(), 0, null, null, station.getChain(), null);
         if (trueStation.size() != 1 || trueStation.get(0).getSchedule() == null || trueStation.get(0).getSchedule().isEmpty()) {
-            LoggingUtils.logError("DONUT", "Error in requery.\nData:\nList size: %d\nTrueStation: %s",
+            LoggingUtils.logError(TAG, "Error in requery.\nData:\nList size: %d\nTrueStation: %s",
                     trueStation.size(),
                     (!trueStation.isEmpty()) ? trueStation.get(0).toString() : "Null");
             return station;
         }
         return trueStation.get(0);
+    }
+
+    public static Set<TransStation> getAllChainsForStop(TransStation orig, TimePoint startTime, TimeDelta maxDelta) {
+        Set<TransStation> rval = StationRetriever.getChainsForStation(orig.getCoordinates(), null)
+                .stream()
+                .filter(stat -> startTime.timeUntil(stat.getNextArrival(startTime))
+                        .getDeltaLong() <= maxDelta.getDeltaLong())
+                .limit(CHAINS_PER_STOP_LIMIT)
+                .distinct()
+                .collect(Collectors.toSet());
+        rval.add(orig);
+        return rval;
+    }
+
+    /**
+     * Get all stations within a certain walking time.
+     *
+     * @param begin    the location to start at
+     * @param maxDelta the maximum walking time
+     * @return nodes representing walking to all possible stations
+     */
+    public static Set<TravelRouteNode> getWalkableStations(LocationPoint begin, TimePoint startTime, TimeDelta maxDelta) {
+        return StationRetriever.getStrippedStations(
+                begin.getCoordinates(),
+                LocationUtils.timeToWalkDistance(maxDelta.getDeltaLong(), true),
+                WALKING_LIMIT,
+                null
+        )
+                .stream()
+                .map(point -> new TravelRouteNode.Builder()
+                        .setWalkTime(LocationUtils.timeBetween(begin.getCoordinates(), point.getCoordinates()))
+                        .setPoint(point)
+                        .build()
+                )
+                .collect(Collectors.toSet());
     }
 
     /**
@@ -205,8 +210,10 @@ public final class DonutLogicSupport {
      * @return TransStations for all chains at the location of orig
      */
     public static Set<TransStation> getAllChainsForStop(TransStation orig) {
-        List<TransStation> all = StationRetriever.getStations(orig.getCoordinates(), .001, null, null, null, null);
-        Set<TransStation> rval = new HashSet<>(all);
+        Set<TransStation> rval = StationRetriever.getChainsForStation(orig.getCoordinates(), null)
+                .stream()
+                .distinct()
+                .collect(Collectors.toSet());
         rval.add(orig);
         return rval;
     }
