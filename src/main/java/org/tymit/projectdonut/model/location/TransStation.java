@@ -1,5 +1,7 @@
 package org.tymit.projectdonut.model.location;
 
+import org.tymit.projectdonut.model.database.DatabaseID;
+import org.tymit.projectdonut.model.database.DatabaseObject;
 import org.tymit.projectdonut.model.time.SchedulePoint;
 import org.tymit.projectdonut.model.time.TimePoint;
 
@@ -11,13 +13,14 @@ import java.util.List;
 /**
  * Created by ilan on 7/7/16.
  */
-public class TransStation implements LocationPoint {
+public class TransStation implements LocationPoint, DatabaseObject {
 
     private static final LocationType type = new LocationType("Station", "TransStation");
     private final double[] location;
     private final String name;
     private final List<SchedulePoint> schedule;
     private final TransChain chain;
+    private final DatabaseID id;
 
 
     public TransStation(String name, double[] location) {
@@ -25,6 +28,15 @@ public class TransStation implements LocationPoint {
         this.location = location;
         schedule = null;
         chain = null;
+        id = null;
+    }
+
+    public TransStation(String name, double[] location, DatabaseID id) {
+        this.name = name;
+        this.location = location;
+        this.id = id;
+        this.chain = null;
+        this.schedule = null;
     }
 
     public TransStation(String name, double[] location, List<SchedulePoint> schedule, TransChain chain) {
@@ -32,6 +44,17 @@ public class TransStation implements LocationPoint {
         this.name = name;
         this.schedule = schedule;
         this.chain = chain;
+        id = null;
+
+        chain.addStation(this);
+    }
+
+    public TransStation(String name, double[] location, List<SchedulePoint> schedule, TransChain chain, DatabaseID id) {
+        this.location = location;
+        this.name = name;
+        this.schedule = schedule;
+        this.chain = chain;
+        this.id = id;
 
         chain.addStation(this);
     }
@@ -106,5 +129,10 @@ public class TransStation implements LocationPoint {
 
     public TransStation stripSchedule() {
         return new TransStation(name, location);
+    }
+
+    @Override
+    public DatabaseID getID() {
+        return id;
     }
 }

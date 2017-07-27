@@ -1,6 +1,8 @@
 package org.tymit.projectdonut.model.location;
 
 import com.google.common.collect.Sets;
+import org.tymit.projectdonut.model.database.DatabaseID;
+import org.tymit.projectdonut.model.database.DatabaseObject;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -8,14 +10,22 @@ import java.util.Set;
 /**
  * Created by ilan on 7/7/16.
  */
-public class TransChain {
+public class TransChain implements DatabaseObject {
 
     private final String name;
     private final Set<TransStation> stations;
+    private final DatabaseID id;
 
     public TransChain(String name) {
         this.name = name;
         this.stations = Sets.newConcurrentHashSet();
+        this.id = null;
+    }
+
+    public TransChain(String name, DatabaseID id) {
+        this.name = name;
+        this.stations = Sets.newConcurrentHashSet();
+        this.id = id;
     }
 
     public String getName() {
@@ -80,5 +90,10 @@ public class TransChain {
         return "TransChain{" +
                 "name='" + name + '\'' +
                 '}';
+    }
+
+    @Override
+    public DatabaseID getID() {
+        return id;
     }
 }

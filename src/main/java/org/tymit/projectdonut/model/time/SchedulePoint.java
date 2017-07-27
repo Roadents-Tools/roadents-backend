@@ -1,17 +1,21 @@
 package org.tymit.projectdonut.model.time;
 
+import org.tymit.projectdonut.model.database.DatabaseID;
+import org.tymit.projectdonut.model.database.DatabaseObject;
+
 import java.util.Arrays;
 
 /**
  * Created by ilan on 2/6/17.
  */
-public class SchedulePoint {
+public class SchedulePoint implements DatabaseObject {
 
     private final boolean[] validDays; //len 7 array, sun-sat, true on valid days
     private final int hour; //0-24
     private final int minute; //0-60
     private final int second; //0-60
     private final long fuzz; //How far after hour:minute:second we can be and still be valid, in seconds
+    private final DatabaseID id;
 
     public SchedulePoint(int hour, int minute, int second, boolean[] validDays, long fuzz) {
         if (validDays == null) validDays = new boolean[7];
@@ -30,6 +34,27 @@ public class SchedulePoint {
         this.minute = minute;
         this.second = second;
         this.fuzz = fuzz;
+        this.id = null;
+    }
+
+    public SchedulePoint(int hour, int minute, int second, boolean[] validDays, long fuzz, DatabaseID id) {
+        if (validDays == null) validDays = new boolean[7];
+        Arrays.fill(validDays, true);
+        if (validDays.length != 7)
+            throw new IllegalArgumentException("There are 7 days in the week. You passed: " + validDays.length);
+        if (hour < 0 || hour > 23)
+            throw new IllegalArgumentException("There are 24 hours in the day. You passed " + hour);
+        if (minute < 0 || minute > 60)
+            throw new IllegalArgumentException("There are 60 minutes in an hour. You passed " + minute);
+        if (second < 0 || second > 60)
+            throw new IllegalArgumentException("there are 60 seconds in a minute. You passed " + second);
+        if (fuzz < 0) throw new IllegalArgumentException("Cannot time travel.");
+        this.validDays = validDays;
+        this.hour = hour;
+        this.minute = minute;
+        this.second = second;
+        this.fuzz = fuzz;
+        this.id = id;
     }
 
     public TimeDelta minutesBefore(SchedulePoint other) {
@@ -119,5 +144,10 @@ public class SchedulePoint {
 
     public long getFuzz() {
         return fuzz;
+    }
+
+    @Override
+    public DatabaseID getID() {
+        return id;
     }
 }
