@@ -2,6 +2,7 @@ package org.tymit.projectdonut.stations;
 
 import org.tymit.projectdonut.costs.CostCalculator;
 import org.tymit.projectdonut.costs.arguments.CostArgs;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
@@ -16,6 +17,7 @@ import org.tymit.projectdonut.utils.LocationUtils;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -73,16 +75,20 @@ public class StationRetriever {
             ChainStore.getStore().putChain(transChain, allStations);
         }
 
-        if (args == null || args.size() == 0) return allStations;
-        Iterator<TransStation> stationIterator = allStations.iterator();
-        while (stationIterator.hasNext()) {
-            for (CostArgs arg : args) {
-                arg.setSubject(stationIterator.next());
-                if (!CostCalculator.isWithinCosts(arg))
-                    stationIterator.remove();
-            }
-        }
-        return allStations;
+        return filterList(allStations, args);
+    }
+
+    private static <T> List<T> filterList(List<T> toFilter, List<CostArgs> args) {
+
+        if (args == null || args.size() == 0) return toFilter;
+
+        Predicate<T> costPredicate = tval -> args.stream()
+                .allMatch(arg -> CostCalculator.isWithinCosts(arg.setSubject(tval)));
+
+        return toFilter.stream()
+                .filter(costPredicate)
+                .collect(Collectors.toList());
+
     }
 
     public static List<TransStation> getChainsForStation(double[] coords, List<CostArgs> args) {
@@ -97,32 +103,7 @@ public class StationRetriever {
             return Collections.emptyList();
         }
 
-
-        if (args == null || args.size() == 0) return allStations;
-        Iterator<TransStation> stationIterator = allStations.iterator();
-        while (stationIterator.hasNext()) {
-            for (CostArgs arg : args) {
-                arg.setSubject(stationIterator.next());
-                if (!CostCalculator.isWithinCosts(arg))
-                    stationIterator.remove();
-            }
-        }
-        return allStations;
-    }
-
-    public static List<TransStation> getStrippedStations(double[] center, double range, int limit, List<CostArgs> args) {
-        List<TransStation> allStations = StationDbHelper.getHelper().queryStrippedStations(center, range, limit);
-
-        if (args == null || args.size() == 0) return allStations;
-        Iterator<TransStation> stationIterator = allStations.iterator();
-        while (stationIterator.hasNext()) {
-            for (CostArgs arg : args) {
-                arg.setSubject(stationIterator.next());
-                if (!CostCalculator.isWithinCosts(arg))
-                    stationIterator.remove();
-            }
-        }
-        return allStations;
+        return filterList(allStations, args);
     }
 
     public static void setTestMode(boolean testMode) {
@@ -138,5 +119,55 @@ public class StationRetriever {
             allStations = StationDbHelper.getHelper().queryStations(center, range, startTime, maxDelta, null);
             StationChainCacheHelper.getHelper().cacheStations(center, range, startTime, maxDelta, allStations);
         }
+    }
+
+    public static List<TransStation> getStrippedStations(double[] center, double range, int limit, List<CostArgs> args) {
+        List<TransStation> allStations = StationDbHelper.getHelper().queryStrippedStations(center, range, limit);
+        return filterList(allStations, args);
+    }
+
+    public static List<TransStation> getStationsInArea(LocationPoint center, double range, List<CostArgs> args) {
+
+        List<TransStation> rval = StationChainCacheHelper.getHelper().getStationsInArea(center, range);
+        if (rval != null && !rval.isEmpty()) {
+            return filterList(rval, args);
+        }
+
+        rval = StationDbHelper.getHelper().getStationsInArea(center, range);
+        if (rval != null && !rval.isEmpty()) {
+            StationChainCacheHelper.getHelper().putArea(center, range, rval);
+            return filterList(rval, args);
+        }
+
+        return Collections.emptyList();
+    }
+
+    public static List<TransChain> getChainsForStation(TransStation station, List<CostArgs> args) {
+        List<TransChain> rval = StationChainCacheHelper.getHelper().getChainsForStation(station);
+        if (rval != null && !rval.isEmpty()) {
+            return filterList(rval, args);
+        }
+
+        rval = StationDbHelper.getHelper().getChainsForStation(station);
+        if (rval != null && !rval.isEmpty()) {
+            StationChainCacheHelper.getHelper().putChainsForStation(station, rval);
+            return filterList(rval, args);
+        }
+
+        return Collections.emptyList();
+    }
+
+    public static List<TransStation> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta, List<CostArgs> args) {
+        List<TransStation> rval = StationChainCacheHelper.getHelper().getArrivableStations(chain, startTime, maxDelta);
+        if (rval != null && !rval.isEmpty()) {
+            return filterList(rval, args);
+        }
+
+        rval = StationDbHelper.getHelper().getArrivableStations(chain, startTime, maxDelta);
+        if (rval != null && !rval.isEmpty()) {
+            return filterList(rval, args);
+        }
+
+        return Collections.emptyList();
     }
 }

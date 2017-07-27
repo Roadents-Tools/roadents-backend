@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public class FatMemoryCache implements StationCacheInstance {
+public class FatMemoryCache implements StationCacheInstance.GeneralCache {
 
     private List<Range> ranges = new LinkedList<>();
 

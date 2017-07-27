@@ -1,5 +1,6 @@
 package org.tymit.projectdonut.stations.interfaces;
 
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
@@ -31,6 +32,15 @@ public interface StationDbInstance {
                     .limit(limit)
                     .collect(Collectors.toList());
         }
+    }
+
+    interface DonutDb extends StationDbInstance {
+
+        List<TransStation> getStationsInArea(LocationPoint center, double range);
+
+        List<TransChain> getChainsForStation(TransStation station);
+
+        List<TransStation> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta);
     }
 }
 

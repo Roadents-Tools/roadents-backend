@@ -1,6 +1,5 @@
 package org.tymit.projectdonut.locations.postgresql;
 
-import com.zaxxer.hikari.HikariConfig;
 import org.tymit.projectdonut.locations.interfaces.LocationProvider;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
@@ -42,15 +41,6 @@ public class PostgresqlLocationDb implements LocationProvider {
             tempcon = null;
         }
         con = tempcon;
-    }
-
-    private HikariConfig initSource(String url) {
-        HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(url);
-        config.setUsername(USER);
-        config.setPassword(PASS);
-        config.setMaximumPoolSize(1);
-        return config;
     }
 
     public Connection getConnection() {

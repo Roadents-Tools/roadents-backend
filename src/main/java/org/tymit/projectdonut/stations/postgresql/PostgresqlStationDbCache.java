@@ -20,7 +20,7 @@ import java.util.List;
 /**
  * Created by ilan on 3/31/17.
  */
-public class PostgresqlStationDbCache implements StationCacheInstance, StationDbInstance.ComboDb {
+public class PostgresqlStationDbCache implements StationCacheInstance.GeneralCache, StationDbInstance.ComboDb {
 
     public static final String[] DB_URLS = new String[] {
             "jdbc:postgresql://donutdb.c3ovzbdvtevz.us-west-2.rds.amazonaws.com:5432/DonutDump",
