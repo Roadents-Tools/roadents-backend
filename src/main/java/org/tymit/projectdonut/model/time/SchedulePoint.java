@@ -18,8 +18,10 @@ public class SchedulePoint implements DatabaseObject {
     private final DatabaseID id;
 
     public SchedulePoint(int hour, int minute, int second, boolean[] validDays, long fuzz) {
-        if (validDays == null) validDays = new boolean[7];
-        Arrays.fill(validDays, true);
+        if (validDays == null) {
+            validDays = new boolean[7];
+            Arrays.fill(validDays, true);
+        }
         if (validDays.length != 7)
             throw new IllegalArgumentException("There are 7 days in the week. You passed: " + validDays.length);
         if (hour < 0 || hour > 23)
@@ -38,8 +40,10 @@ public class SchedulePoint implements DatabaseObject {
     }
 
     public SchedulePoint(int hour, int minute, int second, boolean[] validDays, long fuzz, DatabaseID id) {
-        if (validDays == null) validDays = new boolean[7];
-        Arrays.fill(validDays, true);
+        if (validDays == null) {
+            validDays = new boolean[7];
+            Arrays.fill(validDays, true);
+        }
         if (validDays.length != 7)
             throw new IllegalArgumentException("There are 7 days in the week. You passed: " + validDays.length);
         if (hour < 0 || hour > 23)
