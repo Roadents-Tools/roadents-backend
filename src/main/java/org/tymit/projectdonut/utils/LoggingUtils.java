@@ -23,13 +23,13 @@ public class LoggingUtils {
     }
 
     public static void logMessage(String tag, String message) {
-        log.add(new String[]{"Message", tag, message});
+        log.add(new String[] { "" + System.currentTimeMillis(), "Message", tag, message });
         if (printImmediate) printLog();
     }
 
     public static void printLog() {
         for (String[] msg : log) {
-            System.out.printf("%-7s %s: %s\n\n", msg[0] + ",", msg[1], msg[2]);
+            System.out.printf("%s:       %-7s %s: %s\n\n", msg[0], msg[1] + ",", msg[2], msg[3]);
         }
         log.clear();
     }
@@ -60,7 +60,7 @@ public class LoggingUtils {
             msg.append(elm.getLineNumber());
             msg.append("\n");
         }
-        return new String[]{"ERROR", e.getClass().getName(), msg.toString()};
+        return new String[] { "" + System.currentTimeMillis(), "ERROR", e.getClass().getName(), msg.toString() };
     }
 
     public static boolean isEmpty() {
