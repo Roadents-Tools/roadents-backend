@@ -1,6 +1,5 @@
 package org.tymit.projectdonut.stations.postgresql;
 
-import org.tymit.projectdonut.logic.utils.StreamUtils;
 import org.tymit.projectdonut.model.database.DatabaseID;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
@@ -11,6 +10,7 @@ import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.interfaces.StationDbInstance;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
+import org.tymit.projectdonut.utils.StreamUtils;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

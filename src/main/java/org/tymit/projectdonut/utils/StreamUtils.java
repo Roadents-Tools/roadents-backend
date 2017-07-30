@@ -1,4 +1,4 @@
-package org.tymit.projectdonut.logic.utils;
+package org.tymit.projectdonut.utils;
 
 import com.google.common.collect.Sets;
 

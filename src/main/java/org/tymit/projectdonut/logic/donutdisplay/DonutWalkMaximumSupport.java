@@ -2,7 +2,6 @@ package org.tymit.projectdonut.logic.donutdisplay;
 
 import com.google.common.collect.Sets;
 import org.tymit.projectdonut.logic.donut.DonutLogicSupport;
-import org.tymit.projectdonut.logic.utils.StreamUtils;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransStation;
@@ -13,6 +12,7 @@ import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.StationRetriever;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
+import org.tymit.projectdonut.utils.StreamUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;

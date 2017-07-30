@@ -1,12 +1,12 @@
 package org.tymit.projectdonut.stations.interfaces;
 
-import org.tymit.projectdonut.logic.utils.StreamUtils;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.SchedulePoint;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
+import org.tymit.projectdonut.utils.StreamUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;

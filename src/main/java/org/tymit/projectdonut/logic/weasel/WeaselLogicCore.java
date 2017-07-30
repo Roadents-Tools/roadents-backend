@@ -4,10 +4,10 @@ import org.tymit.projectdonut.costs.CostCalculator;
 import org.tymit.projectdonut.costs.arguments.BulkCostArgs;
 import org.tymit.projectdonut.logic.helpers.LogicCoreHelper;
 import org.tymit.projectdonut.logic.interfaces.LogicCore;
-import org.tymit.projectdonut.logic.utils.StreamUtils;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.routing.TravelRoute;
+import org.tymit.projectdonut.utils.StreamUtils;
 
 import java.util.ArrayList;
 import java.util.List;

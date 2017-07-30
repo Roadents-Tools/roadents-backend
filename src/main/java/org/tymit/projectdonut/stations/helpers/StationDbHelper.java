@@ -1,6 +1,5 @@
 package org.tymit.projectdonut.stations.helpers;
 
-import org.tymit.projectdonut.logic.utils.StreamUtils;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
@@ -10,6 +9,7 @@ import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.interfaces.StationDbInstance;
 import org.tymit.projectdonut.stations.postgresql.PostgresqlStationDbCache;
 import org.tymit.projectdonut.stations.test.TestStationDb;
+import org.tymit.projectdonut.utils.StreamUtils;
 
 import java.util.Arrays;
 import java.util.Collection;
