@@ -1,7 +1,7 @@
 package org.tymit.projectdonut.logic.mole;
 
+import org.tymit.projectdonut.logic.donut.DonutLogicSupport;
 import org.tymit.projectdonut.logic.interfaces.LogicCore;
-import org.tymit.projectdonut.logic.utils.StreamUtils;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.model.location.StartPoint;
@@ -97,6 +97,6 @@ public class MoleLogicCore implements LogicCore {
                         .parallelStream())
 
                 //Collect the optimal routes to each destination, since the same dest could have multiple routes
-                .collect(StreamUtils.OPTIMAL_ROUTES_FOR_DESTINATIONS);
+                .collect(DonutLogicSupport.OPTIMAL_ROUTES_FOR_DESTINATIONS);
     }
 }

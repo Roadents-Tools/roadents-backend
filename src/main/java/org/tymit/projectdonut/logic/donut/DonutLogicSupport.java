@@ -2,6 +2,7 @@ package org.tymit.projectdonut.logic.donut;
 
 import com.google.common.collect.Sets;
 import org.tymit.projectdonut.locations.LocationRetriever;
+import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.model.location.StartPoint;
@@ -23,8 +24,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
+import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -33,6 +38,48 @@ import java.util.stream.Stream;
  * Static utilities for the DonutLogicCore.
  */
 public final class DonutLogicSupport {
+
+    public static final Collector<? super TravelRoute, ?, Map<DestinationLocation, TravelRoute>> OPTIMAL_ROUTES_FOR_DESTINATIONS = new Collector<TravelRoute, Map<DestinationLocation, TravelRoute>, Map<DestinationLocation, TravelRoute>>() {
+
+        @Override
+        public Supplier<Map<DestinationLocation, TravelRoute>> supplier() {
+            return ConcurrentHashMap::new;
+        }
+
+        @Override
+        public BiConsumer<Map<DestinationLocation, TravelRoute>, TravelRoute> accumulator() {
+            return (curmap, route) -> {
+                DestinationLocation dest = route.getDestination();
+                TravelRoute current = curmap.get(dest);
+                if (current == null || current.getTotalTime().getDeltaLong() > route.getTotalTime().getDeltaLong())
+                    curmap.put(dest, route);
+            };
+        }
+
+        @Override
+        public BinaryOperator<Map<DestinationLocation, TravelRoute>> combiner() {
+            return (curmap, curmap2) -> {
+                for (DestinationLocation key : curmap2.keySet()) {
+                    TravelRoute current = curmap.get(key);
+                    TravelRoute current2 = curmap2.get(key);
+                    if (current == null || current.getTotalTime().getDeltaLong() > current2.getTotalTime()
+                            .getDeltaLong())
+                        curmap.put(key, current2);
+                }
+                return curmap;
+            };
+        }
+
+        @Override
+        public Function<Map<DestinationLocation, TravelRoute>, Map<DestinationLocation, TravelRoute>> finisher() {
+            return curmap -> curmap;
+        }
+
+        @Override
+        public Set<Characteristics> characteristics() {
+            return Sets.newHashSet(Characteristics.IDENTITY_FINISH, Characteristics.UNORDERED);
+        }
+    };
 
     private static final int WALKING_LIMIT = 200;
     private static final int CHAINS_PER_STOP_LIMIT = 100;
@@ -98,10 +145,9 @@ public final class DonutLogicSupport {
         TimeDelta truDelta = effectiveDelta.minus(base.getTotalTimeToArrive());
         TimePoint truStart = startTime.plus(base.getTotalTimeToArrive());
         TransStation pt = (TransStation) base.getPt();
-        Stream<TravelRouteNode> rval = getAllChainsForStop(pt, truStart, truDelta).stream()
+        return getAllChainsForStop(pt, truStart, truDelta).stream()
                 .map(cstat -> getArrivableStations(cstat, truStart, truDelta))
                 .flatMap(Collection::stream);
-        return rval;
     }
 
     /**
