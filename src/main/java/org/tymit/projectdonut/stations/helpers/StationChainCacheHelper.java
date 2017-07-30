@@ -6,7 +6,6 @@ import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.interfaces.StationCacheInstance;
-import org.tymit.projectdonut.stations.memory.FatMemoryCache;
 import org.tymit.projectdonut.utils.LocationUtils;
 
 import java.util.Arrays;
@@ -35,9 +34,7 @@ public class StationChainCacheHelper {
 
     private void initializeStationInstanceList() {
         if (isTest) allStationInstances = new StationCacheInstance.GeneralCache[0];
-        allStationInstances = new StationCacheInstance.GeneralCache[] {
-                new FatMemoryCache()
-        };
+        allStationInstances = new StationCacheInstance.GeneralCache[] {};
     }
 
     public static void setTestMode(boolean testMode) {
