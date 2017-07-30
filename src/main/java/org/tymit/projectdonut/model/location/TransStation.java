@@ -124,11 +124,11 @@ public class TransStation implements LocationPoint, DatabaseObject {
     }
 
     public TransStation withSchedule(TransChain chain, List<SchedulePoint> schedule) {
-        return new TransStation(name, location, schedule, chain);
+        return new TransStation(name, location, schedule, chain, id);
     }
 
     public TransStation stripSchedule() {
-        return new TransStation(name, location);
+        return new TransStation(name, location, id);
     }
 
     @Override
