@@ -5,26 +5,28 @@ import org.tymit.projectdonut.costs.arguments.CostArgs;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
+import org.tymit.projectdonut.model.time.SchedulePoint;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.helpers.StationChainCacheHelper;
 import org.tymit.projectdonut.stations.helpers.StationDbHelper;
 import org.tymit.projectdonut.stations.helpers.StationDbUpdater;
-import org.tymit.projectdonut.stations.memory.ChainStore;
-import org.tymit.projectdonut.stations.memory.StationToChainStore;
 import org.tymit.projectdonut.utils.LocationUtils;
 
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
  * Created by ilan on 7/7/16.
  */
-public class StationRetriever {
+public final class StationRetriever {
 
+    private StationRetriever() {
+    }
 
     public static List<TransStation> getStations(double[] center, double range,
                                                  TimePoint startTime, TimeDelta maxDelta,
@@ -64,7 +66,7 @@ public class StationRetriever {
 
     public static List<TransStation> getChain(TransChain transChain, List<CostArgs> args) {
 
-        List<TransStation> inCache = ChainStore.getStore().getChain(transChain.getName());
+        List<TransStation> inCache = null;
         if (inCache != null && !inCache.isEmpty()) return inCache;
 
         List<TransStation> allStations = StationChainCacheHelper.getHelper()
@@ -72,7 +74,6 @@ public class StationRetriever {
         if (allStations == null || allStations.isEmpty()) {
             allStations = StationDbHelper.getHelper()
                     .queryStations(null, -1, null, null, transChain);
-            ChainStore.getStore().putChain(transChain, allStations);
         }
 
         return filterList(allStations, args);
@@ -92,14 +93,12 @@ public class StationRetriever {
     }
 
     public static List<TransStation> getChainsForStation(double[] coords, List<CostArgs> args) {
-        List<TransStation> allStations = StationToChainStore.getInstance().getChainsForStation(coords[0], coords[1]);
+        List<TransStation> allStations = null;
         if (allStations != null && !allStations.isEmpty()) return allStations;
 
         allStations = StationDbHelper.getHelper()
                 .queryStations(coords, LocationUtils.metersToMiles(.1), null, null, null);
-        if (allStations != null && !allStations.isEmpty()) {
-            StationToChainStore.getInstance().putStation(coords[0], coords[1], allStations);
-        } else {
+        if (allStations == null || allStations.isEmpty()) {
             return Collections.emptyList();
         }
 
@@ -126,48 +125,108 @@ public class StationRetriever {
         return filterList(allStations, args);
     }
 
+
     public static List<TransStation> getStationsInArea(LocationPoint center, double range, List<CostArgs> args) {
+        List<TransStation> allStations = null;
 
-        List<TransStation> rval = StationChainCacheHelper.getHelper().getStationsInArea(center, range);
-        if (rval != null && !rval.isEmpty()) {
-            return filterList(rval, args);
+        if (allStations != null && !allStations.isEmpty()) return allStations;
+        allStations = StationDbHelper.getHelper()
+                .getStationsInArea(center, range);
+
+        if (allStations == null || allStations.isEmpty()) {
+            return Collections.emptyList();
         }
 
-        rval = StationDbHelper.getHelper().getStationsInArea(center, range);
-        if (rval != null && !rval.isEmpty()) {
-            StationChainCacheHelper.getHelper().putArea(center, range, rval);
-            return filterList(rval, args);
-        }
-
-        return Collections.emptyList();
+        return filterList(allStations, args);
     }
 
-    public static List<TransChain> getChainsForStation(TransStation station, List<CostArgs> args) {
-        List<TransChain> rval = StationChainCacheHelper.getHelper().getChainsForStation(station);
-        if (rval != null && !rval.isEmpty()) {
-            return filterList(rval, args);
+    public static Map<LocationPoint, List<TransStation>> getStationsInArea(Map<LocationPoint, Double> ranges, List<CostArgs> args) {
+        Map<LocationPoint, List<TransStation>> allStations = null;
+
+        if (allStations != null && !allStations.isEmpty()) return allStations;
+        allStations = StationDbHelper.getHelper()
+                .getStationsInArea(ranges);
+
+        if (allStations == null || allStations.isEmpty()) {
+            return Collections.emptyMap();
         }
 
-        rval = StationDbHelper.getHelper().getChainsForStation(station);
-        if (rval != null && !rval.isEmpty()) {
-            StationChainCacheHelper.getHelper().putChainsForStation(station, rval);
-            return filterList(rval, args);
-        }
+        allStations.replaceAll((key, stations) -> filterList(stations, args));
 
-        return Collections.emptyList();
+        return allStations;
     }
 
-    public static List<TransStation> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta, List<CostArgs> args) {
-        List<TransStation> rval = StationChainCacheHelper.getHelper().getArrivableStations(chain, startTime, maxDelta);
-        if (rval != null && !rval.isEmpty()) {
-            return filterList(rval, args);
+    public static Map<TransChain, List<SchedulePoint>> getChainsForStation(TransStation station, List<CostArgs> args) {
+
+        Map<TransChain, List<SchedulePoint>> rval = null;
+
+        if (rval != null && !rval.isEmpty()) return rval;
+        rval = StationDbHelper.getHelper()
+                .getChainsForStation(station);
+
+        if (rval == null || rval.isEmpty()) {
+            return Collections.emptyMap();
         }
 
-        rval = StationDbHelper.getHelper().getArrivableStations(chain, startTime, maxDelta);
-        if (rval != null && !rval.isEmpty()) {
-            return filterList(rval, args);
+        return rval;
+    }
+
+    public static Map<TransStation, Map<TransChain, List<SchedulePoint>>> getChainsForStations(List<TransStation> stations) {
+        Map<TransStation, Map<TransChain, List<SchedulePoint>>> rval = null;
+
+        if (rval != null && !rval.isEmpty()) return rval;
+        rval = StationDbHelper.getHelper()
+                .getChainsForStations(stations);
+
+        if (rval == null || rval.isEmpty()) {
+            return Collections.emptyMap();
         }
 
-        return Collections.emptyList();
+        return rval;
+    }
+
+    public static Map<TransStation, TimeDelta> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta) {
+
+        Map<TransStation, TimeDelta> rval = null;
+
+        if (rval != null && !rval.isEmpty()) return rval;
+        rval = StationDbHelper.getHelper()
+                .getArrivableStations(chain, startTime, maxDelta);
+
+        if (rval == null || rval.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        return rval;
+    }
+
+    public static Map<TransChain, Map<TransStation, TimeDelta>> getArrivableStations(List<TransChain> chains, TimePoint startTime, TimeDelta maxDelta) {
+
+        Map<TransChain, Map<TransStation, TimeDelta>> rval = null;
+
+        if (rval != null && !rval.isEmpty()) return rval;
+        rval = StationDbHelper.getHelper()
+                .getArrivableStations(chains, startTime, maxDelta);
+
+        if (rval == null || rval.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        return rval;
+    }
+
+    public static Map<TransChain, Map<TransStation, TimeDelta>> getArrivableStations(Map<TransChain, TimeDelta> chainsAndExtras, TimePoint generalStart, TimeDelta maxDelta) {
+
+        Map<TransChain, Map<TransStation, TimeDelta>> rval = null;
+
+        if (rval != null && !rval.isEmpty()) return rval;
+        rval = StationDbHelper.getHelper()
+                .getArrivableStations(chainsAndExtras, generalStart, maxDelta);
+
+        if (rval == null || rval.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        return rval;
     }
 }
