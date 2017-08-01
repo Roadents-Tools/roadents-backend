@@ -1,6 +1,7 @@
 package org.tymit.projectdonut.stations.helpers;
 
 import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransChain;
@@ -59,24 +60,14 @@ public class StationChainCacheHelper {
         return instance;
     }
 
-    public List<TransStation> getCachedStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
-        if (isTest || allStationInstances == null || allStationInstances.length == 0) return Collections.emptyList();
-        return Arrays.stream(allStationInstances)
-                .parallel()
-                .map(cache -> cache.getCachedStations(center, range, startTime, maxDelta, chain))
-                .filter(Objects::nonNull)
-                .flatMap(Collection::parallelStream)
-                .collect(Collectors.toList());
-    }
-
-    public boolean cacheStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, Stream<List<TransStation>> stations) {
+    public boolean cacheStations(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta, Stream<List<TransStation>> stations) {
         if (isTest) return true;
         if (allStationInstances == null || allStationInstances.length == 0) return false;
         return stations
                 .anyMatch(src -> cacheStations(center, range, startTime, maxDelta, src));
     }
 
-    public boolean cacheStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, List<TransStation> stations) {
+    public boolean cacheStations(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta, List<TransStation> stations) {
 
         if (isTest) return true;
         if (allStationInstances == null || allStationInstances.length == 0) return false;
@@ -84,29 +75,29 @@ public class StationChainCacheHelper {
         //Since physical range is easily calculable even without being given it,
         //we do so for possible efficiencies in the future.
         //However, the same is not true for temporal range.
-        if (center == null || range < 0) {
-            center = new double[] { 0, 0 };
+        if (center == null || range == null || range.inMeters() < 0) {
+            double[] centerCoords = new double[] { 0, 0 };
             int size = 0;
 
             for (TransStation stat : stations) {
-                center[0] += stat.getCoordinates()[0];
-                center[1] += stat.getCoordinates()[1];
+                centerCoords[0] += stat.getCoordinates()[0];
+                centerCoords[1] += stat.getCoordinates()[1];
                 size++;
             }
 
-            center[0] = center[0] / size;
-            center[1] = center[1] / size;
+            centerCoords[0] = centerCoords[0] / size;
+            centerCoords[1] = centerCoords[1] / size;
 
-            StartPoint startPoint = new StartPoint(center);
+            center = new StartPoint(centerCoords);
             for (TransStation stat : stations) {
-                double curange = LocationUtils.distanceBetween(startPoint, stat).inMiles();
-                if (curange > range) range = curange;
+                Distance curDist = LocationUtils.distanceBetween(stat, center);
+                if (range == null || range.inMeters() < curDist.inMeters()) range = curDist;
             }
         }
 
         //Java is BS sometimes
-        double[] finalCenter = center;
-        double finalRange = range;
+        LocationPoint finalCenter = center;
+        Distance finalRange = range;
 
 
         return Arrays.stream(allStationInstances)
@@ -115,13 +106,12 @@ public class StationChainCacheHelper {
 
     }
 
-
     public List<TransStation> getStationsInArea(LocationPoint center, Distance range) {
         if (isTest || center == null || range.inMeters() < 0) {
             return Collections.emptyList();
         }
 
-        Supplier<List<TransStation>> fallback = () -> getCachedStations(center.getCoordinates(), range.inMiles(), null, null, null);
+        Supplier<List<TransStation>> fallback = () -> getCachedStations(center, range, null, null, null);
 
         return Arrays.stream(donutCaches)
                 .map(cache -> cache.getStationsInArea(center, range))
@@ -131,12 +121,22 @@ public class StationChainCacheHelper {
                 .orElseGet(fallback);
     }
 
+    public List<TransStation> getCachedStations(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+        if (isTest || allStationInstances == null || allStationInstances.length == 0) return Collections.emptyList();
+        return Arrays.stream(allStationInstances)
+                .parallel()
+                .map(cache -> cache.getCachedStations(center, range, startTime, maxDelta, chain))
+                .filter(Objects::nonNull)
+                .flatMap(Collection::parallelStream)
+                .collect(Collectors.toList());
+    }
+
     public Map<TransChain, List<SchedulePoint>> getChainsForStation(TransStation station) {
         if (isTest || station == null) {
             return Collections.emptyMap();
         }
 
-        Supplier<Map<TransChain, List<SchedulePoint>>> fallback = () -> getCachedStations(station.getCoordinates(), 0, null, null, null)
+        Supplier<Map<TransChain, List<SchedulePoint>>> fallback = () -> getCachedStations(station, new Distance(0, DistanceUnits.METERS), null, null, null)
                 .stream()
                 .collect(StreamUtils.collectWithMapping(TransStation::getChain, TransStation::getSchedule));
 

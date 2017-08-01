@@ -2,7 +2,6 @@ package org.tymit.projectdonut.stations.test;
 
 import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.LocationPoint;
-import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
@@ -58,17 +57,16 @@ public class TestStationDb implements StationDbInstance.ComboDb {
         chainsToStations.clear();
     }
 
-    public List<TransStation> queryStations(double[] center, double range, TransChain chain) {
+    public List<TransStation> queryStations(LocationPoint center, Distance range, TransChain chain) {
         List<TransStation> stationsToCheck = (chain != null) ? chainsToStations.get(chain) : chainsToStations
                 .values()
                 .stream()
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
-        StartPoint startPoint = new StartPoint(center);
 
         return stationsToCheck.parallelStream()
-                .filter(station -> center == null || LocationUtils.distanceBetween(startPoint, station)
-                        .inMiles() <= range + 0.001)
+                .filter(station -> center == null || LocationUtils.distanceBetween(center, station)
+                        .inMeters() <= range.inMeters() + 1)
                 .collect(Collectors.toList());
     }
 

@@ -47,7 +47,7 @@ public class TestLocationProvider implements LocationProvider {
         if (testLocations == null) return buildNullLocations(center, range, type);
         return testLocations.stream()
                 .filter(location -> location.getType().equals(type)
-                        && LocationUtils.distanceBetween(center, location).inMiles() < range.inMiles() + 0.001)
+                        && LocationUtils.distanceBetween(center, location).inMeters() < range.inMeters() + 0.1)
                 .collect(Collectors.toList());
     }
 

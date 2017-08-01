@@ -22,9 +22,9 @@ public interface StationCacheInstance {
 
     interface GeneralCache extends StationCacheInstance {
 
-        List<TransStation> getCachedStations(double[] center, double range, TimePoint start, TimeDelta maxDelta, TransChain chain);
+        List<TransStation> getCachedStations(LocationPoint center, Distance range, TimePoint start, TimeDelta maxDelta, TransChain chain);
 
-        boolean cacheStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, List<TransStation> stations);
+        boolean cacheStations(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta, List<TransStation> stations);
     }
 
 

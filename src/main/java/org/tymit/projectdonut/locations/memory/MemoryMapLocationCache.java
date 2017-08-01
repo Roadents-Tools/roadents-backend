@@ -48,7 +48,7 @@ public class MemoryMapLocationCache implements LocationCacheInstance {
         if (Math.abs(cachedRange.inMeters() - range.inMeters()) < ERROR_MARGIN) return cache.get(tag);
         return cache.get(tag).stream()
                 .filter(toCheck -> LocationUtils.distanceBetween(toCheck, center)
-                        .inMiles() <= range.inMeters() + ERROR_MARGIN)
+                        .inMeters() <= range.inMeters() + ERROR_MARGIN)
                 .collect(Collectors.toList());
     }
 

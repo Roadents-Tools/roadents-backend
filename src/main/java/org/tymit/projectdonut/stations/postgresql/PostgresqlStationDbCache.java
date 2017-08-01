@@ -1,7 +1,6 @@
 package org.tymit.projectdonut.stations.postgresql;
 
 import org.tymit.projectdonut.model.distance.Distance;
-import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransChain;
@@ -79,7 +78,7 @@ public class PostgresqlStationDbCache implements StationCacheInstance.GeneralCac
     public boolean storeStations(Collection<? extends TransStation> stations) {
         if (!isUp) return false;
         double[] center = new double[] { 0, 0 };
-        double range = -1;
+        Distance range = null;
         int size = 0;
 
         for (TransStation stat : stations) {
@@ -93,14 +92,25 @@ public class PostgresqlStationDbCache implements StationCacheInstance.GeneralCac
 
         StartPoint startPoint = new StartPoint(center);
         for (TransStation stat : stations) {
-            double curange = LocationUtils.distanceBetween(startPoint, stat).inMiles();
-            if (curange > range) range = curange;
+            Distance curange = LocationUtils.distanceBetween(stat, startPoint);
+            if (range == null || curange.inMeters() > range.inMeters()) range = curange;
         }
-        return cacheStations(center, range, TimePoint.NULL, new TimeDelta(Long.MAX_VALUE), new ArrayList<>(stations));
+        return cacheStations(startPoint, range, TimePoint.NULL, new TimeDelta(Long.MAX_VALUE), new ArrayList<>(stations));
     }
 
     @Override
-    public boolean cacheStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, List<TransStation> stations) {
+    public List<TransStation> getCachedStations(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+        if (!isUp) return Collections.emptyList();
+        try {
+            return PostgresSqlSupport.getInformation(this::getConnection, center, range, startTime, maxDelta, chain, true);
+        } catch (Exception e) {
+            LoggingUtils.logError(e);
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
+    public boolean cacheStations(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta, List<TransStation> stations) {
         if (!isUp) return false;
         try {
             //Null time values = all possible available schedule points.
@@ -112,17 +122,6 @@ public class PostgresqlStationDbCache implements StationCacheInstance.GeneralCac
         } catch (Exception e) {
             LoggingUtils.logError(e);
             return false;
-        }
-    }
-
-    @Override
-    public List<TransStation> getCachedStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
-        if (!isUp) return Collections.emptyList();
-        try {
-            return PostgresSqlSupport.getInformation(this::getConnection, new StartPoint(center), new Distance(range, DistanceUnits.MILES), startTime, maxDelta, chain, true);
-        } catch (Exception e) {
-            LoggingUtils.logError(e);
-            return Collections.emptyList();
         }
     }
 

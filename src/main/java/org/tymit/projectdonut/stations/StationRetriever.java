@@ -5,7 +5,6 @@ import org.tymit.projectdonut.costs.arguments.CostArgs;
 import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.LocationPoint;
-import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.SchedulePoint;
@@ -31,7 +30,7 @@ public final class StationRetriever {
     }
 
     @Deprecated
-    public static List<TransStation> getStations(double[] center, double range,
+    public static List<TransStation> getStations(LocationPoint center, Distance range,
                                                  TimePoint startTime, TimeDelta maxDelta,
                                                  TransChain chain, List<CostArgs> args) {
 
@@ -42,15 +41,18 @@ public final class StationRetriever {
                     .collect(Collectors.toList());
         }
 
-        if (startTime == null && maxDelta == null && center != null && range <= .0001) {
-            return getChainsForStation(center, args);
+        if (startTime == null && maxDelta == null && center != null && range.inMeters() <= .1 && center instanceof TransStation) {
+            TransStation centerStat = (TransStation) center;
+            return getChainsForStation(centerStat, args).entrySet().stream()
+                    .map(entry -> centerStat.withSchedule(entry.getKey(), entry.getValue()))
+                    .collect(Collectors.toList());
         }
 
         List<TransStation> allStations = StationChainCacheHelper.getHelper()
                 .getCachedStations(center, range, startTime, maxDelta, chain);
         if (allStations == null || allStations.isEmpty()) {
             allStations = StationDbHelper.getHelper()
-                    .queryStations(new StartPoint(center), new Distance(range, DistanceUnits.MILES), startTime, maxDelta, chain);
+                    .queryStations(center, range, startTime, maxDelta, chain);
             if (chain == null) StationChainCacheHelper.getHelper()
                     .cacheStations(center, range, startTime, maxDelta, allStations);
         }
@@ -74,7 +76,7 @@ public final class StationRetriever {
         if (inCache != null && !inCache.isEmpty()) return inCache;
 
         List<TransStation> allStations = StationChainCacheHelper.getHelper()
-                .getCachedStations(null, -1, null, null, transChain);
+                .getCachedStations(null, null, null, null, transChain);
         if (allStations == null || allStations.isEmpty()) {
             allStations = StationDbHelper.getHelper()
                     .queryStations(null, new Distance(-1, DistanceUnits.METERS), null, null, transChain);
@@ -96,20 +98,6 @@ public final class StationRetriever {
 
     }
 
-    @Deprecated
-    public static List<TransStation> getChainsForStation(double[] coords, List<CostArgs> args) {
-        List<TransStation> allStations = null;
-        if (allStations != null && !allStations.isEmpty()) return allStations;
-
-        allStations = StationDbHelper.getHelper()
-                .queryStations(new StartPoint(coords), new Distance(0, DistanceUnits.METERS), null, null, null);
-        if (allStations == null || allStations.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        return filterList(allStations, args);
-    }
-
     public static void setTestMode(boolean testMode) {
         StationDbUpdater.setTestMode(testMode);
         StationDbHelper.setTestMode(testMode);
@@ -117,21 +105,14 @@ public final class StationRetriever {
     }
 
     @Deprecated
-    public static void prepareArea(double[] center, double range, TimePoint startTime, TimeDelta maxDelta) {
+    public static void prepareArea(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta) {
         List<TransStation> allStations = StationChainCacheHelper.getHelper()
                 .getCachedStations(center, range, startTime, maxDelta, null);
         if (allStations == null || allStations.isEmpty()) {
             allStations = StationDbHelper.getHelper()
-                    .queryStations(new StartPoint(center), new Distance(range, DistanceUnits.MILES), startTime, maxDelta, null);
+                    .queryStations(center, range, startTime, maxDelta, null);
             StationChainCacheHelper.getHelper().cacheStations(center, range, startTime, maxDelta, allStations);
         }
-    }
-
-    @Deprecated
-    public static List<TransStation> getStrippedStations(double[] center, double range, int limit, List<CostArgs> args) {
-        List<TransStation> allStations = StationDbHelper.getHelper()
-                .queryStrippedStations(new StartPoint(center), new Distance(range, DistanceUnits.MILES), limit);
-        return filterList(allStations, args);
     }
 
 

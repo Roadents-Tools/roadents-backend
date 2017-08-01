@@ -25,7 +25,7 @@ public class TransitlandZipDb implements StationDbInstance.ComboDb {
     @Override
     public List<TransStation> queryStations(LocationPoint center, Distance range, TimePoint start, TimeDelta maxDelta, TransChain chain) {
         if (chain != null) return delegate.queryStations(center, range, start, maxDelta, chain);
-        List<URL> allChains = delegate.getFeedsInArea(center.getCoordinates(), range.inMiles(), null, null);
+        List<URL> allChains = delegate.getFeedsInArea(center, range, null, null);
         List<TransStation> rval = new ArrayList<>();
         Predicate<TransStation> rangeFilter = withinRange(center, range);
         Predicate<TransStation> timeFIlter = withinTime(start, maxDelta);

@@ -52,7 +52,7 @@ public class TravelRouteJsonConverterTest {
             if (testRoute.isInRoute(stationNode.getPt())) {
                 testRoute.addNode(stationNode);
             } else continue;
-            List<TransStation> stationsInChain = StationRetriever.getStations(null, 0, null, null, currentStation.getChain(), null);
+            List<TransStation> stationsInChain = StationRetriever.getStations(null, null, null, null, currentStation.getChain(), null);
             TransStation chainStation = stationsInChain.get(i % stationsInChain.size());
             TravelRouteNode chainStationNode = new TravelRouteNode.Builder().setPoint(chainStation).setTravelTime(1).setWaitTime(1).build();
             testRoute.addNode(chainStationNode);

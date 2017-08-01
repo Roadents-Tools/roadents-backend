@@ -333,7 +333,7 @@ public class PostgresSqlSupport {
     }
 
     public static boolean storeArea(Supplier<Connection> conGenerator,
-                                    double[] center, double range,
+                                    LocationPoint center, Distance range,
                                     TimePoint startTime, TimeDelta maxDelta,
                                     Collection<? extends TransStation> stations
     ) throws SQLException {
@@ -342,8 +342,6 @@ public class PostgresSqlSupport {
         long deltlong = (MAX_POSTGRES_INTERVAL_MILLI > maxDelta.getDeltaLong()) ? maxDelta
                 .getDeltaLong() : MAX_POSTGRES_INTERVAL_MILLI;
         Statement stm = con.createStatement();
-
-        Distance rangeDist = new Distance(range, DistanceUnits.MILES);
 
         //Insert the chains into the database in a batch
         AtomicInteger ctprev = new AtomicInteger(0);
@@ -404,10 +402,11 @@ public class PostgresSqlSupport {
                         "VALUES (ST_POINT(%f,%f)::geography, %f, to_timestamp(%d), INTERVAL '%d seconds') " +
                         "ON CONFLICT(%s, %s) DO UPDATE SET %s=%f, %s=to_timestamp(%d), %s=INTERVAL '%d seconds'",
                 PostgresqlContract.RangeTable.TABLE_NAME, PostgresqlContract.RangeTable.LAT_KEY, PostgresqlContract.RangeTable.BOX_KEY, PostgresqlContract.RangeTable.TIME_KEY, PostgresqlContract.RangeTable.FUZZ_KEY,
-                center[0], center[1], (rangeDist.inMeters() != Double.POSITIVE_INFINITY) ? rangeDist.inMeters() : 9e99,
+                center.getCoordinates()[0], center.getCoordinates()[1], (range.inMeters() != Double.POSITIVE_INFINITY) ? range
+                        .inMeters() : 9e99,
                 startTime.getUnixTime(), deltlong / 1000,
                 PostgresqlContract.RangeTable.LAT_KEY, PostgresqlContract.RangeTable.TIME_KEY,
-                PostgresqlContract.RangeTable.BOX_KEY, rangeDist.inMeters(),
+                PostgresqlContract.RangeTable.BOX_KEY, range.inMeters(),
                 PostgresqlContract.RangeTable.TIME_KEY, startTime.getUnixTime(),
                 PostgresqlContract.RangeTable.FUZZ_KEY, deltlong / 1000
         );

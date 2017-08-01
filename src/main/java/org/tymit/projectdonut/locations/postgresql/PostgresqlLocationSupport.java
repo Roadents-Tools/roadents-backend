@@ -1,6 +1,8 @@
 package org.tymit.projectdonut.locations.postgresql;
 
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
 
 import java.sql.Connection;
@@ -23,11 +25,11 @@ public class PostgresqlLocationSupport {
     private static final String LNG_KEY_FAKE = "lngfakekey";
 
     public static List<DestinationLocation> getInformation(Supplier<Connection> supplier,
-                                                           double[] center, double range,
+                                                           LocationPoint center, Distance range,
                                                            LocationType type
     ) throws SQLException {
 
-        if (center == null || center.length != 2 || range < 0 || type == null) return Collections.emptyList();
+        if (center == null || range == null || range.inMeters() <= 0 || type == null) return Collections.emptyList();
 
         Connection con = supplier.get();
         Statement stm = con.createStatement();
@@ -49,7 +51,7 @@ public class PostgresqlLocationSupport {
         return rval;
     }
 
-    private static String buildQuery(double[] center, double range, LocationType type) {
+    private static String buildQuery(LocationPoint center, Distance range, LocationType type) {
         return String.format("SELECT %s.%s, " +
                         "ST_X(%s.%s) AS %s, " +
                         "ST_Y(%s.%s) AS %s " +
@@ -64,7 +66,8 @@ public class PostgresqlLocationSupport {
                 LNG_KEY_FAKE,
                 PostgresqlLocationContract.LocationTable.TABLE_NAME, PostgresqlLocationContract.TagTable.TABLE_NAME,
                 PostgresqlLocationContract.LocationTable.ID_KEY, PostgresqlLocationContract.TagTable.LOCATION_ID_KEY,
-                PostgresqlLocationContract.LocationTable.LOCATION_KEY, center[0], center[1], range,
+                PostgresqlLocationContract.LocationTable.LOCATION_KEY, center.getCoordinates()[0], center.getCoordinates()[1], range
+                        .inMeters(),
                 PostgresqlLocationContract.TagTable.TAG_KEY, type.getEncodedname()
         );
     }

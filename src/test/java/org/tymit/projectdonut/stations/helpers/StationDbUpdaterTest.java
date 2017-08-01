@@ -29,12 +29,12 @@ public class StationDbUpdaterTest {
     @Test
     public void testDbUpdate() throws Exception {
         //Make sure we have no stations to begin with
-        List<TransStation> stations = StationRetriever.getStations(null, 0, null, null, null, null);
+        List<TransStation> stations = StationRetriever.getStations(null, null, null, null, null, null);
         Assert.assertEquals(0, stations.size());
 
         Assert.assertTrue(StationDbUpdater.getUpdater().updateStationsSync());
 
-        stations = StationRetriever.getStations(null, 0, null, null, null, null);
+        stations = StationRetriever.getStations(null, null, null, null, null, null);
 
         Assert.assertEquals(TOTAL_TEST_CHAINS, stations.size());
     }
@@ -42,7 +42,7 @@ public class StationDbUpdaterTest {
     @Test
     public void testDbUpdateAsync() throws Exception {
         //Make sure we have no stations to begin with
-        List<TransStation> stations = StationRetriever.getStations(null, 0, null, null, null, null);
+        List<TransStation> stations = StationRetriever.getStations(null, null, null, null, null, null);
         Assert.assertEquals(0, stations.size());
 
         CompletableFuture<Boolean> asyncResult = StationDbUpdater.getUpdater().updateStationsAsync();
@@ -52,7 +52,7 @@ public class StationDbUpdaterTest {
 
         Assert.assertTrue(asyncResult.get());
 
-        stations = StationRetriever.getStations(null, 0, null, null, null, null);
+        stations = StationRetriever.getStations(null, null, null, null, null, null);
 
         Assert.assertEquals(TOTAL_TEST_CHAINS, stations.size());
     }
@@ -60,7 +60,7 @@ public class StationDbUpdaterTest {
     @Test
     public void testDbUpdateBackground() throws Exception {
         //Make sure we have no stations to begin with
-        List<TransStation> stations = StationRetriever.getStations(null, 0, null, null, null, null);
+        List<TransStation> stations = StationRetriever.getStations(null, null, null, null, null, null);
         Assert.assertEquals(0, stations.size());
 
         StationDbUpdater.getUpdater().setBackgroundInterval(10);
@@ -69,7 +69,7 @@ public class StationDbUpdaterTest {
             //Gurantee we finish
         }
 
-        stations = StationRetriever.getStations(null, 0, null, null, null, null);
+        stations = StationRetriever.getStations(null, null, null, null, null, null);
 
         Assert.assertTrue(stations.size() > 0);
     }

@@ -212,7 +212,7 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
         return rawobj;
     }
 
-    private CompletableFuture<Boolean> seedStations(double[] center, double range) {
+    private CompletableFuture<Boolean> seedStations(LocationPoint center, Distance range) {
         return CompletableFuture.supplyAsync(() -> {
             Stream<List<TransStation>> srcStream = getFeedsInArea(center, range, null, null)
                     .parallelStream()
@@ -228,14 +228,14 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
         });
     }
 
-    public List<URL> getFeedsInArea(double[] center, double range, Map<String, String> restrict, Map<String, String> avoid) {
+    public List<URL> getFeedsInArea(LocationPoint center, Distance range, Map<String, String> restrict, Map<String, String> avoid) {
         String url = BASE_FEED_URL + "?per_page=500";
-        if (center != null && range >= 0) {
-            double latVal1 = center[0] - range * MILES_TO_LAT;
-            double latVal2 = center[0] + range * MILES_TO_LAT;
+        if (center != null && range != null && range.inMeters() >= 0) {
+            double latVal1 = center.getCoordinates()[0] - range.inMiles() * MILES_TO_LAT;
+            double latVal2 = center.getCoordinates()[0] + range.inMiles() * MILES_TO_LAT;
 
-            double lngVal1 = center[1] - range * MILES_TO_LONG;
-            double lngVal2 = center[1] + range * MILES_TO_LONG;
+            double lngVal1 = center.getCoordinates()[1] - range.inMiles() * MILES_TO_LONG;
+            double lngVal2 = center.getCoordinates()[1] + range.inMiles() * MILES_TO_LONG;
             url += "&" + String.format(AREA_FORMAT, lngVal1, latVal1, lngVal2, latVal2);
         }
 
