@@ -6,6 +6,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.tymit.projectdonut.jsonconvertion.routing.TravelRouteJsonConverter;
 import org.tymit.projectdonut.locations.LocationRetriever;
+import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.model.location.StartPoint;
@@ -57,7 +59,7 @@ public class TravelRouteJsonConverterTest {
         }
 
         LocationType testType = new LocationType("food", "food");
-        List<DestinationLocation> locations = LocationRetriever.getLocations(testRoute.getCurrentEnd().getCoordinates(), range, testType, null);
+        List<DestinationLocation> locations = LocationRetriever.getLocations(testRoute.getCurrentEnd(), new Distance(range, DistanceUnits.MILES), testType, null);
         testRoute.setDestinationNode(new TravelRouteNode.Builder().setWalkTime(1).setPoint(locations.get(0)).build());
     }
 

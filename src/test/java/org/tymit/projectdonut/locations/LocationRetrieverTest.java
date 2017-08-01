@@ -2,8 +2,12 @@ package org.tymit.projectdonut.locations;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
+import org.tymit.projectdonut.model.location.StartPoint;
 
 import java.util.List;
 
@@ -16,8 +20,8 @@ public class LocationRetrieverTest {
     public void getLocations() throws Exception {
 
 
-        double[] testPt = new double[]{37.3532801, -122.0052875};
-        double testRange = 1;
+        LocationPoint testPt = new StartPoint(new double[] { 37.3532801, -122.0052875 });
+        Distance testRange = new Distance(1, DistanceUnits.MILES);
         LocationType testType = new LocationType("Food", "food");
 
 

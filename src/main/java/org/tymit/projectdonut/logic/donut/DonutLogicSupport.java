@@ -303,8 +303,7 @@ public final class DonutLogicSupport {
      * @return the found destinations
      */
     public static Set<TravelRouteNode> getWalkableDestinations(LocationPoint center, TimeDelta maxDelta, LocationType type) {
-        return LocationRetriever.getLocations(center.getCoordinates(), LocationUtils
-                .timeToWalkDistance(maxDelta).inMiles(), type, null)
+        return LocationRetriever.getLocations(center, LocationUtils.timeToWalkDistance(maxDelta), type, null)
                 .stream()
                 .map(point -> new TravelRouteNode.Builder()
                         .setWalkTime(LocationUtils.timeBetween(center, point).getDeltaLong())

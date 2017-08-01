@@ -2,7 +2,9 @@ package org.tymit.projectdonut.locations.test;
 
 import org.junit.Assert;
 import org.tymit.projectdonut.locations.interfaces.LocationProvider;
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.utils.LocationUtils;
@@ -41,12 +43,11 @@ public class TestLocationProvider implements LocationProvider {
     }
 
     @Override
-    public List<DestinationLocation> queryLocations(double[] center, double range, LocationType type) {
+    public List<DestinationLocation> queryLocations(LocationPoint center, Distance range, LocationType type) {
         if (testLocations == null) return buildNullLocations(center, range, type);
-        StartPoint centerPoint = new StartPoint(center);
         return testLocations.stream()
-                .filter(location -> location.getType()
-                        .equals(type) && LocationUtils.distanceBetween(centerPoint, location).inMiles() < range + 0.001)
+                .filter(location -> location.getType().equals(type)
+                        && LocationUtils.distanceBetween(center, location).inMiles() < range.inMiles() + 0.001)
                 .collect(Collectors.toList());
     }
 
@@ -55,20 +56,20 @@ public class TestLocationProvider implements LocationProvider {
 
     }
 
-    private static List<DestinationLocation> buildNullLocations(double[] center, double range, LocationType type) {
+    private static List<DestinationLocation> buildNullLocations(LocationPoint center, Distance range, LocationType type) {
 
         List<DestinationLocation> rval = new ArrayList<>(DEFAULT_POINTS_PER_QUERY);
-        StartPoint startPoint = new StartPoint(center);
         for (double[] muliplier : MULTIPLIERS) {
-            double newLat = center[0] + range * muliplier[0];
-            double newLong = center[1] + range * muliplier[1];
+            double newLat = center.getCoordinates()[0] + range.inMiles() * muliplier[0];
+            double newLong = center.getCoordinates()[1] + range.inMiles() * muliplier[1];
             double[] newCenter = new double[]{newLat, newLong};
-            Assert.assertTrue(LocationUtils.distanceBetween(new StartPoint(newCenter), startPoint).inMiles() <= range);
+            Assert.assertTrue(LocationUtils.distanceBetween(new StartPoint(newCenter), center)
+                    .inMeters() <= range.inMeters());
 
             String name = String.format("Test Dest: QueryCenter = (%f,%f), Type = %s, Additive = (%f,%f)",
-                    center[0], center[1],
+                    center.getCoordinates()[0], center.getCoordinates()[1],
                     type.getEncodedname(),
-                    range * muliplier[0], range * muliplier[1]
+                    range.inMiles() * muliplier[0], range.inMiles() * muliplier[1]
             );
 
             rval.add(new DestinationLocation(name, type, newCenter));

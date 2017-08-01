@@ -6,10 +6,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.tymit.projectdonut.locations.interfaces.LocationProvider;
 import org.tymit.projectdonut.model.distance.Distance;
-import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
-import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 import retrofit2.Call;
@@ -64,12 +63,11 @@ public class FoursquareLocationsProvider implements LocationProvider {
     }
 
     @Override
-    public List<DestinationLocation> queryLocations(double[] center, double range, LocationType type) {
+    public List<DestinationLocation> queryLocations(LocationPoint center, Distance range, LocationType type) {
 
         //Build the parameters for the call
-        StartPoint startPoint = new StartPoint(center);
-        String ll = center[0]+","+center[1];
-        int rangeInMeters = 1 + (int) new Distance(range, DistanceUnits.MILES).inMeters();
+        String ll = center.getCoordinates()[0] + "," + center.getCoordinates()[1];
+        int rangeInMeters = 1 + (int) range.inMeters();
 
         if (categories == null || categories.isEmpty()) buildCategoryMap();
         String category = (categories.containsKey(type.getEncodedname())) ? categories.get(type.getEncodedname()) : categories.get(type.getVisibleName());
@@ -103,7 +101,7 @@ public class FoursquareLocationsProvider implements LocationProvider {
                     .boxed().parallel()
                     .map(arr::getJSONObject)
                     .map(jsonObject -> mapJsonToDest(jsonObject, type))
-                    .filter(dest -> LocationUtils.distanceBetween(dest, startPoint).inMiles() < range)
+                    .filter(dest -> LocationUtils.distanceBetween(dest, center).inMeters() < range.inMeters())
                     .collect(Collectors.toList());
 
         } catch (JSONException | IOException e) {

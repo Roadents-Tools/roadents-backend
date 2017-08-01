@@ -3,7 +3,9 @@ package org.tymit.projectdonut.locations.helpers;
 import org.tymit.projectdonut.locations.foursquare.FoursquareLocationsProvider;
 import org.tymit.projectdonut.locations.interfaces.LocationProvider;
 import org.tymit.projectdonut.locations.test.TestLocationProvider;
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
 
 import java.util.Arrays;
@@ -43,7 +45,7 @@ public class LocationProviderHelper {
         TestLocationProvider.setTestLocations(null);
     }
 
-    public List<DestinationLocation> getLocations(double[] center, double range, LocationType type) {
+    public List<DestinationLocation> getLocations(LocationPoint center, Distance range, LocationType type) {
 
         return Arrays.stream(allProviders)
                 .filter(attemptProvider -> attemptProvider.isValidType(type))

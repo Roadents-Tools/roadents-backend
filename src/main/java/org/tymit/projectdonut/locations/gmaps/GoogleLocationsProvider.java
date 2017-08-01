@@ -5,9 +5,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.tymit.projectdonut.locations.interfaces.LocationProvider;
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
-import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 import retrofit2.Call;
@@ -53,8 +54,9 @@ public class GoogleLocationsProvider implements LocationProvider {
     }
 
     @Override
-    public List<DestinationLocation> queryLocations(double[] center, double range, LocationType type) {
-        Call<ResponseBody> result = rest.getLocations(center[0] + "," + center[1], type.getEncodedname(), "distance", API_KEYS[apiInd]);
+    public List<DestinationLocation> queryLocations(LocationPoint center, Distance range, LocationType type) {
+        Call<ResponseBody> result = rest.getLocations(center.getCoordinates()[0] + "," + center.getCoordinates()[1], type
+                .getEncodedname(), "distance", API_KEYS[apiInd]);
 
         Response<ResponseBody> response;
         try {
@@ -75,9 +77,8 @@ public class GoogleLocationsProvider implements LocationProvider {
             String raw = new String(response.body().bytes());
             JSONObject obj = new JSONObject(raw);
             JSONArray arr = obj.getJSONArray("results");
-            StartPoint centerPoint = new StartPoint(center);
             return getLocationsFromGglJson(arr, type).stream()
-                    .filter(location -> LocationUtils.distanceBetween(centerPoint, location).inMiles() < range)
+                    .filter(location -> LocationUtils.distanceBetween(center, location).inMeters() < range.inMeters())
                     .collect(Collectors.toList());
         } catch (JSONException | IOException e) {
             LoggingUtils.logError(e);

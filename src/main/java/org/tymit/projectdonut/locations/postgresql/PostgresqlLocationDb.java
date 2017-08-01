@@ -1,7 +1,9 @@
 package org.tymit.projectdonut.locations.postgresql;
 
 import org.tymit.projectdonut.locations.interfaces.LocationProvider;
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
@@ -58,7 +60,7 @@ public class PostgresqlLocationDb implements LocationProvider {
     }
 
     @Override
-    public List<DestinationLocation> queryLocations(double[] center, double range, LocationType type) {
+    public List<DestinationLocation> queryLocations(LocationPoint center, Distance range, LocationType type) {
         return null;
     }
 

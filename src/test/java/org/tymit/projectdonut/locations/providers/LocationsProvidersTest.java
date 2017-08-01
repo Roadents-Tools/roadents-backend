@@ -7,7 +7,10 @@ import org.junit.Test;
 import org.tymit.projectdonut.locations.foursquare.FoursquareLocationsProvider;
 import org.tymit.projectdonut.locations.gmaps.GoogleLocationsProvider;
 import org.tymit.projectdonut.locations.interfaces.LocationProvider;
+import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.utils.LocationUtils;
@@ -31,20 +34,20 @@ public class LocationsProvidersTest {
     }
 
     private void testProvider(LocationProvider provider) throws Exception{
-        double[] testPt = new double[]{37.3532801, -122.0052875};
-        double testRange = 1;
+        LocationPoint testPt = new StartPoint(new double[] { 37.3532801, -122.0052875 });
+        Distance testRange = new Distance(1, DistanceUnits.MILES);
         LocationType testType = new LocationType("Food", "food");
 
         List<DestinationLocation> testDests = provider.queryLocations(testPt, testRange, testType);
         Assert.assertTrue(testDests.size() > 0);
         System.out.println("PROVIDER: "+provider.getClass().getName());
         testDests.forEach(dest -> {
-            double dist = LocationUtils.distanceBetween(dest, new StartPoint(testPt)).inMiles();
+            double dist = LocationUtils.distanceBetween(dest, testPt).inMiles();
                     System.out.printf("%s @ (%f, %f), %f miles from center.\n",
                             dest.getName(),
                             dest.getCoordinates()[0], dest.getCoordinates()[1],
                             dist);
-                    Assert.assertTrue(dist <= testRange);
+            Assert.assertTrue(dist <= testRange.inMiles());
                 }
         );
         System.out.printf("Total: %d\n\n", testDests.size());
