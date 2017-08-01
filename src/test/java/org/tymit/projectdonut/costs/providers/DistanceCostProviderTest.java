@@ -5,6 +5,7 @@ import org.junit.Test;
 import org.tymit.projectdonut.costs.arguments.CostArgs;
 import org.tymit.projectdonut.costs.providers.distance.DistanceCostProvider;
 import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.utils.LocationUtils;
 
 /**
@@ -48,7 +49,7 @@ public class DistanceCostProviderTest {
         }
 
         //Equal to
-        compareValue = LocationUtils.distanceBetween(testp1, testp2, true);
+        compareValue = LocationUtils.distanceBetween(new StartPoint(testp1), new StartPoint(testp2)).inMiles();
         testArgs.getArgs().put(DistanceCostProvider.COMPARE_VALUE_TAG, compareValue);
         for (String comparisonValue : VALID_COMPARISONS) {
             testArgs.getArgs().put(DistanceCostProvider.COMPARISON_TAG, comparisonValue);

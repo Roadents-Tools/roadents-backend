@@ -2,6 +2,7 @@ package org.tymit.projectdonut.stations.helpers;
 
 import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.LocationPoint;
+import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.SchedulePoint;
@@ -96,8 +97,9 @@ public class StationChainCacheHelper {
             center[0] = center[0] / size;
             center[1] = center[1] / size;
 
+            StartPoint startPoint = new StartPoint(center);
             for (TransStation stat : stations) {
-                double curange = LocationUtils.distanceBetween(center, stat.getCoordinates(), true);
+                double curange = LocationUtils.distanceBetween(startPoint, stat).inMiles();
                 if (curange > range) range = curange;
             }
         }

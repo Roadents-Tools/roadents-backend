@@ -9,6 +9,7 @@ import org.tymit.projectdonut.locations.gmaps.GoogleLocationsProvider;
 import org.tymit.projectdonut.locations.interfaces.LocationProvider;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
+import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
@@ -38,7 +39,7 @@ public class LocationsProvidersTest {
         Assert.assertTrue(testDests.size() > 0);
         System.out.println("PROVIDER: "+provider.getClass().getName());
         testDests.forEach(dest -> {
-                    double dist = LocationUtils.distanceBetween(dest.getCoordinates(), testPt, true);
+            double dist = LocationUtils.distanceBetween(dest, new StartPoint(testPt)).inMiles();
                     System.out.printf("%s @ (%f, %f), %f miles from center.\n",
                             dest.getName(),
                             dest.getCoordinates()[0], dest.getCoordinates()[1],

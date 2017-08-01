@@ -3,6 +3,7 @@ package org.tymit.projectdonut.locations.memory;
 import org.tymit.projectdonut.locations.interfaces.LocationCacheInstance;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
+import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.utils.LocationUtils;
 
 import java.util.ArrayList;
@@ -10,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Created by ilan on 7/7/16.
@@ -43,10 +43,9 @@ public class MemoryMapLocationCache implements LocationCacheInstance {
         double cachedRange = ranges.getOrDefault(tag, 0.0);
         if (cachedRange < range) return null;
         if (Math.abs(cachedRange - range) < ERROR_MARGIN) return cache.get(tag);
-        int cacheSize = cache.get(tag).size();
-        return IntStream.range(0, cacheSize)
-                .mapToObj(i -> cache.get(tag).get(i))
-                .filter(toCheck -> LocationUtils.distanceBetween(toCheck.getCoordinates(), center, true) <= range + ERROR_MARGIN)
+        StartPoint startPoint = new StartPoint(center);
+        return cache.get(tag).stream()
+                .filter(toCheck -> LocationUtils.distanceBetween(toCheck, startPoint).inMiles() <= range + ERROR_MARGIN)
                 .collect(Collectors.toList());
     }
 

@@ -7,6 +7,7 @@ import org.json.JSONObject;
 import org.tymit.projectdonut.locations.interfaces.LocationProvider;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
+import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 import retrofit2.Call;
@@ -74,8 +75,9 @@ public class GoogleLocationsProvider implements LocationProvider {
             String raw = new String(response.body().bytes());
             JSONObject obj = new JSONObject(raw);
             JSONArray arr = obj.getJSONArray("results");
+            StartPoint centerPoint = new StartPoint(center);
             return getLocationsFromGglJson(arr, type).stream()
-                    .filter(location -> LocationUtils.distanceBetween(center, location.getCoordinates(), true) < range)
+                    .filter(location -> LocationUtils.distanceBetween(centerPoint, location).inMiles() < range)
                     .collect(Collectors.toList());
         } catch (JSONException | IOException e) {
             LoggingUtils.logError(e);

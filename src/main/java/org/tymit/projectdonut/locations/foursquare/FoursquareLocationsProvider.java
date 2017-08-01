@@ -7,6 +7,7 @@ import org.json.JSONObject;
 import org.tymit.projectdonut.locations.interfaces.LocationProvider;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
+import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 import retrofit2.Call;
@@ -64,6 +65,7 @@ public class FoursquareLocationsProvider implements LocationProvider {
     public List<DestinationLocation> queryLocations(double[] center, double range, LocationType type) {
 
         //Build the parameters for the call
+        StartPoint startPoint = new StartPoint(center);
         String ll = center[0]+","+center[1];
         int rangeInMeters = 1+(int) LocationUtils.milesToMeters(range);
 
@@ -99,7 +101,7 @@ public class FoursquareLocationsProvider implements LocationProvider {
                     .boxed().parallel()
                     .map(arr::getJSONObject)
                     .map(jsonObject -> mapJsonToDest(jsonObject, type))
-                    .filter(dest -> LocationUtils.distanceBetween(dest.getCoordinates(), center, true) < range)
+                    .filter(dest -> LocationUtils.distanceBetween(dest, startPoint).inMiles() < range)
                     .collect(Collectors.toList());
 
         } catch (JSONException | IOException e) {

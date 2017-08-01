@@ -1,5 +1,6 @@
 package org.tymit.projectdonut.stations.postgresql;
 
+import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
@@ -87,8 +88,9 @@ public class PostgresqlStationDbCache implements StationCacheInstance.GeneralCac
         center[0] = center[0] / size;
         center[1] = center[1] / size;
 
+        StartPoint startPoint = new StartPoint(center);
         for (TransStation stat : stations) {
-            double curange = LocationUtils.distanceBetween(center, stat.getCoordinates(), true);
+            double curange = LocationUtils.distanceBetween(startPoint, stat).inMiles();
             if (curange > range) range = curange;
         }
         return cacheStations(center, range, TimePoint.NULL, new TimeDelta(Long.MAX_VALUE), new ArrayList<>(stations));

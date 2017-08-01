@@ -22,6 +22,7 @@ import com.amazonaws.services.dynamodbv2.model.KeyType;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
+import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
@@ -240,7 +241,8 @@ public class DynamoStationChainDb implements StationDbInstance.ComboDb {
 
     private static Predicate<TransStation> withinRange(double[] center, double range) {
         if (center == null || range < 0) return any -> true;
-        return stat -> LocationUtils.distanceBetween(center, stat.getCoordinates(), true) <= range;
+        StartPoint startPoint = new StartPoint(center);
+        return stat -> LocationUtils.distanceBetween(startPoint, stat).inMiles() <= range;
     }
 
     private static Predicate<TransStation> withinTime(TimePoint startTime, TimeDelta maxDelta) {

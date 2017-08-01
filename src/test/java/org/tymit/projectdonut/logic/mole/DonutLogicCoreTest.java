@@ -133,7 +133,7 @@ public class DonutLogicCoreTest {
                                 && current instanceof TransStation
                                 && ((TransStation) prev).getChain().equals(((TransStation) current).getChain())
                         )) {
-                            double distance = LocationUtils.distanceBetween(prev.getCoordinates(), current.getCoordinates(), true);
+                            double distance = LocationUtils.distanceBetween(prev, current).inMiles();
                             long addedTime = LocationUtils.distanceToWalkTime(distance, true);
                             calcDelta += addedTime;
                             continue;
