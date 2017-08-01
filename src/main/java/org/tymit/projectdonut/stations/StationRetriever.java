@@ -12,7 +12,6 @@ import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.helpers.StationChainCacheHelper;
 import org.tymit.projectdonut.stations.helpers.StationDbHelper;
 import org.tymit.projectdonut.stations.helpers.StationDbUpdater;
-import org.tymit.projectdonut.utils.LocationUtils;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -101,7 +100,7 @@ public final class StationRetriever {
         if (allStations != null && !allStations.isEmpty()) return allStations;
 
         allStations = StationDbHelper.getHelper()
-                .queryStations(coords, LocationUtils.metersToMiles(.1), null, null, null);
+                .queryStations(coords, 0, null, null, null);
         if (allStations == null || allStations.isEmpty()) {
             return Collections.emptyList();
         }

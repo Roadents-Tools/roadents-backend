@@ -3,6 +3,7 @@ package org.tymit.projectdonut.stations.postgresql;
 import org.tymit.projectdonut.model.database.DatabaseID;
 import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.LocationPoint;
+import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.SchedulePoint;
@@ -128,7 +129,8 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
                 String name = rs.getString(PostgresqlContract.StationTable.NAME_KEY);
                 double lat = rs.getDouble(LAT_KEY);
                 double lng = rs.getDouble(LNG_KEY);
-                if (LocationUtils.distanceBetween(new double[] { lat, lng }, center.getCoordinates(), true) <= range.inMiles()) {
+                if (LocationUtils.distanceBetween(new StartPoint(new double[] { lat, lng }), center).inMeters() <= range
+                        .inMeters()) {
                     rval.add(new TransStation(name, new double[] { lat, lng }, new DatabaseID(url, "" + id)));
                 }
             } while (rs.next());

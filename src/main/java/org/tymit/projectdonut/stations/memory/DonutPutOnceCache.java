@@ -6,6 +6,7 @@ import com.conversantmedia.util.collection.spatial.RectBuilder;
 import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.LocationPoint;
+import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.SchedulePoint;
@@ -198,13 +199,10 @@ public class DonutPutOnceCache implements StationCacheInstance.DonutCache {
         @Override
         public boolean intersects(final HyperRect r) {
             final Rect2D r2 = (Rect2D) r;
-            if (min.lat > r2.max.lat ||
-                    r2.min.lat > max.lat ||
-                    min.lng > r2.max.lng ||
-                    r2.min.lng > max.lng) {
-                return false;
-            }
-            return true;
+            return !(min.lat > r2.max.lat) &&
+                    !(r2.min.lat > max.lat) &&
+                    !(min.lng > r2.max.lng) &&
+                    !(r2.min.lng > max.lng);
         }
 
         @Override
@@ -234,7 +232,7 @@ public class DonutPutOnceCache implements StationCacheInstance.DonutCache {
         }
     }
 
-    private static class Point implements HyperPoint {
+    private static class Point implements HyperPoint, LocationPoint {
         final double lat, lng;
 
         Point(final double x, final double y) {
@@ -260,8 +258,7 @@ public class DonutPutOnceCache implements StationCacheInstance.DonutCache {
 
             Point point = (Point) o;
 
-            if (Double.compare(point.lat, lat) != 0) return false;
-            return Double.compare(point.lng, lng) == 0;
+            return Double.compare(point.lat, lat) == 0 && Double.compare(point.lng, lng) == 0;
         }
 
         @Override
@@ -283,7 +280,7 @@ public class DonutPutOnceCache implements StationCacheInstance.DonutCache {
         @Override
         public double distance(final HyperPoint p) {
             final Point p2 = (Point) p;
-            return 1000 * LocationUtils.distanceBetween(getCoords(), p2.getCoords(), false);
+            return LocationUtils.distanceBetween(this, p2).inMeters();
         }
 
         public double[] getCoords() {
@@ -308,6 +305,21 @@ public class DonutPutOnceCache implements StationCacheInstance.DonutCache {
             } else {
                 throw new RuntimeException("Invalid dimension");
             }
+        }
+
+        @Override
+        public String getName() {
+            return "Point " + lat + ", " + lng;
+        }
+
+        @Override
+        public LocationType getType() {
+            return new LocationType("DonutPutOnceCache::HyperPoint", "donutputconcecache::hyperpoint");
+        }
+
+        @Override
+        public double[] getCoordinates() {
+            return new double[] { lat, lng };
         }
 
         public final static class Builder implements RectBuilder<Point> {

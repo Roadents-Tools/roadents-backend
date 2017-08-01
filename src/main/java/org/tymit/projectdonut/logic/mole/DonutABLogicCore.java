@@ -87,12 +87,8 @@ public class DonutABLogicCore implements LogicCore {
             double centerlag = (start.getCoordinates()[0] + end.getCoordinates()[0]) / 2;
             double centerlng = (start.getCoordinates()[1] + end.getCoordinates()[1]) / 2;
             final double[] center = new double[] { centerlag, centerlng };
-            final double range = Math.max(
-                    LocationUtils.distanceBetween(center, start.getCoordinates(), true),
-                    LocationUtils.distanceBetween(center, end.getCoordinates(), true)
-            );
             final TimeDelta maxDelta = LocationUtils.timeBetween(start, end);
-            StationRetriever.prepareArea(center, range, startTime, maxDelta);
+            StationRetriever.prepareWorld(new StartPoint(center), startTime, maxDelta);
         }
 
         TimeDelta maxTimeDelta = ends.stream()

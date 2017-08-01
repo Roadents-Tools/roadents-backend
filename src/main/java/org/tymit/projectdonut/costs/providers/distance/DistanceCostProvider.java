@@ -3,8 +3,11 @@ package org.tymit.projectdonut.costs.providers.distance;
 import org.tymit.projectdonut.costs.arguments.CostArgs;
 import org.tymit.projectdonut.costs.interfaces.CostProvider;
 import org.tymit.projectdonut.model.location.LocationPoint;
+import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
+
+import java.util.Arrays;
 
 public class DistanceCostProvider implements CostProvider {
 
@@ -13,7 +16,6 @@ public class DistanceCostProvider implements CostProvider {
      **/
     public static final String COMPARISON_TAG = "comparison";
     public static final String COMPARE_VALUE_TAG = "compareto";
-    public static final String UNIT_TAG = "unit";
     public static final String POINT_TWO_TAG = "p2";
 
     public static final String TAG = "distance";
@@ -70,12 +72,7 @@ public class DistanceCostProvider implements CostProvider {
             return 0.0;
         }
 
-        String unitArg = (String) arg.getArgs().get(UNIT_TAG);
-
-        //We default to miles, so we only have to check if we have any sort of metric requests, ie "Kilometer", or "kM", or "kiLOmEt", etc.
-        boolean miles = unitArg == null || !(unitArg.toLowerCase().contains("k") || unitArg.toLowerCase().contains("meter"));
-
-        return LocationUtils.distanceBetween(subj, oth, miles);
+        return LocationUtils.distanceBetween(new StartPoint(subj), new StartPoint(oth));
     }
 
     @Override
@@ -90,11 +87,9 @@ public class DistanceCostProvider implements CostProvider {
         if (obj instanceof double[]) return (double[]) obj;
 
         if (obj instanceof Double[]) {
-            double[] out = new double[((Double[]) obj).length];
-            for (int i = 0; i < ((Double[]) obj).length; i++) {
-                out[i] = ((Double[]) obj)[i];
-            }
-            return out;
+            return Arrays.stream((Double[]) obj)
+                    .mapToDouble(aDouble -> aDouble)
+                    .toArray();
         }
 
         return null;

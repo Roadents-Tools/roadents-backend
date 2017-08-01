@@ -259,8 +259,8 @@ public final class DonutLogicSupport {
             if (isMiddleMan(route))
                 return false; //TODO: Not bandaid the middleman issue
             TravelRoute currentInMap = currentRoutes.get(getLocationTag(route.getCurrentEnd()));
-            if (currentInMap == null) return true;
-            return currentInMap.getTotalTime().getDeltaLong() > route.getTotalTime().getDeltaLong();
+            return currentInMap == null
+                    || currentInMap.getTotalTime().getDeltaLong() > route.getTotalTime().getDeltaLong();
         };
     }
 
@@ -304,7 +304,7 @@ public final class DonutLogicSupport {
      */
     public static Set<TravelRouteNode> getWalkableDestinations(LocationPoint center, TimeDelta maxDelta, LocationType type) {
         return LocationRetriever.getLocations(center.getCoordinates(), LocationUtils
-                .timeToWalkDistance(maxDelta.getDeltaLong(), true), type, null)
+                .timeToWalkDistance(maxDelta).inMiles(), type, null)
                 .stream()
                 .map(point -> new TravelRouteNode.Builder()
                         .setWalkTime(LocationUtils.timeBetween(center, point).getDeltaLong())

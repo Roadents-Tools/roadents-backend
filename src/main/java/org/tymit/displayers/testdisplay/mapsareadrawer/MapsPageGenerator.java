@@ -122,7 +122,7 @@ public class MapsPageGenerator {
                 String name = pt.getName() + " " + i;
                 double lat = pt.getCoordinates()[0];
                 double lng = pt.getCoordinates()[1];
-                double range = LocationUtils.timeToWalkDistance(area.get(pt).getDeltaLong(), false) * 1000;
+                double range = LocationUtils.timeToWalkDistance(area.get(pt)).inMeters();
                 String colorString = Integer.toHexString(color.getRGB());
 
                 String circle = String.format(MapsPageConstants.CIRCLE_FORMAT, name, lat, lng, range, colorString);

@@ -32,8 +32,8 @@ public class TestDisplayer {
 
         builder.append(String.format(TestDisplayConstants.ROUTE_TITLE_FORMAT, route.getDestination()
                         .getName(), hours, mins,
-                LocationUtils.distanceBetween(route.getStart().getCoordinates(), route.getDestination()
-                        .getCoordinates(), true), route.getRoute().size() - 2)
+                LocationUtils.distanceBetween(route.getStart(), route.getDestination()).inMiles(), route.getRoute()
+                        .size() - 2)
         );
 
         route.getRoute().stream()
