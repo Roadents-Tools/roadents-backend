@@ -28,6 +28,7 @@ public final class StationRetriever {
     private StationRetriever() {
     }
 
+    @Deprecated
     public static List<TransStation> getStations(double[] center, double range,
                                                  TimePoint startTime, TimeDelta maxDelta,
                                                  TransChain chain, List<CostArgs> args) {
@@ -64,6 +65,7 @@ public final class StationRetriever {
         return allStations;
     }
 
+    @Deprecated
     public static List<TransStation> getChain(TransChain transChain, List<CostArgs> args) {
 
         List<TransStation> inCache = null;
@@ -92,6 +94,7 @@ public final class StationRetriever {
 
     }
 
+    @Deprecated
     public static List<TransStation> getChainsForStation(double[] coords, List<CostArgs> args) {
         List<TransStation> allStations = null;
         if (allStations != null && !allStations.isEmpty()) return allStations;
@@ -111,6 +114,7 @@ public final class StationRetriever {
         StationChainCacheHelper.setTestMode(testMode);
     }
 
+    @Deprecated
     public static void prepareArea(double[] center, double range, TimePoint startTime, TimeDelta maxDelta) {
         List<TransStation> allStations = StationChainCacheHelper.getHelper()
                 .getCachedStations(center, range, startTime, maxDelta, null);
@@ -120,16 +124,18 @@ public final class StationRetriever {
         }
     }
 
+    @Deprecated
     public static List<TransStation> getStrippedStations(double[] center, double range, int limit, List<CostArgs> args) {
         List<TransStation> allStations = StationDbHelper.getHelper().queryStrippedStations(center, range, limit);
         return filterList(allStations, args);
     }
 
 
+    //Post V2
     public static List<TransStation> getStationsInArea(LocationPoint center, double range, List<CostArgs> args) {
-        List<TransStation> allStations = null;
+        List<TransStation> allStations = StationChainCacheHelper.getHelper().getStationsInArea(center, range);
 
-        if (allStations != null && !allStations.isEmpty()) return allStations;
+        if (allStations != null && !allStations.isEmpty()) return filterList(allStations, args);
         allStations = StationDbHelper.getHelper()
                 .getStationsInArea(center, range);
 
@@ -137,13 +143,18 @@ public final class StationRetriever {
             return Collections.emptyList();
         }
 
+        StationChainCacheHelper.getHelper().putArea(center, range, allStations);
+
         return filterList(allStations, args);
     }
 
     public static Map<LocationPoint, List<TransStation>> getStationsInArea(Map<LocationPoint, Double> ranges, List<CostArgs> args) {
         Map<LocationPoint, List<TransStation>> allStations = null;
 
-        if (allStations != null && !allStations.isEmpty()) return allStations;
+        if (allStations != null && !allStations.isEmpty()) {
+            allStations.replaceAll((key, stations) -> filterList(stations, args));
+            return allStations;
+        }
         allStations = StationDbHelper.getHelper()
                 .getStationsInArea(ranges);
 
@@ -151,6 +162,8 @@ public final class StationRetriever {
             return Collections.emptyMap();
         }
 
+        allStations.forEach((key1, value) -> StationChainCacheHelper.getHelper()
+                .putArea(key1, ranges.get(key1), value));
         allStations.replaceAll((key, stations) -> filterList(stations, args));
 
         return allStations;
@@ -187,7 +200,8 @@ public final class StationRetriever {
 
     public static Map<TransStation, TimeDelta> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta) {
 
-        Map<TransStation, TimeDelta> rval = null;
+        Map<TransStation, TimeDelta> rval = StationChainCacheHelper.getHelper()
+                .getArrivableStations(chain, startTime, maxDelta);
 
         if (rval != null && !rval.isEmpty()) return rval;
         rval = StationDbHelper.getHelper()
@@ -228,5 +242,11 @@ public final class StationRetriever {
         }
 
         return rval;
+    }
+
+    public static boolean prepareWorld(LocationPoint center, TimePoint startTime, TimeDelta maxDelta) {
+        Map<TransChain, Map<TransStation, List<SchedulePoint>>> world = StationDbHelper.getHelper()
+                .getWorld(center, startTime, maxDelta);
+        return StationChainCacheHelper.getHelper().putWorld(world);
     }
 }

@@ -3,15 +3,19 @@ package org.tymit.projectdonut.stations.helpers;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
+import org.tymit.projectdonut.model.time.SchedulePoint;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.interfaces.StationCacheInstance;
+import org.tymit.projectdonut.stations.memory.DonutPutOnceCache;
 import org.tymit.projectdonut.utils.LocationUtils;
+import org.tymit.projectdonut.utils.StreamUtils;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -33,8 +37,15 @@ public class StationChainCacheHelper {
     }
 
     private void initializeStationInstanceList() {
-        if (isTest) allStationInstances = new StationCacheInstance.GeneralCache[0];
+        if (isTest) {
+            allStationInstances = new StationCacheInstance.GeneralCache[0];
+            donutCaches = new StationCacheInstance.DonutCache[0];
+            return;
+        }
         allStationInstances = new StationCacheInstance.GeneralCache[] {};
+        donutCaches = new StationCacheInstance.DonutCache[] {
+                new DonutPutOnceCache()
+        };
     }
 
     public static void setTestMode(boolean testMode) {
@@ -117,16 +128,14 @@ public class StationChainCacheHelper {
                 .orElseGet(fallback);
     }
 
-    public List<TransChain> getChainsForStation(TransStation station) {
+    public Map<TransChain, List<SchedulePoint>> getChainsForStation(TransStation station) {
         if (isTest || station == null) {
-            return Collections.emptyList();
+            return Collections.emptyMap();
         }
 
-        Supplier<List<TransChain>> fallback = () -> getCachedStations(station.getCoordinates(), 0, null, null, null)
+        Supplier<Map<TransChain, List<SchedulePoint>>> fallback = () -> getCachedStations(station.getCoordinates(), 0, null, null, null)
                 .stream()
-                .map(TransStation::getChain)
-                .distinct()
-                .collect(Collectors.toList());
+                .collect(StreamUtils.collectWithMapping(TransStation::getChain, TransStation::getSchedule));
 
         return Arrays.stream(donutCaches)
                 .map(cache -> cache.getChainsForStation(station))
@@ -136,19 +145,17 @@ public class StationChainCacheHelper {
                 .orElseGet(fallback);
     }
 
-    public List<TransStation> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta) {
+    public Map<TransStation, TimeDelta> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta) {
         if (isTest || chain == null) {
-            return Collections.emptyList();
+            return Collections.emptyMap();
         }
-
-        Supplier<List<TransStation>> fallback = () -> getCachedStations(null, -1, startTime, maxDelta, chain);
 
         return Arrays.stream(donutCaches)
                 .map(cache -> cache.getArrivableStations(chain, startTime, maxDelta))
                 .filter(Objects::nonNull)
                 .filter(a -> !a.isEmpty())
                 .findAny()
-                .orElseGet(fallback);
+                .orElseGet(Collections::emptyMap);
     }
 
 
@@ -157,16 +164,15 @@ public class StationChainCacheHelper {
                 .anyMatch(cache -> cache.putArea(center, range, stations));
     }
 
-    public boolean putChainsForStation(TransStation station, List<TransChain> chains) {
+    public boolean putChainsForStation(TransStation station, Map<TransChain, List<SchedulePoint>> chains) {
         return Arrays.stream(donutCaches)
-                .anyMatch(cache -> cache.putChainsForStation(station, chains));
+                .anyMatch(cache -> cache.putChainsForStations(station, chains));
     }
 
-    public boolean putStationsForChain(TransChain chain, List<TransStation> stations) {
+    public boolean putWorld(Map<TransChain, Map<TransStation, List<SchedulePoint>>> world) {
         return Arrays.stream(donutCaches)
-                .anyMatch(cache -> cache.putStationsForChain(chain, stations));
+                .anyMatch(cache -> cache.putWorld(world));
     }
-
 
     public void closeAllCaches() {
         if (allStationInstances == null) return;

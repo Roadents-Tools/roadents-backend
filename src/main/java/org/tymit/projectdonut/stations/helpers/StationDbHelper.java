@@ -7,10 +7,10 @@ import org.tymit.projectdonut.model.time.SchedulePoint;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.interfaces.StationDbInstance;
-import org.tymit.projectdonut.stations.postgresql.PostgresqlStationDbCache;
+import org.tymit.projectdonut.stations.postgresql.PostgresqlDonutDb;
 import org.tymit.projectdonut.stations.test.TestStationDb;
-import org.tymit.projectdonut.utils.StreamUtils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -36,18 +36,20 @@ public class StationDbHelper {
     }
 
     private void initializeDbList() {
-
-        if (allDatabases != null) {
-            Arrays.stream(allDatabases).forEach(StationDbInstance::close);
-        }
-
         if (isTest) {
             allDatabases = new StationDbInstance[]{new TestStationDb()};
             return;
         }
+
         allDatabases = new StationDbInstance[] {
-                new PostgresqlStationDbCache(PostgresqlStationDbCache.DB_URLS[0])
+                new PostgresqlDonutDb(PostgresqlDonutDb.DB_URLS[1])
         };
+
+        for (StationDbInstance instance : allDatabases) {
+            if (!(instance instanceof StationDbInstance.DonutDb)) continue;
+            StationDbInstance.DonutDb ddb = (StationDbInstance.DonutDb) instance;
+            nameToDbs.computeIfAbsent(ddb.getSourceName(), (k) -> new ArrayList<>()).add(ddb);
+        }
     }
 
     public static StationDbHelper getHelper() {
@@ -96,22 +98,13 @@ public class StationDbHelper {
     }
 
     public List<TransStation> getStationsInArea(LocationPoint center, double range) {
-        Supplier<List<TransStation>> orElseSupplier = () ->
-                doComboQuery(db -> db.queryStrippedStations(center.getCoordinates(), range, 10000), Collections::emptyList);
+        Supplier<List<TransStation>> orElseSupplier = ArrayList::new;
 
-        return doDonutQuery(db -> getStationsInArea(center, range), orElseSupplier);
+        return doDonutQuery(db -> db.getStationsInArea(center, range), orElseSupplier);
     }
 
     public Map<LocationPoint, List<TransStation>> getStationsInArea(Map<LocationPoint, Double> ranges) {
-        Supplier<Map<LocationPoint, List<TransStation>>> orElseSupplier = () -> ranges.entrySet().stream()
-                .collect(StreamUtils.collectWithMapping(
-                        Map.Entry::getKey,
-                        entry -> doComboQuery(
-                                db -> db.queryStrippedStations(entry.getKey()
-                                        .getCoordinates(), entry.getValue(), 10000),
-                                Collections::emptyList
-                        )
-                ));
+        Supplier<Map<LocationPoint, List<TransStation>>> orElseSupplier = HashMap::new;
 
         return doDonutQuery(db -> db.getStationsInArea(ranges), orElseSupplier);
 
@@ -145,7 +138,7 @@ public class StationDbHelper {
     }
 
     public Map<TransStation, TimeDelta> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta) {
-        return doDonutQuery(db -> getArrivableStations(chain, startTime, maxDelta), Collections::emptyMap);
+        return doDonutQuery(db -> db.getArrivableStations(chain, startTime, maxDelta), Collections::emptyMap);
     }
 
     public Map<TransChain, Map<TransStation, TimeDelta>> getArrivableStations(List<TransChain> chains, TimePoint startTime, TimeDelta maxDelta) {
@@ -154,5 +147,9 @@ public class StationDbHelper {
 
     public Map<TransChain, Map<TransStation, TimeDelta>> getArrivableStations(Map<TransChain, TimeDelta> chainsAndExtras, TimePoint generalStart, TimeDelta maxDelta) {
         return doDonutQuery(db -> db.getArrivableStations(chainsAndExtras, generalStart, maxDelta), Collections::emptyMap);
+    }
+
+    public Map<TransChain, Map<TransStation, List<SchedulePoint>>> getWorld(LocationPoint center, TimePoint startTIme, TimeDelta maxDelta) {
+        return doDonutQuery(db -> db.getWorld(center, startTIme, maxDelta), Collections::emptyMap);
     }
 }

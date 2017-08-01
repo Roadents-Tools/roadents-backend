@@ -86,6 +86,11 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
     }
 
     @Override
+    public boolean isUp() {
+        return isUp;
+    }
+
+    @Override
     public boolean putStations(List<TransStation> stations) {
         if (!isUp) return false;
         try {
@@ -94,19 +99,6 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
             LoggingUtils.logError(e);
             isUp = false;
             return false;
-        }
-    }
-
-    public boolean isUp() {
-        return isUp;
-    }
-
-    public void close() {
-        isUp = false;
-        try {
-            con.close();
-        } catch (Exception e) {
-            LoggingUtils.logError(e);
         }
     }
 
@@ -124,7 +116,7 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
                 center.getCoordinates()[0], center.getCoordinates()[1], range
         );
 
-        System.out.printf("Query: %s\n", query);
+        LoggingUtils.logMessage(TAG, "Query: %s\n", query);
         List<TransStation> rval = new ArrayList<>();
 
         try {
@@ -136,7 +128,9 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
                 String name = rs.getString(PostgresqlContract.StationTable.NAME_KEY);
                 double lat = rs.getDouble(LAT_KEY);
                 double lng = rs.getDouble(LNG_KEY);
-                rval.add(new TransStation(name, new double[] { lat, lng }, new DatabaseID(url, "" + id)));
+                if (LocationUtils.distanceBetween(new double[] { lat, lng }, center.getCoordinates(), true) <= range) {
+                    rval.add(new TransStation(name, new double[] { lat, lng }, new DatabaseID(url, "" + id)));
+                }
             } while (rs.next());
 
             rs.close();
@@ -147,6 +141,77 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
             isUp = false;
             return Collections.emptyList();
         }
+    }
+
+    public void close() {
+        isUp = false;
+        try {
+            con.close();
+        } catch (Exception e) {
+            LoggingUtils.logError(e);
+        }
+    }
+
+    @Override
+    public Map<TransStation, TimeDelta> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta) {
+        if (!isUp || con == null || chain == null || chain.getID() == null || !url.equals(chain.getID()
+                .getDatabaseName())) {
+            return Collections.emptyMap();
+        }
+
+        String query = String.format(
+                "SELECT %s, %s, " +
+                        "ST_X(%s::geometry) AS %s, " +
+                        "ST_Y(%s::geometry) AS %s, " +
+                        "EXTRACT('epoch' FROM %s - '%d:%d:%d') AS %s " +
+                        "FROM %s, %s " +
+                        "WHERE %s=%s.%s AND %s=%s AND %s",
+                PostgresqlContract.ScheduleTable.STATION_ID_KEY, PostgresqlContract.StationTable.NAME_KEY,
+                PostgresqlContract.StationTable.LATLNG_KEY, LAT_KEY,
+                PostgresqlContract.StationTable.LATLNG_KEY, LNG_KEY,
+
+                PostgresqlContract.ScheduleTable.TIME_KEY, startTime.getHour(), startTime.getMinute(), startTime.getSecond(),
+                DELTA_KEY,
+
+                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.StationTable.TABLE_NAME,
+                PostgresqlContract.ScheduleTable.STATION_ID_KEY,
+                PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.ID_KEY,
+                PostgresqlContract.ScheduleTable.CHAIN_ID_KEY, chain.getID().getId(),
+                buildTimeQuery(startTime, maxDelta)
+        );
+
+        Map<TransStation, TimeDelta> rval = new HashMap<>();
+        try {
+            Statement stm = con.createStatement();
+            ResultSet rs = stm.executeQuery(query);
+
+            while (rs.isBeforeFirst()) rs.next();
+            do {
+                int stid = rs.getInt(PostgresqlContract.ScheduleTable.STATION_ID_KEY);
+                String name = rs.getString(PostgresqlContract.StationTable.NAME_KEY);
+                double lat = rs.getDouble(LAT_KEY);
+                double lng = rs.getDouble(LNG_KEY);
+                TransStation station = new TransStation(
+                        name,
+                        new double[] { lat, lng },
+                        new DatabaseID(url, "" + stid)
+                );
+
+                int rawDelta = rs.getInt(DELTA_KEY);
+                int delta = 1000 * (rawDelta >= 0 ? rawDelta : 86400 + rawDelta);
+                TimeDelta deltaObj = new TimeDelta(delta);
+
+                rval.put(station, deltaObj);
+
+            } while (rs.next());
+
+            return rval;
+        } catch (SQLException e) {
+            LoggingUtils.logError(e);
+            isUp = false;
+            return Collections.emptyMap();
+        }
+
     }
 
     @Override
@@ -304,66 +369,30 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
         }
     }
 
-    @Override
-    public Map<TransStation, TimeDelta> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta) {
-        if (!isUp || con == null || chain == null || chain.getID() == null || !url.equals(chain.getID()
-                .getDatabaseName())) {
-            return Collections.emptyMap();
+    private static String buildTimeQuery(TimePoint startTime, TimeDelta maxDelta) {
+
+        if (maxDelta.getDeltaLong() >= (24 * 60 * 60 * 1000L)) {
+            return String.format(" %s BETWEEN %d AND %d",
+                    "packedtime", 0, 86400
+            );
         }
 
-        String query = String.format(
-                "SELECT %s, %s, " +
-                        "ST_X(%s::geometry) AS %s, " +
-                        "ST_Y(%s::geometry) AS %s, " +
-                        "EXTRACT('epoch' FROM %s - '%d:%d:%d)' AS %s" +
-                        "FROM %s, %s " +
-                        "WHERE %s=%s.%s AND %s=%s AND %s",
-                PostgresqlContract.ScheduleTable.STATION_ID_KEY, PostgresqlContract.StationTable.NAME_KEY,
-                PostgresqlContract.StationTable.LATLNG_KEY, LAT_KEY,
-                PostgresqlContract.StationTable.LATLNG_KEY, LNG_KEY,
-
-                PostgresqlContract.ScheduleTable.TIME_KEY, startTime.getHour(), startTime.getMinute(), startTime.getSecond(),
-                DELTA_KEY,
-
-                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.StationTable.TABLE_NAME,
-                PostgresqlContract.ScheduleTable.STATION_ID_KEY,
-                PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.ID_KEY,
-                PostgresqlContract.ScheduleTable.CHAIN_ID_KEY, chain.getID().getId(),
-                buildTimeQuery(startTime, maxDelta)
-        );
-
-        Map<TransStation, TimeDelta> rval = new HashMap<>();
-        try {
-            Statement stm = con.createStatement();
-            ResultSet rs = stm.executeQuery(query);
-
-            while (rs.isBeforeFirst()) rs.next();
-            do {
-                int stid = rs.getInt(PostgresqlContract.ScheduleTable.STATION_ID_KEY);
-                String name = rs.getString(PostgresqlContract.StationTable.NAME_KEY);
-                double lat = rs.getDouble(LAT_KEY);
-                double lng = rs.getDouble(LNG_KEY);
-                TransStation station = new TransStation(
-                        name,
-                        new double[] { lat, lng },
-                        new DatabaseID(url, "" + stid)
-                );
-
-                int rawDelta = rs.getInt(DELTA_KEY);
-                int delta = 1000 * (rawDelta >= 0 ? rawDelta : 86400 + rawDelta);
-                TimeDelta deltaObj = new TimeDelta(delta);
-
-                rval.put(station, deltaObj);
-
-            } while (rs.next());
-
-            return rval;
-        } catch (SQLException e) {
-            LoggingUtils.logError(e);
-            isUp = false;
-            return Collections.emptyMap();
+        TimePoint endTime = startTime.plus(maxDelta);
+        if (endTime.getHour() >= startTime.getHour()) {
+            return String.format(" %s BETWEEN %d AND %d",
+                    "packedtime",
+                    startTime.getHour() * 3600 + startTime.getMinute() * 60 + startTime.getSecond(),
+                    endTime.getHour() * 3600 + endTime.getMinute() * 60 + endTime.getSecond()
+            );
+        } else {
+            return String.format(" (%s BETWEEN %d AND %d OR %s BETWEEN 0 AND %d)",
+                    "packedtime",
+                    startTime.getHour() * 3600 + startTime.getMinute() * 60 + startTime.getSecond(),
+                    86399,
+                    "packedtime",
+                    endTime.getHour() * 3600 + endTime.getMinute() * 60 + endTime.getSecond()
+            );
         }
-
     }
 
     @Override
@@ -448,27 +477,8 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
         }
     }
 
-    private static String buildTimeQuery(TimePoint startTime, TimeDelta maxDelta) {
-
-        TimePoint endTime = startTime.plus(maxDelta);
-        if (endTime.getHour() >= startTime.getHour()) {
-            return String.format(" %s BETWEEN %d AND %d",
-                    "packedtime",
-                    startTime.getHour() * 3600 + startTime.getMinute() * 60 + startTime.getSecond(),
-                    endTime.getHour() * 3600 + endTime.getMinute() * 60 + endTime.getSecond()
-            );
-        } else {
-            return String.format(" (%s BETWEEN %d AND %d OR %s BETWEEN 0 AND %d)",
-                    "packedtime",
-                    startTime.getHour() * 3600 + startTime.getMinute() * 60 + startTime.getSecond(),
-                    86399,
-                    "packedtime",
-                    endTime.getHour() * 3600 + endTime.getMinute() * 60 + endTime.getSecond()
-            );
-        }
-    }
-
-    public Map<TransChain, Map<TransStation, List<SchedulePoint>>> getAllInfoInArea(LocationPoint center, TimePoint startTime, TimeDelta maxDelta) {
+    @Override
+    public Map<TransChain, Map<TransStation, List<SchedulePoint>>> getWorld(LocationPoint center, TimePoint startTime, TimeDelta maxDelta) {
 
         LoggingUtils.logMessage(TAG, "Entering batch into request.");
         String query = String.format("SELECT %s.%s, %s, %s, " +
@@ -551,5 +561,9 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
             LoggingUtils.logError(e);
             return Collections.emptyMap();
         }
+    }
+
+    public String getSourceName() {
+        return url;
     }
 }
