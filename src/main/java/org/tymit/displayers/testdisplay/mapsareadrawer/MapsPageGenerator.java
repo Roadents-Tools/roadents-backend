@@ -1,11 +1,16 @@
 package org.tymit.displayers.testdisplay.mapsareadrawer;
 
-import org.tymit.projectdonut.logic.donutdisplay.DonutWalkMaximumTImeIndependentSupport;
+import com.google.common.collect.Lists;
+import org.tymit.projectdonut.logic.donut.DonutLogicSupport;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.StartPoint;
+import org.tymit.projectdonut.model.routing.TravelRoute;
 import org.tymit.projectdonut.model.time.TimeDelta;
+import org.tymit.projectdonut.model.time.TimePoint;
+import org.tymit.projectdonut.stations.StationRetriever;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
+import org.tymit.projectdonut.utils.StreamUtils;
 
 import java.awt.*;
 import java.nio.file.Files;
@@ -13,6 +18,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -39,32 +46,58 @@ public class MapsPageGenerator {
     private static String API_KEY = "AIzaSyB0pBdXuC4VRte73qnVtE5pLmxNs3ju0Gg";
 
 
-    public static Stream<String> generateIndividualPagesFromFile(String fileName, TimeDelta maxDelta) {
-        return readLatLngFromFile(fileName)
+    public static Stream<String> generateIndividualPagesFromFile(String fileName, TimePoint startTime, TimeDelta maxDelta) {
+        return readLatLngFromFile(fileName).stream()
                 .peek(a -> LoggingUtils.logMessage("MapGenerator", "Now using latlng %s.", a.toString()))
-                .map(latlng -> generateIndivitualPage(latlng, maxDelta));
+                .map(latlng -> generateIndivitualPage(latlng, startTime, maxDelta));
     }
 
-    public static Stream<StartPoint> readLatLngFromFile(String fileName) {
+    public static List<StartPoint> readLatLngFromFile(String fileName) {
         try {
             return Files.lines(Paths.get(fileName))
                     .map(line -> line.split(","))
                     .peek(a -> LoggingUtils.logMessage("MapGenerator", "Now parsing %s.", Arrays.toString(a)))
                     .map(pair -> new double[] { Double.valueOf(pair[0]), Double.valueOf(pair[1]) })
-                    .map(StartPoint::new);
+                    .map(StartPoint::new)
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             LoggingUtils.logError(e);
-            return Stream.empty();
+            return Collections.emptyList();
         }
     }
 
-    private static String generateIndivitualPage(StartPoint start, TimeDelta maxDelta) {
-        return generateCompositePage(Stream.of(start), maxDelta);
+    private static String generateIndivitualPage(StartPoint start, TimePoint startTime, TimeDelta maxDelta) {
+        return generateCompositePage(Lists.newArrayList(start), startTime, maxDelta);
     }
 
-    private static String generateCompositePage(Stream<StartPoint> starts, TimeDelta maxDelta) {
-        List<Map<LocationPoint, TimeDelta>> areas = starts
-                .map(start -> DonutWalkMaximumTImeIndependentSupport.buildStationRouteList(start, maxDelta))
+    private static String generateCompositePage(List<StartPoint> starts, TimePoint startTime, TimeDelta maxDelta) {
+
+        double latsum = 0;
+        double lngsum = 0;
+        for (StartPoint st : starts) {
+            latsum += st.getCoordinates()[0];
+            lngsum += st.getCoordinates()[1];
+        }
+
+        latsum /= starts.size();
+        lngsum /= starts.size();
+
+        LocationPoint centroid = new StartPoint(new double[] { latsum, lngsum });
+        TimeDelta maxDistTime = starts.stream()
+                .map(start -> LocationUtils.timeBetween(start, centroid))
+                .max(Comparator.comparing(TimeDelta::getDeltaLong))
+                .orElse(new TimeDelta(0));
+
+        TimeDelta worldDelta = maxDelta.plus(maxDistTime);
+
+        StationRetriever.prepareWorld(centroid, startTime, worldDelta);
+
+
+        List<Map<LocationPoint, TimeDelta>> areas = starts.stream()
+                .map(start -> DonutLogicSupport.buildStationRouteList(start, startTime, maxDelta))
+                .map(routes -> routes.stream()
+                        .collect(StreamUtils.collectWithMapping(TravelRoute::getCurrentEnd, route -> maxDelta.minus(route
+                                .getTotalTime()))))
                 .collect(Collectors.toList());
 
         return generatePage(areas);
@@ -108,7 +141,7 @@ public class MapsPageGenerator {
         return String.format(MapsPageConstants.HTML_FORMAT, javascript, API_KEY);
     }
 
-    public static String generateCompositePageFromFile(String fileName, TimeDelta maxDelta) {
-        return generateCompositePage(readLatLngFromFile(fileName), maxDelta);
+    public static String generateCompositePageFromFile(String fileName, TimePoint startTime, TimeDelta maxDelta) {
+        return generateCompositePage(readLatLngFromFile(fileName), startTime, maxDelta);
     }
 }
