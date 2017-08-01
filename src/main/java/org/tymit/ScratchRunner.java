@@ -12,6 +12,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -25,15 +26,15 @@ public class ScratchRunner {
 
         LoggingUtils.setPrintImmediate(true);
 
-        String data = null;
+        List<String> data = null;
+        String outputFile = null;
         for (int i = 0; i < args.length; i++) {
             if ("-f".equals(args[i]) && args.length > i + 1) {
                 String filePath = args[i + 1];
-                data = Files.readAllLines(Paths.get(filePath)).stream()
-                        .collect(StringBuilder::new, StringBuilder::append, (r, r2) -> r.append(r2.toString()))
-                        .toString();
-
-                break;
+                data = new ArrayList<>(Files.readAllLines(Paths.get(filePath)));
+            }
+            if ("-o".equals(args[i]) && args.length > i + 1) {
+                outputFile = args[i + 1];
             }
         }
 
@@ -42,13 +43,18 @@ public class ScratchRunner {
             return;
         }
 
-        ByteArrayInputStream stream = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        for (String input : data) {
+            System.out.printf("Input: \n\n%s\n\n", input);
+            ByteArrayInputStream stream = new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8));
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
 
-        LambdaHandler handler = new LambdaHandler();
-        handler.handleRequest(stream, output, null);
+            LambdaHandler handler = new LambdaHandler();
+            handler.handleRequest(stream, output, null);
 
-        System.out.printf("Output: \n\n%s\n\n", output.toString("utf-8"));
+            if (outputFile != null) {
+                Files.write(Paths.get(outputFile), output.toByteArray());
+            } else System.out.printf("Output: \n\n%s\n\n", output.toString("utf-8"));
+        }
     }
 
 
