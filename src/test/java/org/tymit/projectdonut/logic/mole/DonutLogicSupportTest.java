@@ -8,6 +8,7 @@ import org.junit.Test;
 import org.tymit.projectdonut.locations.LocationRetriever;
 import org.tymit.projectdonut.locations.test.TestLocationProvider;
 import org.tymit.projectdonut.logic.donut.DonutLogicSupport;
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.model.location.StartPoint;
@@ -176,8 +177,8 @@ public class DonutLogicSupportTest {
         Set<DestinationLocation> testLocations = Sets.newHashSetWithExpectedSize(WALKABLEPTS.length);
         for (double[] walkable : WALKABLEPTS) {
             DestinationLocation testStation = new DestinationLocation(String.format("Test: %f,%f", walkable[0], walkable[1]), testType, walkable);
-            double dist = LocationUtils.distanceBetween(new StartPoint(walkable), new StartPoint(CENTER)).inMiles();
-            long delta = LocationUtils.distanceToWalkTime(dist, true);
+            Distance dist = LocationUtils.distanceBetween(new StartPoint(walkable), new StartPoint(CENTER));
+            long delta = LocationUtils.distanceToWalkTime(dist).getDeltaLong();
             expected.add(new TravelRouteNode.Builder().setPoint(testStation).setWalkTime(delta).build());
             testLocations.add(testStation);
         }
@@ -195,8 +196,8 @@ public class DonutLogicSupportTest {
         Set<TransStation> testStations = new HashSet<>(WALKABLEPTS.length);
         for (double[] walkable : WALKABLEPTS) {
             TransStation testStation = new TransStation(String.format("Test: %f,%f", walkable[0], walkable[1]), walkable);
-            double dist = LocationUtils.distanceBetween(new StartPoint(walkable), new StartPoint(CENTER)).inMiles();
-            long delta = LocationUtils.distanceToWalkTime(dist, true);
+            Distance dist = LocationUtils.distanceBetween(new StartPoint(walkable), new StartPoint(CENTER));
+            long delta = LocationUtils.distanceToWalkTime(dist).getDeltaLong();
             expected.add(new TravelRouteNode.Builder().setWalkTime(delta).setPoint(testStation).build());
             testStations.add(testStation);
         }

@@ -8,6 +8,7 @@ import org.tymit.projectdonut.locations.LocationRetriever;
 import org.tymit.projectdonut.locations.test.TestLocationProvider;
 import org.tymit.projectdonut.logic.ApplicationRunner;
 import org.tymit.projectdonut.logic.donut.DonutLogicSupport;
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
@@ -133,8 +134,8 @@ public class DonutLogicCoreTest {
                                 && current instanceof TransStation
                                 && ((TransStation) prev).getChain().equals(((TransStation) current).getChain())
                         )) {
-                            double distance = LocationUtils.distanceBetween(prev, current).inMiles();
-                            long addedTime = LocationUtils.distanceToWalkTime(distance, true);
+                            Distance distance = LocationUtils.distanceBetween(prev, current);
+                            long addedTime = LocationUtils.distanceToWalkTime(distance).getDeltaLong();
                             calcDelta += addedTime;
                             continue;
                         }

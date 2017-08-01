@@ -3,7 +3,6 @@ package org.tymit.projectdonut.utils;
 import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.LocationPoint;
-import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.time.TimeDelta;
 
 /**
@@ -15,24 +14,11 @@ public class LocationUtils {
      * Constants For Math
      **/
     public static final double EARTH_RADIUS_KM = 6367.449; //kilometers
-    private static final double AVG_WALKING_SPEED_MPH = 3.1075;
     private static final double AVG_WALKING_SPEED_KPH = 5.0;
     private static final double SAFETY_FACTOR = 1;
 
-    @Deprecated
-    private static long timeBetween(double[] l1, double[] l2) {
-        return distanceToWalkTime(distanceBetween(new StartPoint(l1), new StartPoint(l2))).getDeltaLong();
-    }
-
     public static TimeDelta timeBetween(LocationPoint a, LocationPoint b) {
-        return new TimeDelta(timeBetween(a.getCoordinates(), b.getCoordinates()));
-    }
-
-    @Deprecated
-    public static long distanceToWalkTime(double distance, boolean miles) {
-        double hours = (miles) ? distance / AVG_WALKING_SPEED_MPH : distance / AVG_WALKING_SPEED_KPH;
-        double millis = hours * 1000.0 * 60.0 * 60.0 * SAFETY_FACTOR;
-        return (long) millis;
+        return distanceToWalkTime(distanceBetween(a, b));
     }
 
     public static Distance distanceBetween(LocationPoint p1, LocationPoint p2) {
@@ -59,12 +45,6 @@ public class LocationUtils {
         double timeHours = time.getDeltaLong() / 1000.0 / 60.0 / 60.0;
         double km = (AVG_WALKING_SPEED_KPH * timeHours) / SAFETY_FACTOR;
         return new Distance(km, DistanceUnits.KILOMETERS);
-    }
-
-    @Deprecated
-    public static double timeToWalkDistance(long time, boolean miles) {
-        double timeHours = time / 1000.0 / 60.0 / 60.0;
-        return (miles) ? AVG_WALKING_SPEED_MPH * timeHours / SAFETY_FACTOR : AVG_WALKING_SPEED_KPH * timeHours / SAFETY_FACTOR;
     }
 
 }
