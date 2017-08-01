@@ -3,6 +3,7 @@ package org.tymit.projectdonut.utils;
 import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.LocationPoint;
+import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.time.TimeDelta;
 
 /**
@@ -20,7 +21,7 @@ public class LocationUtils {
     private static final double SAFETY_FACTOR = 1;
 
     private static long timeBetween(double[] l1, double[] l2) {
-        return distanceToWalkTime(distanceBetween(l1, l2, true), true);
+        return distanceToWalkTime(distanceBetween(new StartPoint(l1), new StartPoint(l2))).getDeltaLong();
     }
 
     public static TimeDelta timeBetween(LocationPoint a, LocationPoint b) {
@@ -47,16 +48,30 @@ public class LocationUtils {
         return (long) millis;
     }
 
-    public static Distance distanceBetween(LocationPoint a, LocationPoint b) {
-        return new Distance(distanceBetween(a.getCoordinates(), b.getCoordinates(), false), DistanceUnits.KILOMETERS);
+    public static Distance distanceBetween(LocationPoint p1, LocationPoint p2) {
+        double[] l1 = p1.getCoordinates();
+        double[] l2 = p2.getCoordinates();
+        double dLat = Math.toRadians(l2[0] - l1[0]);
+        double dLng = Math.toRadians(l2[1] - l1[1]);
+        double sindLat = Math.sin(dLat / 2);
+        double sindLng = Math.sin(dLng / 2);
+        double a = Math.pow(sindLat, 2) + Math.pow(sindLng, 2)
+                * Math.cos(Math.toRadians(l1[0]) * Math.cos(Math.toRadians(l2[0])));
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        double ckm = c * EARTH_RADIUS_KM;
+        return new Distance(ckm, DistanceUnits.KILOMETERS);
     }
 
     public static TimeDelta distanceToWalkTime(Distance distance) {
-        return new TimeDelta(distanceToWalkTime(distance.inKilometers(), false));
+        double hours = distance.inKilometers() / AVG_WALKING_SPEED_KPH;
+        double millis = hours * 1000.0 * 60.0 * 60.0 * SAFETY_FACTOR;
+        return new TimeDelta((long) millis);
     }
 
     public static Distance timeToWalkDistance(TimeDelta time) {
-        return new Distance(timeToWalkDistance(time.getDeltaLong(), false), DistanceUnits.KILOMETERS);
+        double timeHours = time.getDeltaLong() / 1000.0 / 60.0 / 60.0;
+        double km = (AVG_WALKING_SPEED_KPH * timeHours) / SAFETY_FACTOR;
+        return new Distance(km, DistanceUnits.KILOMETERS);
     }
 
     @Deprecated
