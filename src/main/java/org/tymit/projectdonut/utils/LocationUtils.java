@@ -11,8 +11,8 @@ public class LocationUtils {
     /**
      * Constants For Math
      **/
-    private static final double EARTH_RADIUS_MI = 3958.75; //miles
-    private static final double EARTH_RADIUS_KM = 6371.00; //kilometers
+    public static final double EARTH_RADIUS_MI = metersToMiles(6367449); //miles
+    public static final double EARTH_RADIUS_KM = 6367.449; //kilometers
     private static final double AVG_WALKING_SPEED_MPH = 3.1075;
     private static final double AVG_WALKING_SPEED_KPH = 5.0;
     private static final double SAFETY_FACTOR = 1;
