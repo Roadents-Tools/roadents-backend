@@ -4,6 +4,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.tymit.projectdonut.jsonconvertion.JsonConverter;
 import org.tymit.projectdonut.jsonconvertion.time.SchedulePointJsonConverter;
+import org.tymit.projectdonut.model.database.DatabaseID;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.SchedulePoint;
@@ -24,17 +25,25 @@ public class TransStationJsonConverter implements JsonConverter<TransStation> {
     private static final String LAT_TAG = "latitude";
     private static final String LNG_TAG = "longitude";
     private static final String SCHEDULE_TAG = "schedule";
+    private static final String ID_TAG = "id";
 
     @Override
     public String toJson(TransStation input) {
         JSONObject obj = new JSONObject();
         obj.put(NAME_TAG, input.getName());
-        obj.put(CHAIN_TAG, input.getChain().getName());
         obj.put(LAT_TAG, input.getCoordinates()[0]);
         obj.put(LNG_TAG, input.getCoordinates()[1]);
+        if (input.getChain() != null) {
+            obj.put(CHAIN_TAG, input.getChain().getName());
+        }
+        if (input.getSchedule() != null && !input.getSchedule().isEmpty()) {
+            JSONArray arr = new JSONArray(new SchedulePointJsonConverter().toJson(input.getSchedule()));
+            obj.put(SCHEDULE_TAG, arr);
+        }
+        if (input.getID() != null) {
+            obj.put(ID_TAG, input.getID().getDatabaseName() + "::" + input.getID().getId());
+        }
 
-        JSONArray arr = new JSONArray(new SchedulePointJsonConverter().toJson(input.getSchedule()));
-        obj.put(SCHEDULE_TAG, arr);
 
         return obj.toString();
     }
@@ -61,13 +70,25 @@ public class TransStationJsonConverter implements JsonConverter<TransStation> {
         String name = obj.getString(NAME_TAG);
         double[] coords = new double[] { obj.getDouble(LAT_TAG), obj.getDouble(LNG_TAG) };
 
-        String chainName = obj.getString(CHAIN_TAG);
-        chains.putIfAbsent(chainName, new TransChain(chainName));
-        TransChain chain = chains.get(chainName);
+        TransChain chain = null;
+        if (obj.has(CHAIN_TAG)) {
+            String chainName = obj.getString(CHAIN_TAG);
+            chains.putIfAbsent(chainName, new TransChain(chainName));
+            chain = chains.get(chainName);
+        }
 
         List<SchedulePoint> schedule = new ArrayList<>();
-        new SchedulePointJsonConverter().fromJson(obj.getJSONArray(SCHEDULE_TAG).toString(), schedule);
+        if (obj.has(SCHEDULE_TAG)) {
+            new SchedulePointJsonConverter().fromJson(obj.getJSONArray(SCHEDULE_TAG).toString(), schedule);
+        }
 
-        return new TransStation(name, coords, schedule, chain);
+        DatabaseID id = null;
+        if (obj.has(ID_TAG)) {
+            String[] components = obj.getString(ID_TAG).split("::");
+            id = new DatabaseID(components[0], components[1]);
+        }
+
+        if (chain != null) return new TransStation(name, coords, schedule, chain, id);
+        return new TransStation(name, coords, id);
     }
 }

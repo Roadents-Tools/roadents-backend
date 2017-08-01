@@ -79,7 +79,7 @@ public class TransStation implements LocationPoint, DatabaseObject {
     }
 
     public List<SchedulePoint> getSchedule() {
-        return new ArrayList<>(schedule);
+        return schedule == null ? null : new ArrayList<>(schedule);
     }
 
     public TimePoint getNextArrival(TimePoint start) {

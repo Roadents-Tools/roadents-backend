@@ -4,6 +4,7 @@ import org.json.JSONObject;
 import org.tymit.projectdonut.jsonconvertion.JsonConverter;
 import org.tymit.projectdonut.jsonconvertion.location.DestinationJsonConverter;
 import org.tymit.projectdonut.jsonconvertion.location.StartPointJsonConverter;
+import org.tymit.projectdonut.jsonconvertion.location.TransStationJsonConverter;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.StartPoint;
@@ -40,6 +41,7 @@ public class TravelRouteNodeJsonConverter implements JsonConverter<TravelRouteNo
     private final Map<String, TransChain> chainBucket;
     private StartPointJsonConverter startConv;
     private DestinationJsonConverter destConv;
+    private TransStationJsonConverter statConv;
 
     public TravelRouteNodeJsonConverter() {
         chainBucket = new ConcurrentHashMap<>();
@@ -77,27 +79,13 @@ public class TravelRouteNodeJsonConverter implements JsonConverter<TravelRouteNo
             obj.put(DEST_POINT_TAG, ptData);
             return obj;
         } else if (pt instanceof TransStation) {
-            obj.put(STATION_POINT_TAG, convertStation((TransStation) pt));
+            if (statConv == null) statConv = new TransStationJsonConverter();
+            obj.put(STATION_POINT_TAG, new JSONObject(statConv.toJson((TransStation) pt)));
             return obj;
         } else {
             LoggingUtils.logError(getClass().getName() + "::extractPt", "pt was not instance of known types.");
             return ERROR;
         }
-    }
-
-    private JSONObject convertStation(TransStation station) {
-        JSONObject stationObj = new JSONObject();
-
-        String stationName = station.getName();
-        stationObj.put(STATION_NAME_TAG, stationName);
-        String chainName = station.getChain().getName();
-        stationObj.put(STATION_CHAIN_TAG, chainName);
-        double stationLat = station.getCoordinates()[0];
-        stationObj.put(STATION_LAT_TAG, stationLat);
-        double stationLong = station.getCoordinates()[1];
-        stationObj.put(STATION_LONG_TAG, stationLong);
-
-        return stationObj;
     }
 
     @Override
@@ -122,24 +110,12 @@ public class TravelRouteNodeJsonConverter implements JsonConverter<TravelRouteNo
             if (destConv == null) destConv = new DestinationJsonConverter();
             return destConv.fromJson(input.getJSONObject(DEST_POINT_TAG).toString());
         } else if (input.has(STATION_POINT_TAG)) {
-            return convertStation(input.getJSONObject(STATION_POINT_TAG));
+            if (statConv == null) statConv = new TransStationJsonConverter();
+            return statConv.fromJson(input.getJSONObject(STATION_POINT_TAG).toString(), chainBucket);
         } else {
             LoggingUtils.logError(getClass().getName() + "::extractPt", "pt was not instance of known types.");
             return null;
         }
-    }
-
-    private TransStation convertStation(JSONObject jsonObj) {
-        String stationName = jsonObj.getString(STATION_NAME_TAG);
-        double stationLat = jsonObj.getDouble(STATION_LAT_TAG);
-        double stationLong = jsonObj.getDouble(STATION_LONG_TAG);
-        String chainName = jsonObj.getString(STATION_CHAIN_TAG);
-
-        if (chainBucket.get(chainName) == null) {
-            TransChain chain = new TransChain(chainName);
-            chainBucket.put(chainName, chain);
-        }
-        return new TransStation(stationName, new double[] { stationLat, stationLong }, null, chainBucket.get(chainName));
     }
 
 }
