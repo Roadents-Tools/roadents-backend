@@ -14,12 +14,12 @@ public class LocationUtils {
     /**
      * Constants For Math
      **/
-    public static final double EARTH_RADIUS_MI = metersToMiles(6367449); //miles
     public static final double EARTH_RADIUS_KM = 6367.449; //kilometers
     private static final double AVG_WALKING_SPEED_MPH = 3.1075;
     private static final double AVG_WALKING_SPEED_KPH = 5.0;
     private static final double SAFETY_FACTOR = 1;
 
+    @Deprecated
     private static long timeBetween(double[] l1, double[] l2) {
         return distanceToWalkTime(distanceBetween(new StartPoint(l1), new StartPoint(l2))).getDeltaLong();
     }
@@ -67,13 +67,4 @@ public class LocationUtils {
         return (miles) ? AVG_WALKING_SPEED_MPH * timeHours / SAFETY_FACTOR : AVG_WALKING_SPEED_KPH * timeHours / SAFETY_FACTOR;
     }
 
-    @Deprecated
-    public static double milesToMeters(double miles){
-        return miles * 1000 * AVG_WALKING_SPEED_KPH/AVG_WALKING_SPEED_MPH;
-    }
-
-    @Deprecated
-    public static double metersToMiles(double meters) {
-        return meters / 1000 * AVG_WALKING_SPEED_MPH / AVG_WALKING_SPEED_KPH;
-    }
 }

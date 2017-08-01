@@ -22,6 +22,8 @@ import com.amazonaws.services.dynamodbv2.model.KeyType;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
+import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
@@ -196,7 +198,7 @@ public class DynamoStationChainDb implements StationDbInstance.ComboDb {
 
         GeoHashCircleQuery circleQuery = new GeoHashCircleQuery(
                 new WGS84Point(center[0], center[1]),
-                LocationUtils.milesToMeters(range)
+                new Distance(range, DistanceUnits.MILES).inMeters()
         );
 
         List<Long> shortHashes = circleQuery.getSearchHashes().stream()

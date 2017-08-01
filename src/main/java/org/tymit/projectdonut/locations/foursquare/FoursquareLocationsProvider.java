@@ -5,6 +5,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.tymit.projectdonut.locations.interfaces.LocationProvider;
+import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.model.location.StartPoint;
@@ -67,7 +69,7 @@ public class FoursquareLocationsProvider implements LocationProvider {
         //Build the parameters for the call
         StartPoint startPoint = new StartPoint(center);
         String ll = center[0]+","+center[1];
-        int rangeInMeters = 1+(int) LocationUtils.milesToMeters(range);
+        int rangeInMeters = 1 + (int) new Distance(range, DistanceUnits.MILES).inMeters();
 
         if (categories == null || categories.isEmpty()) buildCategoryMap();
         String category = (categories.containsKey(type.getEncodedname())) ? categories.get(type.getEncodedname()) : categories.get(type.getVisibleName());

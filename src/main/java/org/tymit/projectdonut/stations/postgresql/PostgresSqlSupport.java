@@ -1,11 +1,12 @@
 package org.tymit.projectdonut.stations.postgresql;
 
+import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.SchedulePoint;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
-import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 import org.tymit.projectdonut.utils.ProfilingUtils;
 
@@ -45,7 +46,7 @@ public class PostgresSqlSupport {
     private static final long BATCH_SIZE = 300;
     private static final long ERROR_MARGIN = 1; //meters
     public static final String TAG = "Postgres";
-    private static final double MAX_NO_REQUERY = LocationUtils.metersToMiles(250);
+    private static final Distance MAX_NO_REQUERY = new Distance(250, DistanceUnits.METERS);
 
 
     /**
@@ -55,11 +56,11 @@ public class PostgresSqlSupport {
     public static List<TransStation> getStrippedStations(Supplier<Connection> connectionSupplier,
                                                          double[] center, double range, int limit
     ) throws SQLException {
-        if (range <= MAX_NO_REQUERY) {
+        if (range <= MAX_NO_REQUERY.inMiles()) {
             return getStrippedStationsSingle(connectionSupplier, center, range, limit);
         }
 
-        double effectiverange = MAX_NO_REQUERY;
+        double effectiverange = MAX_NO_REQUERY.inMiles();
         List<TransStation> rval = getStrippedStationsSingle(connectionSupplier, center, effectiverange, limit);
         while (rval.size() < limit && effectiverange <= range) {
             if (range / effectiverange <= 2) {
@@ -87,7 +88,8 @@ public class PostgresSqlSupport {
                 PostgresqlContract.StationTable.LATLNG_KEY, LNG_COL_NAME,
                 PostgresqlContract.StationTable.NAME_KEY,
                 PostgresqlContract.StationTable.TABLE_NAME,
-                PostgresqlContract.StationTable.LATLNG_KEY, center[0], center[1], LocationUtils.milesToMeters(range),
+                PostgresqlContract.StationTable.LATLNG_KEY, center[0], center[1], new Distance(range, DistanceUnits.MILES)
+                        .inMeters(),
                 limit
         );
 
@@ -155,7 +157,8 @@ public class PostgresSqlSupport {
                 builder.append(" AND ");
             }
             builder.append(String.format(" ST_DWITHIN(%s, ST_POINT(%f, %f)::geography, %f) ",
-                    PostgresqlContract.StationTable.LATLNG_KEY, center[0], center[1], LocationUtils.milesToMeters(range)
+                    PostgresqlContract.StationTable.LATLNG_KEY, center[0], center[1], new Distance(range, DistanceUnits.MILES)
+                            .inMeters()
             ));
         }
         if (startTime != null && maxDelta != null) {
@@ -184,8 +187,7 @@ public class PostgresSqlSupport {
                         "AND %s <= to_timestamp(%d) " +
                         "AND %s + %s >= to_timestamp(%d)",
                 PostgresqlContract.RangeTable.ID_KEY, PostgresqlContract.RangeTable.TABLE_NAME,
-                center[0], center[1], PostgresqlContract.RangeTable.LAT_KEY, LocationUtils
-                        .milesToMeters(range),
+                center[0], center[1], PostgresqlContract.RangeTable.LAT_KEY, new Distance(range, DistanceUnits.MILES).inMeters(),
                 PostgresqlContract.RangeTable.TIME_KEY, startTime.getUnixTime(),
                 PostgresqlContract.RangeTable.TIME_KEY, PostgresqlContract.RangeTable.FUZZ_KEY,
                 startTime.plus(maxDelta).getUnixTime()
@@ -341,6 +343,8 @@ public class PostgresSqlSupport {
                 .getDeltaLong() : MAX_POSTGRES_INTERVAL_MILLI;
         Statement stm = con.createStatement();
 
+        Distance rangeDist = new Distance(range, DistanceUnits.MILES);
+
         //Insert the chains into the database in a batch
         AtomicInteger ctprev = new AtomicInteger(0);
         stations.stream()
@@ -400,10 +404,10 @@ public class PostgresSqlSupport {
                         "VALUES (ST_POINT(%f,%f)::geography, %f, to_timestamp(%d), INTERVAL '%d seconds') " +
                         "ON CONFLICT(%s, %s) DO UPDATE SET %s=%f, %s=to_timestamp(%d), %s=INTERVAL '%d seconds'",
                 PostgresqlContract.RangeTable.TABLE_NAME, PostgresqlContract.RangeTable.LAT_KEY, PostgresqlContract.RangeTable.BOX_KEY, PostgresqlContract.RangeTable.TIME_KEY, PostgresqlContract.RangeTable.FUZZ_KEY,
-                center[0], center[1], (LocationUtils.milesToMeters(range) != Double.POSITIVE_INFINITY) ? LocationUtils
-                        .milesToMeters(range) : 9e99, startTime.getUnixTime(), deltlong / 1000,
+                center[0], center[1], (rangeDist.inMeters() != Double.POSITIVE_INFINITY) ? rangeDist.inMeters() : 9e99,
+                startTime.getUnixTime(), deltlong / 1000,
                 PostgresqlContract.RangeTable.LAT_KEY, PostgresqlContract.RangeTable.TIME_KEY,
-                PostgresqlContract.RangeTable.BOX_KEY, LocationUtils.milesToMeters(range),
+                PostgresqlContract.RangeTable.BOX_KEY, rangeDist.inMeters(),
                 PostgresqlContract.RangeTable.TIME_KEY, startTime.getUnixTime(),
                 PostgresqlContract.RangeTable.FUZZ_KEY, deltlong / 1000
         );
