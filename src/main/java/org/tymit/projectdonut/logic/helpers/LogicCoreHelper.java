@@ -3,7 +3,6 @@ package org.tymit.projectdonut.logic.helpers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.tymit.projectdonut.logic.donut.DonutLogicCore;
-import org.tymit.projectdonut.logic.donutdisplay.DonutWalkRangeLogicCore;
 import org.tymit.projectdonut.logic.interfaces.LogicCore;
 import org.tymit.projectdonut.logic.mole.DonutABLogicCore;
 import org.tymit.projectdonut.logic.mole.MoleLogicCore;
@@ -39,7 +38,7 @@ public class LogicCoreHelper {
 
     private static LogicCore[] initializeCoresList() {
         return new LogicCore[] {
-                new DonutLogicCore(), new DonutABLogicCore(), new DonutWalkRangeLogicCore(),
+                new DonutLogicCore(), new DonutABLogicCore(),
                 new MoleLogicCore(), new WeaselLogicCore()
         };
     }

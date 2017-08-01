@@ -38,6 +38,14 @@ public class TimePoint implements Comparable<TimePoint> {
         this.timeZone = timeZone;
     }
 
+    public static TimePoint now() {
+        return now("GMT");
+    }
+
+    public static TimePoint now(String timeZone) {
+        return new TimePoint(System.currentTimeMillis(), timeZone);
+    }
+
     public TimePoint withYear(int year) {
         Calendar cal = getCalendar();
         cal.set(Calendar.YEAR, year);
