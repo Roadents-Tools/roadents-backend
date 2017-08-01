@@ -2,7 +2,9 @@ package org.tymit.projectdonut.locations.helpers;
 
 import org.tymit.projectdonut.locations.interfaces.LocationCacheInstance;
 import org.tymit.projectdonut.locations.memory.MemoryMapLocationCache;
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
 
 import java.util.Arrays;
@@ -29,7 +31,7 @@ public class LocationCacheHelper {
         return instance;
     }
 
-    public List<DestinationLocation> getCachedLocations(double[] center, double range, LocationType type) {
+    public List<DestinationLocation> getCachedLocations(LocationPoint center, Distance range, LocationType type) {
         return Arrays.stream(allInstances)
                 .map(instance -> instance.getCachedLocations(center, range, type))
                 .filter(Objects::nonNull)
@@ -37,7 +39,7 @@ public class LocationCacheHelper {
                 .orElse(null);
     }
 
-    public void cacheLocations(double[] center, double range, LocationType type, List<DestinationLocation> locations) {
+    public void cacheLocations(LocationPoint center, Distance range, LocationType type, List<DestinationLocation> locations) {
         allInstances[0].cacheLocations(center, range, type, locations);
     }
 

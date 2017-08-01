@@ -3,8 +3,12 @@ package org.tymit.projectdonut.locations.caches;
 import org.junit.Assert;
 import org.junit.Test;
 import org.tymit.projectdonut.locations.memory.MemoryMapLocationCache;
+import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
+import org.tymit.projectdonut.model.location.StartPoint;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,6 +31,8 @@ public class MemoryMapLocationCacheTest {
         Random rng = new Random(123);
         List<LocationType> types = new ArrayList<>();
         Map<LocationType, Set<DestinationLocation>> trueVals = new HashMap<>();
+        LocationPoint startPoint = new StartPoint(new double[] { 60, 60 });
+        Distance mile = new Distance(1, DistanceUnits.MILES);
         for (int i = 0; i < 10; i++) {
             String typeName = rng.ints(5).collect(StringBuilder::new, (r, value) -> r.append(value), (r, r2) -> r.append(r2.toString())).toString();
             LocationType type = new LocationType(typeName, typeName);
@@ -35,18 +41,18 @@ public class MemoryMapLocationCacheTest {
             Set<DestinationLocation> dests = new HashSet<>();
             for (int j = 0; j < 10; j++) {
                 String destName = rng.ints(7).collect(StringBuilder::new, (r, value) -> r.append(value), (r, r2) -> r.append(r2.toString())).toString();
-                DestinationLocation dest = new DestinationLocation(destName, type, new double[] { 60, 60 });
+                DestinationLocation dest = new DestinationLocation(destName, type, startPoint.getCoordinates());
                 dests.add(dest);
             }
             trueVals.put(type, dests);
-            testCache.cacheLocations(new double[] { 60, 60 }, 1, type, new ArrayList<>(dests));
+            testCache.cacheLocations(startPoint, mile, type, new ArrayList<>(dests));
         }
 
         /* TEST */
         for (LocationType type : types) {
-            List<DestinationLocation> actualEqual = testCache.getCachedLocations(new double[] { 60, 60 }, 1, type);
-            List<DestinationLocation> actualLess = testCache.getCachedLocations(new double[] { 60, 60 }, 0.5, type);
-            List<DestinationLocation> actualGreater = testCache.getCachedLocations(new double[] { 60, 60 }, 1.5, type);
+            List<DestinationLocation> actualEqual = testCache.getCachedLocations(startPoint, mile, type);
+            List<DestinationLocation> actualLess = testCache.getCachedLocations(startPoint, mile.div(2), type);
+            List<DestinationLocation> actualGreater = testCache.getCachedLocations(startPoint, mile.mul(1.5), type);
 
             Assert.assertEquals(trueVals.get(type), new HashSet<>(actualEqual));
             Assert.assertEquals(trueVals.get(type), new HashSet<>(actualLess));

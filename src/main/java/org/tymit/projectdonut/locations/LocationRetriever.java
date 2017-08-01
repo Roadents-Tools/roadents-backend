@@ -23,11 +23,11 @@ public class LocationRetriever {
     public static List<DestinationLocation> getLocations(LocationPoint center, Distance range, LocationType type, List<CostArgs> args) {
         List<DestinationLocation> locations = null;
         if (!isTest) locations = LocationCacheHelper.getHelper()
-                .getCachedLocations(center.getCoordinates(), range.inMiles(), type);
+                .getCachedLocations(center, range, type);
         if (locations == null) {
             locations = LocationProviderHelper.getHelper().getLocations(center, range, type);
             if (!isTest) LocationCacheHelper.getHelper()
-                    .cacheLocations(center.getCoordinates(), range.inMiles(), type, locations);
+                    .cacheLocations(center, range, type, locations);
         }
         if (locations == null || locations.size() == 0) return new ArrayList<>(0);
 

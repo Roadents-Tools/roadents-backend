@@ -1,9 +1,11 @@
 package org.tymit.projectdonut.locations.memory;
 
 import org.tymit.projectdonut.locations.interfaces.LocationCacheInstance;
+import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.DestinationLocation;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
-import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.utils.LocationUtils;
 
 import java.util.ArrayList;
@@ -17,10 +19,10 @@ import java.util.stream.Collectors;
  */
 public class MemoryMapLocationCache implements LocationCacheInstance {
 
-    private static final double ERROR_MARGIN = .000001;
+    private static final double ERROR_MARGIN = .001;
 
     private final Map<String, List<DestinationLocation>> cache;
-    private final Map<String, Double> ranges;
+    private final Map<String, Distance> ranges;
 
     public MemoryMapLocationCache() {
         this.cache = new ConcurrentHashMap<>();
@@ -28,24 +30,25 @@ public class MemoryMapLocationCache implements LocationCacheInstance {
     }
 
     @Override
-    public void cacheLocations(double[] center, double range, LocationType type, List<DestinationLocation> locations) {
-        if (center == null || range == 0 || type == null || locations == null) return; //Arg check
+    public void cacheLocations(LocationPoint center, Distance range, LocationType type, List<DestinationLocation> locations) {
+        if (center == null || range.inMeters() == 0 || type == null || locations == null) return; //Arg check
         String tag = generateTag(center, type);
-        if (ranges.getOrDefault(tag, 0.0) >= range) return; //Already cached
+        if (ranges.getOrDefault(tag, new Distance(0, DistanceUnits.METERS)).inMeters() >= range.inMeters())
+            return; //Already cached
         locations = new ArrayList<>(locations); //To not modify the old list
         cache.put(tag, locations);
         ranges.put(tag, range);
     }
 
     @Override
-    public List<DestinationLocation> getCachedLocations(double[] center, double range, LocationType type) {
+    public List<DestinationLocation> getCachedLocations(LocationPoint center, Distance range, LocationType type) {
         String tag = generateTag(center, type);
-        double cachedRange = ranges.getOrDefault(tag, 0.0);
-        if (cachedRange < range) return null;
-        if (Math.abs(cachedRange - range) < ERROR_MARGIN) return cache.get(tag);
-        StartPoint startPoint = new StartPoint(center);
+        Distance cachedRange = ranges.getOrDefault(tag, new Distance(0, DistanceUnits.METERS));
+        if (cachedRange.inMeters() < range.inMeters()) return null;
+        if (Math.abs(cachedRange.inMeters() - range.inMeters()) < ERROR_MARGIN) return cache.get(tag);
         return cache.get(tag).stream()
-                .filter(toCheck -> LocationUtils.distanceBetween(toCheck, startPoint).inMiles() <= range + ERROR_MARGIN)
+                .filter(toCheck -> LocationUtils.distanceBetween(toCheck, center)
+                        .inMiles() <= range.inMeters() + ERROR_MARGIN)
                 .collect(Collectors.toList());
     }
 
@@ -67,7 +70,7 @@ public class MemoryMapLocationCache implements LocationCacheInstance {
         clear();
     }
 
-    private static String generateTag(double[] center, LocationType type) {
-        return center[0] + type.getEncodedname() + center[1];
+    private static String generateTag(LocationPoint center, LocationType type) {
+        return center.getCoordinates()[0] + type.getEncodedname() + center.getCoordinates()[1];
     }
 }
