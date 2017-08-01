@@ -1,6 +1,7 @@
 package org.tymit.projectdonut.stations.postgresql;
 
 import org.tymit.projectdonut.model.database.DatabaseID;
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
@@ -103,17 +104,16 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
     }
 
     @Override
-    public List<TransStation> getStationsInArea(LocationPoint center, double range) {
-        if (!isUp || con == null || center == null || range < 0) return Collections.emptyList();
+    public List<TransStation> getStationsInArea(LocationPoint center, Distance range) {
+        if (!isUp || con == null || center == null || range.inMeters() < 0) return Collections.emptyList();
 
-        range = LocationUtils.milesToMeters(range);
         String query = String.format(
                 "SELECT %s, %s, ST_X(%s::geometry) AS %s, ST_Y(%s::geometry) AS %s FROM %s " +
                         "WHERE ST_DWITHIN(%s, ST_POINT(%f, %f)::geography, %f)",
                 PostgresqlContract.StationTable.ID_KEY, PostgresqlContract.StationTable.NAME_KEY,
                 PostgresqlContract.StationTable.LATLNG_KEY, LAT_KEY, PostgresqlContract.StationTable.LATLNG_KEY, LNG_KEY,
                 PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.LATLNG_KEY,
-                center.getCoordinates()[0], center.getCoordinates()[1], range
+                center.getCoordinates()[0], center.getCoordinates()[1], range.inMeters()
         );
 
         LoggingUtils.logMessage(TAG, "Query: %s\n", query);
@@ -128,7 +128,7 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
                 String name = rs.getString(PostgresqlContract.StationTable.NAME_KEY);
                 double lat = rs.getDouble(LAT_KEY);
                 double lng = rs.getDouble(LNG_KEY);
-                if (LocationUtils.distanceBetween(new double[] { lat, lng }, center.getCoordinates(), true) <= range) {
+                if (LocationUtils.distanceBetween(new double[] { lat, lng }, center.getCoordinates(), true) <= range.inMiles()) {
                     rval.add(new TransStation(name, new double[] { lat, lng }, new DatabaseID(url, "" + id)));
                 }
             } while (rs.next());

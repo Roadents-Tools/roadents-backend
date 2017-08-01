@@ -1,5 +1,6 @@
 package org.tymit.projectdonut.stations.interfaces;
 
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
@@ -30,15 +31,15 @@ public interface StationCacheInstance {
     interface DonutCache extends StationCacheInstance {
 
 
-        List<TransStation> getStationsInArea(LocationPoint center, double range);
-
-        default Map<LocationPoint, List<TransStation>> getStationsInArea(Map<LocationPoint, Double> ranges) {
+        default Map<LocationPoint, List<TransStation>> getStationsInArea(Map<LocationPoint, Distance> ranges) {
             return ranges.entrySet().stream()
                     .collect(StreamUtils.collectWithMapping(
                             Map.Entry::getKey,
                             entry -> getStationsInArea(entry.getKey(), entry.getValue())
                     ));
         }
+
+        List<TransStation> getStationsInArea(LocationPoint center, Distance range);
 
         Map<TransChain, List<SchedulePoint>> getChainsForStation(TransStation station);
 
@@ -70,14 +71,12 @@ public interface StationCacheInstance {
 
         Map<TransStation, TimeDelta> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta);
 
-
-
-        boolean putArea(LocationPoint center, double range, List<TransStation> stations);
-
-        default boolean putAreas(Map<LocationPoint, Double> ranges, Map<LocationPoint, List<TransStation>> stations) {
+        default boolean putAreas(Map<LocationPoint, Distance> ranges, Map<LocationPoint, List<TransStation>> stations) {
             return ranges.entrySet().stream()
                     .allMatch(pt -> putArea(pt.getKey(), pt.getValue(), stations.get(pt.getKey())));
         }
+
+        boolean putArea(LocationPoint center, Distance range, List<TransStation> stations);
 
         default boolean putChainsForStations(Map<TransStation, Map<TransChain, List<SchedulePoint>>> stationsAndChains) {
             return stationsAndChains.entrySet().stream()
@@ -86,14 +85,14 @@ public interface StationCacheInstance {
 
         boolean putChainsForStations(TransStation station, Map<TransChain, List<SchedulePoint>> chains);
 
-        default Set<LocationPoint> checkAreas(Map<LocationPoint, Double> ranges) {
+        default Set<LocationPoint> checkAreas(Map<LocationPoint, Distance> ranges) {
             return ranges.entrySet().stream()
                     .filter(entry -> hasArea(entry.getKey(), entry.getValue()))
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toSet());
         }
 
-        default boolean hasArea(LocationPoint center, double range) {
+        default boolean hasArea(LocationPoint center, Distance range) {
             return !getStationsInArea(center, range).isEmpty();
         }
 

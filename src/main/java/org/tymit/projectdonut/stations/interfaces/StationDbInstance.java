@@ -1,5 +1,6 @@
 package org.tymit.projectdonut.stations.interfaces;
 
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
@@ -40,15 +41,15 @@ public interface StationDbInstance {
 
     interface DonutDb extends StationDbInstance {
 
-        List<TransStation> getStationsInArea(LocationPoint center, double range);
-
-        default Map<LocationPoint, List<TransStation>> getStationsInArea(Map<LocationPoint, Double> ranges) {
+        default Map<LocationPoint, List<TransStation>> getStationsInArea(Map<LocationPoint, Distance> ranges) {
             return ranges.entrySet().stream()
                     .collect(StreamUtils.collectWithMapping(
                             Map.Entry::getKey,
                             entry -> getStationsInArea(entry.getKey(), entry.getValue())
                     ));
         }
+
+        List<TransStation> getStationsInArea(LocationPoint center, Distance range);
 
         Map<TransChain, List<SchedulePoint>> getChainsForStation(TransStation station);
 

@@ -1,5 +1,6 @@
 package org.tymit.projectdonut.stations.helpers;
 
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
@@ -97,13 +98,13 @@ public class StationDbHelper {
         Arrays.stream(allDatabases).forEach(StationDbInstance::close);
     }
 
-    public List<TransStation> getStationsInArea(LocationPoint center, double range) {
+    public List<TransStation> getStationsInArea(LocationPoint center, Distance range) {
         Supplier<List<TransStation>> orElseSupplier = ArrayList::new;
 
         return doDonutQuery(db -> db.getStationsInArea(center, range), orElseSupplier);
     }
 
-    public Map<LocationPoint, List<TransStation>> getStationsInArea(Map<LocationPoint, Double> ranges) {
+    public Map<LocationPoint, List<TransStation>> getStationsInArea(Map<LocationPoint, Distance> ranges) {
         Supplier<Map<LocationPoint, List<TransStation>>> orElseSupplier = HashMap::new;
 
         return doDonutQuery(db -> db.getStationsInArea(ranges), orElseSupplier);

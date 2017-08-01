@@ -1,5 +1,6 @@
 package org.tymit.projectdonut.stations.helpers;
 
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
@@ -113,12 +114,12 @@ public class StationChainCacheHelper {
     }
 
 
-    public List<TransStation> getStationsInArea(LocationPoint center, double range) {
-        if (isTest || center == null || range < 0) {
+    public List<TransStation> getStationsInArea(LocationPoint center, Distance range) {
+        if (isTest || center == null || range.inMeters() < 0) {
             return Collections.emptyList();
         }
 
-        Supplier<List<TransStation>> fallback = () -> getCachedStations(center.getCoordinates(), range, null, null, null);
+        Supplier<List<TransStation>> fallback = () -> getCachedStations(center.getCoordinates(), range.inMiles(), null, null, null);
 
         return Arrays.stream(donutCaches)
                 .map(cache -> cache.getStationsInArea(center, range))
@@ -159,7 +160,7 @@ public class StationChainCacheHelper {
     }
 
 
-    public boolean putArea(LocationPoint center, double range, List<TransStation> stations) {
+    public boolean putArea(LocationPoint center, Distance range, List<TransStation> stations) {
         return Arrays.stream(donutCaches)
                 .anyMatch(cache -> cache.putArea(center, range, stations));
     }

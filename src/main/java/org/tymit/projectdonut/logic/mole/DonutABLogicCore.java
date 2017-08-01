@@ -91,14 +91,13 @@ public class DonutABLogicCore implements LogicCore {
                     LocationUtils.distanceBetween(center, start.getCoordinates(), true),
                     LocationUtils.distanceBetween(center, end.getCoordinates(), true)
             );
-            final TimeDelta maxDelta = new TimeDelta(LocationUtils.timeBetween(start.getCoordinates(), end.getCoordinates()));
+            final TimeDelta maxDelta = LocationUtils.timeBetween(start, end);
             StationRetriever.prepareArea(center, range, startTime, maxDelta);
         }
 
         TimeDelta maxTimeDelta = ends.stream()
-                .map(end -> LocationUtils.timeBetween(start.getCoordinates(), end.getCoordinates()))
-                .max(Long::compareTo)
-                .map(TimeDelta::new)
+                .map(end -> LocationUtils.timeBetween(start, end))
+                .max(Comparator.comparing(TimeDelta::getDeltaLong))
                 .orElse(new TimeDelta(-1));
 
         //Get the station routes
@@ -113,14 +112,14 @@ public class DonutABLogicCore implements LogicCore {
                     .filter(route -> !route.getRoute()
                             .get(route.getRoute().size() - 1)
                             .arrivesByFoot()) //Would be a future middleman
-                    .min(Comparator.comparing(route -> LocationUtils.timeBetween(route.getCurrentEnd()
-                            .getCoordinates(), end.getCoordinates())))
+                    .min(Comparator.comparing(route -> LocationUtils.timeBetween(route.getCurrentEnd(), end)
+                            .getDeltaLong()))
                     .orElse(stationRoutes.iterator().next()) //Pick a random on error
                     .clone();
 
             TravelRouteNode endNode = new TravelRouteNode.Builder()
                     .setPoint(end)
-                    .setWalkTime(LocationUtils.timeBetween(base.getCurrentEnd().getCoordinates(), end.getCoordinates()))
+                    .setWalkTime(LocationUtils.timeBetween(base.getCurrentEnd(), end).getDeltaLong())
                     .build();
             TravelRoute route = base.setDestinationNode(endNode);
             destRoutes.add(route);

@@ -2,6 +2,7 @@ package org.tymit.projectdonut.stations;
 
 import org.tymit.projectdonut.costs.CostCalculator;
 import org.tymit.projectdonut.costs.arguments.CostArgs;
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
@@ -132,7 +133,7 @@ public final class StationRetriever {
 
 
     //Post V2
-    public static List<TransStation> getStationsInArea(LocationPoint center, double range, List<CostArgs> args) {
+    public static List<TransStation> getStationsInArea(LocationPoint center, Distance range, List<CostArgs> args) {
         List<TransStation> allStations = StationChainCacheHelper.getHelper().getStationsInArea(center, range);
 
         if (allStations != null && !allStations.isEmpty()) return filterList(allStations, args);
@@ -148,7 +149,7 @@ public final class StationRetriever {
         return filterList(allStations, args);
     }
 
-    public static Map<LocationPoint, List<TransStation>> getStationsInArea(Map<LocationPoint, Double> ranges, List<CostArgs> args) {
+    public static Map<LocationPoint, List<TransStation>> getStationsInArea(Map<LocationPoint, Distance> ranges, List<CostArgs> args) {
         Map<LocationPoint, List<TransStation>> allStations = null;
 
         if (allStations != null && !allStations.isEmpty()) {

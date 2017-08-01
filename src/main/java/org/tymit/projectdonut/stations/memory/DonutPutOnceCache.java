@@ -3,6 +3,8 @@ package org.tymit.projectdonut.stations.memory;
 import com.conversantmedia.util.collection.spatial.HyperPoint;
 import com.conversantmedia.util.collection.spatial.HyperRect;
 import com.conversantmedia.util.collection.spatial.RectBuilder;
+import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
@@ -29,14 +31,15 @@ public class DonutPutOnceCache implements StationCacheInstance.DonutCache {
     private Map<TransChain, Map<TransStation, List<SchedulePoint>>> worldInfo = new HashMap<>();
     private Map<Point, TransStation> areaMap = new HashMap<>();
 
-    private static double latLengthAt(double lat) {
+    private static Distance latLengthAt(double lat) {
         double latmidrads = Math.toRadians(lat);
-        return (111132.92 - 559.82 * Math.cos(2 * latmidrads) + 1.175 * Math.cos(4 * latmidrads - .0023 * Math.cos(6 * latmidrads)));
+        return new Distance(111132.92 - 559.82 * Math.cos(2 * latmidrads) + 1.175 * Math.cos(4 * latmidrads - .0023 * Math
+                .cos(6 * latmidrads)), DistanceUnits.METERS);
     }
 
-    private static final double lngLengthAt(double lat) {
+    private static Distance lngLengthAt(double lat) {
         double latmidrads = Math.toRadians(lat);
-        return (111412.85 * Math.cos(latmidrads) - 93.5 * Math.cos(3 * latmidrads) + .118 * Math.cos(5 * latmidrads));
+        return new Distance((111412.85 * Math.cos(latmidrads) - 93.5 * Math.cos(3 * latmidrads) + .118 * Math.cos(5 * latmidrads)), DistanceUnits.METERS);
     }
 
     @Override
@@ -46,15 +49,15 @@ public class DonutPutOnceCache implements StationCacheInstance.DonutCache {
     }
 
     @Override
-    public List<TransStation> getStationsInArea(LocationPoint center, double range) {
+    public List<TransStation> getStationsInArea(LocationPoint center, Distance range) {
         //TODO Use the rtree.
         return getStationsInAreaBad(center, range);
     }
 
-    public List<TransStation> getStationsInAreaBad(LocationPoint center, double range) {
+    public List<TransStation> getStationsInAreaBad(LocationPoint center, Distance range) {
         if (areaMap == null || areaMap.isEmpty()) return Collections.emptyList();
         return areaMap.values().stream()
-                .filter(stat -> LocationUtils.distanceBetween(center.getCoordinates(), stat.getCoordinates(), true) <= range)
+                .filter(stat -> LocationUtils.distanceBetween(center, stat).inMeters() <= range.inMeters())
                 .distinct()
                 .collect(Collectors.toList());
     }
@@ -85,7 +88,7 @@ public class DonutPutOnceCache implements StationCacheInstance.DonutCache {
     }
 
     @Override
-    public boolean putArea(LocationPoint center, double range, List<TransStation> stations) {
+    public boolean putArea(LocationPoint center, Distance range, List<TransStation> stations) {
         return false;
     }
 
@@ -295,13 +298,13 @@ public class DonutPutOnceCache implements StationCacheInstance.DonutCache {
                 double latdif = Math.abs(lat - p2.lat);
 
                 //See wikipedia for formula source.
-                return latdif * latLengthAt(latmid);
+                return latdif * latLengthAt(latmid).inMeters();
             } else if (d == 1) {
                 double latmid = (lat + p2.lat) / 2;
                 double lngdif = Math.abs(lng - p2.lng);
 
                 //See wikipedia for formula source.
-                return lngdif * lngLengthAt(latmid);
+                return lngdif * lngLengthAt(latmid).inMeters();
             } else {
                 throw new RuntimeException("Invalid dimension");
             }

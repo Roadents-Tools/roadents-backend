@@ -2,6 +2,7 @@ package org.tymit.projectdonut.logic.donut;
 
 import com.google.common.collect.Sets;
 import org.tymit.projectdonut.locations.LocationRetriever;
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
@@ -224,12 +225,12 @@ public final class DonutLogicSupport {
      */
     public static Set<TravelRouteNode> getWalkableStations(LocationPoint begin, TimePoint startTime, TimeDelta maxDelta) {
 
-        double range = LocationUtils.timeToWalkDistance(maxDelta.getDeltaLong(), true);
+        Distance range = LocationUtils.timeToWalkDistance(maxDelta);
         List<TransStation> stations = StationRetriever.getStationsInArea(begin, range, null);
         Set<TravelRouteNode> rval = stations
                 .stream()
                 .map(point -> new TravelRouteNode.Builder()
-                        .setWalkTime(LocationUtils.timeBetween(begin.getCoordinates(), point.getCoordinates()))
+                        .setWalkTime(LocationUtils.timeBetween(begin, point).getDeltaLong())
                         .setPoint(point)
                         .build()
                 )
@@ -306,7 +307,7 @@ public final class DonutLogicSupport {
                 .timeToWalkDistance(maxDelta.getDeltaLong(), true), type, null)
                 .stream()
                 .map(point -> new TravelRouteNode.Builder()
-                        .setWalkTime(LocationUtils.timeBetween(center.getCoordinates(), point.getCoordinates()))
+                        .setWalkTime(LocationUtils.timeBetween(center, point).getDeltaLong())
                         .setPoint(point)
                         .build()
                 )
