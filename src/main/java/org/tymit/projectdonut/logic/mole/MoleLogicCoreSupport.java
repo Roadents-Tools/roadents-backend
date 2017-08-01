@@ -4,8 +4,6 @@ import org.tymit.projectdonut.costs.CostCalculator;
 import org.tymit.projectdonut.costs.arguments.CostArgs;
 import org.tymit.projectdonut.logic.ApplicationRunner;
 import org.tymit.projectdonut.logic.donut.DonutLogicCore;
-import org.tymit.projectdonut.model.distance.Distance;
-import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
 import org.tymit.projectdonut.model.location.TransChain;
@@ -98,15 +96,15 @@ public class MoleLogicCoreSupport {
         TimeDelta maxDelta = base.timeUntil(maxTime);
 
         //Create an easily searchable set of all chains containing st2
-        Set<TransChain> st2Chains = StationRetriever.getStations(st2, new Distance(2, DistanceUnits.METERS), base, maxDelta, null, null)
+        Set<TransChain> st2Chains = StationRetriever.getChainsForStation(st2, null)
+                .keySet()
                 .stream()
-                .map(TransStation::getChain)
                 .distinct()
                 .collect(Collectors.toSet());
 
-        return StationRetriever.getStations(st1, new Distance(2, DistanceUnits.METERS), base, maxDelta, null, null)
+        return StationRetriever.getChainsForStation(st1, null)
+                .keySet()
                 .stream()
-                .map(TransStation::getChain)
                 .distinct()
                 .filter(st2Chains::contains) //First get all chains containing both st1 and st2
 

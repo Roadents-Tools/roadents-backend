@@ -14,11 +14,12 @@ import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.routing.TravelRoute;
 import org.tymit.projectdonut.model.routing.TravelRouteNode;
+import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.StationRetriever;
-import org.tymit.projectdonut.stations.helpers.StationDbUpdater;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -34,7 +35,7 @@ public class TravelRouteJsonConverterTest {
 
         LocationRetriever.setTestMode(true);
         StationRetriever.setTestMode(true);
-        StationDbUpdater.getUpdater().updateStationsSync(); //Force a test db population
+        //TODO Fix this test and its lack of station retrieval
         LoggingUtils.setPrintImmediate(true);
 
         final double latitude = 37.358658;
@@ -52,7 +53,9 @@ public class TravelRouteJsonConverterTest {
             if (testRoute.isInRoute(stationNode.getPt())) {
                 testRoute.addNode(stationNode);
             } else continue;
-            List<TransStation> stationsInChain = StationRetriever.getStations(null, null, null, null, currentStation.getChain(), null);
+            List<TransStation> stationsInChain =
+                    new ArrayList<>(StationRetriever.getArrivableStations(currentStation.getChain(), TimePoint.NULL, new TimeDelta(1000 * 60 * 60 * 1000L))
+                            .keySet());
             TransStation chainStation = stationsInChain.get(i % stationsInChain.size());
             TravelRouteNode chainStationNode = new TravelRouteNode.Builder().setPoint(chainStation).setTravelTime(1).setWaitTime(1).build();
             testRoute.addNode(chainStationNode);
