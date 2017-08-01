@@ -3,7 +3,9 @@ package org.tymit.projectdonut.stations;
 import org.tymit.projectdonut.costs.CostCalculator;
 import org.tymit.projectdonut.costs.arguments.CostArgs;
 import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.LocationPoint;
+import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.SchedulePoint;
@@ -48,7 +50,7 @@ public final class StationRetriever {
                 .getCachedStations(center, range, startTime, maxDelta, chain);
         if (allStations == null || allStations.isEmpty()) {
             allStations = StationDbHelper.getHelper()
-                    .queryStations(center, range, startTime, maxDelta, chain);
+                    .queryStations(new StartPoint(center), new Distance(range, DistanceUnits.MILES), startTime, maxDelta, chain);
             if (chain == null) StationChainCacheHelper.getHelper()
                     .cacheStations(center, range, startTime, maxDelta, allStations);
         }
@@ -75,7 +77,7 @@ public final class StationRetriever {
                 .getCachedStations(null, -1, null, null, transChain);
         if (allStations == null || allStations.isEmpty()) {
             allStations = StationDbHelper.getHelper()
-                    .queryStations(null, -1, null, null, transChain);
+                    .queryStations(null, new Distance(-1, DistanceUnits.METERS), null, null, transChain);
         }
 
         return filterList(allStations, args);
@@ -100,7 +102,7 @@ public final class StationRetriever {
         if (allStations != null && !allStations.isEmpty()) return allStations;
 
         allStations = StationDbHelper.getHelper()
-                .queryStations(coords, 0, null, null, null);
+                .queryStations(new StartPoint(coords), new Distance(0, DistanceUnits.METERS), null, null, null);
         if (allStations == null || allStations.isEmpty()) {
             return Collections.emptyList();
         }
@@ -119,14 +121,16 @@ public final class StationRetriever {
         List<TransStation> allStations = StationChainCacheHelper.getHelper()
                 .getCachedStations(center, range, startTime, maxDelta, null);
         if (allStations == null || allStations.isEmpty()) {
-            allStations = StationDbHelper.getHelper().queryStations(center, range, startTime, maxDelta, null);
+            allStations = StationDbHelper.getHelper()
+                    .queryStations(new StartPoint(center), new Distance(range, DistanceUnits.MILES), startTime, maxDelta, null);
             StationChainCacheHelper.getHelper().cacheStations(center, range, startTime, maxDelta, allStations);
         }
     }
 
     @Deprecated
     public static List<TransStation> getStrippedStations(double[] center, double range, int limit, List<CostArgs> args) {
-        List<TransStation> allStations = StationDbHelper.getHelper().queryStrippedStations(center, range, limit);
+        List<TransStation> allStations = StationDbHelper.getHelper()
+                .queryStrippedStations(new StartPoint(center), new Distance(range, DistanceUnits.MILES), limit);
         return filterList(allStations, args);
     }
 

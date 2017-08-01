@@ -65,7 +65,7 @@ public class StationDbHelper {
         TestStationDb.setTestStations(null);
     }
 
-    public List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+    public List<TransStation> queryStations(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
         return Arrays.stream(allDatabases)
                 .filter(StationDbInstance::isUp)
                 .filter(db -> db instanceof StationDbInstance.ComboDb)
@@ -75,8 +75,8 @@ public class StationDbHelper {
                 .collect(Collectors.toList());
     }
 
-    public List<TransStation> queryStrippedStations(double[] center, double range, int limit) {
-        if (center == null || range <= 0 || limit == 0) return Collections.emptyList();
+    public List<TransStation> queryStrippedStations(LocationPoint center, Distance range, int limit) {
+        if (center == null || range == null || range.inMeters() <= 0 || limit == 0) return Collections.emptyList();
         return Arrays.stream(allDatabases)
                 .filter(StationDbInstance::isUp)
                 .filter(db -> db instanceof StationDbInstance.ComboDb)

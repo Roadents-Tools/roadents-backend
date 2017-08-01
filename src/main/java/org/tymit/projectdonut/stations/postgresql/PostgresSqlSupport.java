@@ -2,6 +2,7 @@ package org.tymit.projectdonut.stations.postgresql;
 
 import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.distance.DistanceUnits;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.SchedulePoint;
@@ -54,17 +55,17 @@ public class PostgresSqlSupport {
      **/
 
     public static List<TransStation> getStrippedStations(Supplier<Connection> connectionSupplier,
-                                                         double[] center, double range, int limit
+                                                         LocationPoint center, Distance range, int limit
     ) throws SQLException {
-        if (range <= MAX_NO_REQUERY.inMiles()) {
+        if (range.inMeters() <= MAX_NO_REQUERY.inMeters()) {
             return getStrippedStationsSingle(connectionSupplier, center, range, limit);
         }
 
-        double effectiverange = MAX_NO_REQUERY.inMiles();
+        Distance effectiverange = MAX_NO_REQUERY;
         List<TransStation> rval = getStrippedStationsSingle(connectionSupplier, center, effectiverange, limit);
-        while (rval.size() < limit && effectiverange <= range) {
-            if (range / effectiverange <= 2) {
-                effectiverange *= 2;
+        while (rval.size() < limit && effectiverange.inMeters() <= range.inMeters()) {
+            if (range.inMeters() / effectiverange.inMeters() <= 2) {
+                effectiverange = effectiverange.mul(2);
             } else {
                 effectiverange = range;
             }
@@ -75,7 +76,7 @@ public class PostgresSqlSupport {
     }
 
     private static List<TransStation> getStrippedStationsSingle(Supplier<Connection> connectionSupplier,
-                                                                double[] center, double range, int limit
+                                                                LocationPoint center, Distance range, int limit
     ) throws SQLException {
         Connection con = connectionSupplier.get();
         Statement stm = con.createStatement();
@@ -88,9 +89,8 @@ public class PostgresSqlSupport {
                 PostgresqlContract.StationTable.LATLNG_KEY, LNG_COL_NAME,
                 PostgresqlContract.StationTable.NAME_KEY,
                 PostgresqlContract.StationTable.TABLE_NAME,
-                PostgresqlContract.StationTable.LATLNG_KEY, center[0], center[1], new Distance(range, DistanceUnits.MILES)
-                        .inMeters(),
-                limit
+                PostgresqlContract.StationTable.LATLNG_KEY, center.getCoordinates()[0], center.getCoordinates()[1],
+                range.inMeters(), limit
         );
 
         LoggingUtils.logMessage(TAG, "Query type 1: %s", query);
@@ -113,7 +113,7 @@ public class PostgresSqlSupport {
     }
 
     public static List<TransStation> getInformation(Supplier<Connection> connectionGenerator,
-                                                    double[] center, double range,
+                                                    LocationPoint center, Distance range,
                                                     TimePoint startTime, TimeDelta maxDelta,
                                                     TransChain chain, boolean checkRange
     ) throws SQLException {
@@ -133,14 +133,14 @@ public class PostgresSqlSupport {
         return new ArrayList<>(rval);
     }
 
-    private static String buildQuery(double[] center, double range,
+    private static String buildQuery(LocationPoint center, Distance range,
                                      TimePoint startTime, TimeDelta maxDelta,
                                      TransChain chain
     ) {
         ProfilingUtils.MethodTimer tm = ProfilingUtils.startTimer("buildQuery");
         StringBuilder builder = new StringBuilder();
         builder.append("SELECT * FROM " + PostgresqlContract.JOIN_VIEW_NAME + " ");
-        if ((startTime != null && maxDelta != null) || (center != null && range >= 0) || chain != null) {
+        if ((startTime != null && maxDelta != null) || (center != null && range.inMeters() >= 0) || chain != null) {
             builder.append("WHERE ");
         }
         if (chain != null) {
@@ -151,13 +151,13 @@ public class PostgresSqlSupport {
                     CHN_NAM_KEY, chain.getName().replace("'", "`")
             ));
         }
-        if (center != null && range >= 0) {
-            if (range == 0) range = 0.001;
+        if (center != null && range != null && range.inMeters() >= 0) {
+            if (range.inMeters() == 0) range = new Distance(.1, DistanceUnits.METERS);
             if (!builder.toString().endsWith("WHERE ")) {
                 builder.append(" AND ");
             }
             builder.append(String.format(" ST_DWITHIN(%s, ST_POINT(%f, %f)::geography, %f) ",
-                    PostgresqlContract.StationTable.LATLNG_KEY, center[0], center[1], new Distance(range, DistanceUnits.MILES)
+                    PostgresqlContract.StationTable.LATLNG_KEY, center.getCoordinates()[0], center.getCoordinates()[1], range
                             .inMeters()
             ));
         }
@@ -176,7 +176,7 @@ public class PostgresSqlSupport {
     }
 
     private static boolean isValidQuery(Connection con,
-                                        double[] center, double range,
+                                        LocationPoint center, Distance range,
                                         TimePoint startTime, TimeDelta maxDelta,
                                         TransChain chain
     ) throws SQLException {
@@ -187,7 +187,7 @@ public class PostgresSqlSupport {
                         "AND %s <= to_timestamp(%d) " +
                         "AND %s + %s >= to_timestamp(%d)",
                 PostgresqlContract.RangeTable.ID_KEY, PostgresqlContract.RangeTable.TABLE_NAME,
-                center[0], center[1], PostgresqlContract.RangeTable.LAT_KEY, new Distance(range, DistanceUnits.MILES).inMeters(),
+                center.getCoordinates()[0], center.getCoordinates()[1], PostgresqlContract.RangeTable.LAT_KEY, range.inMeters(),
                 PostgresqlContract.RangeTable.TIME_KEY, startTime.getUnixTime(),
                 PostgresqlContract.RangeTable.TIME_KEY, PostgresqlContract.RangeTable.FUZZ_KEY,
                 startTime.plus(maxDelta).getUnixTime()

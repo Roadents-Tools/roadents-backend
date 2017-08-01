@@ -28,15 +28,15 @@ public interface StationDbInstance {
 
     interface ComboDb extends StationDbInstance {
 
-        List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain);
-
-        default List<TransStation> queryStrippedStations(double[] center, double range, int limit) {
-            if (center == null || range <= 0 || limit == 0) return Collections.emptyList();
+        default List<TransStation> queryStrippedStations(LocationPoint center, Distance range, int limit) {
+            if (center == null || range == null || limit == 0) return Collections.emptyList();
             if (limit < 0) return queryStations(center, range, null, null, null);
             return queryStations(center, range, null, null, null).stream()
                     .limit(limit)
                     .collect(Collectors.toList());
         }
+
+        List<TransStation> queryStations(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta, TransChain chain);
     }
 
     interface DonutDb extends StationDbInstance {

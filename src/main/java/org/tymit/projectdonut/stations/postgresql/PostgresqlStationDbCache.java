@@ -1,5 +1,8 @@
 package org.tymit.projectdonut.stations.postgresql;
 
+import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.distance.DistanceUnits;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
@@ -116,7 +119,7 @@ public class PostgresqlStationDbCache implements StationCacheInstance.GeneralCac
     public List<TransStation> getCachedStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
         if (!isUp) return Collections.emptyList();
         try {
-            return PostgresSqlSupport.getInformation(this::getConnection, center, range, startTime, maxDelta, chain, true);
+            return PostgresSqlSupport.getInformation(this::getConnection, new StartPoint(center), new Distance(range, DistanceUnits.MILES), startTime, maxDelta, chain, true);
         } catch (Exception e) {
             LoggingUtils.logError(e);
             return Collections.emptyList();
@@ -133,10 +136,10 @@ public class PostgresqlStationDbCache implements StationCacheInstance.GeneralCac
     }
 
     @Override
-    public List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+    public List<TransStation> queryStrippedStations(LocationPoint center, Distance range, int limit) {
         if (!isUp) return Collections.emptyList();
         try {
-            return PostgresSqlSupport.getInformation(this::getConnection, center, range, startTime, maxDelta, chain, false);
+            return PostgresSqlSupport.getStrippedStations(this::getConnection, center, range, limit);
         } catch (Exception e) {
             LoggingUtils.logError(e);
             return Collections.emptyList();
@@ -144,10 +147,10 @@ public class PostgresqlStationDbCache implements StationCacheInstance.GeneralCac
     }
 
     @Override
-    public List<TransStation> queryStrippedStations(double[] center, double range, int limit) {
+    public List<TransStation> queryStations(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
         if (!isUp) return Collections.emptyList();
         try {
-            return PostgresSqlSupport.getStrippedStations(this::getConnection, center, range, limit);
+            return PostgresSqlSupport.getInformation(this::getConnection, center, range, startTime, maxDelta, chain, false);
         } catch (Exception e) {
             LoggingUtils.logError(e);
             return Collections.emptyList();

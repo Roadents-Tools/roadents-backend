@@ -1,9 +1,7 @@
 package org.tymit.projectdonut.stations.transitland;
 
 import org.tymit.projectdonut.model.distance.Distance;
-import org.tymit.projectdonut.model.distance.DistanceUnits;
 import org.tymit.projectdonut.model.location.LocationPoint;
-import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
@@ -25,11 +23,11 @@ public class TransitlandZipDb implements StationDbInstance.ComboDb {
     private TransitlandApiDb delegate = new TransitlandApiDb();
 
     @Override
-    public List<TransStation> queryStations(double[] center, double range, TimePoint start, TimeDelta maxDelta, TransChain chain) {
+    public List<TransStation> queryStations(LocationPoint center, Distance range, TimePoint start, TimeDelta maxDelta, TransChain chain) {
         if (chain != null) return delegate.queryStations(center, range, start, maxDelta, chain);
-        List<URL> allChains = delegate.getFeedsInArea(center, range, null, null);
+        List<URL> allChains = delegate.getFeedsInArea(center.getCoordinates(), range.inMiles(), null, null);
         List<TransStation> rval = new ArrayList<>();
-        Predicate<TransStation> rangeFilter = withinRange(new StartPoint(center), new Distance(range, DistanceUnits.MILES));
+        Predicate<TransStation> rangeFilter = withinRange(center, range);
         Predicate<TransStation> timeFIlter = withinTime(start, maxDelta);
         for (URL url : allChains) {
             GtfsProvider prov = new GtfsProvider(url);

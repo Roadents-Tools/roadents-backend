@@ -23,8 +23,7 @@ import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
 import org.tymit.projectdonut.model.distance.Distance;
-import org.tymit.projectdonut.model.distance.DistanceUnits;
-import org.tymit.projectdonut.model.location.StartPoint;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.TimeDelta;
@@ -158,19 +157,20 @@ public class DynamoStationChainDb implements StationDbInstance.ComboDb {
     }
 
     @Override
-    public List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+    public List<TransStation> queryStations(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
 
         //We need a primary key query on either the station table or the chain table. Otherwise we return nothing.
-        if ((center == null || center.length != 2 || range < 0 || range > MAX_RANGE) && (chain == null || chain.getName() == null)) {
+        if ((center == null || range == null || range.inMeters() < 0 || range.inMiles() > MAX_RANGE) && (chain == null || chain
+                .getName() == null)) {
             return Collections.emptyList();
         }
 
         Predicate<TransStation> timeTest = withinTime(startTime, maxDelta);
 
         //If our seach area is small enough we treat the query as a single station item request
-        if (center != null && range <= ERROR_MARGIN) {
-            GeoHash shortHash = GeoHash.withBitPrecision(center[0], center[1], DynamoDbContract.StationTable.GEOHASH_BITS);
-            GeoHash bigHash = GeoHash.withBitPrecision(center[0], center[1], DynamoDbContract.StationTable.LONGHASH_BITS);
+        if (center != null && range.inMiles() <= ERROR_MARGIN) {
+            GeoHash shortHash = GeoHash.withBitPrecision(center.getCoordinates()[0], center.getCoordinates()[1], DynamoDbContract.StationTable.GEOHASH_BITS);
+            GeoHash bigHash = GeoHash.withBitPrecision(center.getCoordinates()[0], center.getCoordinates()[1], DynamoDbContract.StationTable.LONGHASH_BITS);
             Item singleStation = dynamoDB.getTable(DynamoDbContract.StationTable.TABLE_NAME)
                     .getItem(
                             DynamoDbContract.StationTable.GEOHASH, shortHash.ord(),
@@ -197,8 +197,8 @@ public class DynamoStationChainDb implements StationDbInstance.ComboDb {
 
 
         GeoHashCircleQuery circleQuery = new GeoHashCircleQuery(
-                new WGS84Point(center[0], center[1]),
-                new Distance(range, DistanceUnits.MILES).inMeters()
+                new WGS84Point(center.getCoordinates()[0], center.getCoordinates()[1]),
+                range.inMeters()
         );
 
         List<Long> shortHashes = circleQuery.getSearchHashes().stream()
@@ -241,10 +241,9 @@ public class DynamoStationChainDb implements StationDbInstance.ComboDb {
                 .collect(Collectors.toList());
     }
 
-    private static Predicate<TransStation> withinRange(double[] center, double range) {
-        if (center == null || range < 0) return any -> true;
-        StartPoint startPoint = new StartPoint(center);
-        return stat -> LocationUtils.distanceBetween(startPoint, stat).inMiles() <= range;
+    private static Predicate<TransStation> withinRange(LocationPoint center, Distance range) {
+        if (center == null || range == null || range.inMiles() < 0) return any -> true;
+        return stat -> LocationUtils.distanceBetween(center, stat).inMeters() <= range.inMeters();
     }
 
     private static Predicate<TransStation> withinTime(TimePoint startTime, TimeDelta maxDelta) {

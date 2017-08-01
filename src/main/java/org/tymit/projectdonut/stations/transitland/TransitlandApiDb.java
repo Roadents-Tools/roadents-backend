@@ -5,6 +5,8 @@ import okhttp3.Request;
 import okhttp3.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.SchedulePoint;
@@ -58,10 +60,10 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
     }
 
     @Override
-    public List<TransStation> queryStations(double[] center, double range, TimePoint start, TimeDelta maxDelta, TransChain chain) {
+    public List<TransStation> queryStations(LocationPoint center, Distance range, TimePoint start, TimeDelta maxDelta, TransChain chain) {
 
         //Get scheduling info
-        String scheduleUrl = buildScheduleUrl(center, range, start, maxDelta, chain);
+        String scheduleUrl = buildScheduleUrl(center.getCoordinates(), range.inMiles(), start, maxDelta, chain);
         JSONObject rawobj = callUrl(scheduleUrl);
 
         if (rawobj == null) {

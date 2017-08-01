@@ -1,5 +1,7 @@
 package org.tymit.projectdonut.stations.test;
 
+import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
@@ -71,19 +73,18 @@ public class TestStationDb implements StationDbInstance.ComboDb {
     }
 
     @Override
-    public List<TransStation> queryStations(double[] center, double range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
+    public List<TransStation> queryStations(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta, TransChain chain) {
 
-        if (center == null || range < 0) return queryStations(startTime, maxDelta, chain);
+        if (center == null || range == null || range.inMeters() < 0) return queryStations(startTime, maxDelta, chain);
 
         List<TransStation> stationsToCheck = (chain != null) ? chainsToStations.get(chain) : chainsToStations
                 .values()
                 .stream()
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
-        StartPoint startPoint = new StartPoint(center);
 
         return stationsToCheck.parallelStream()
-                .filter(station -> LocationUtils.distanceBetween(startPoint, station).inMiles() <= range + 0.001)
+                .filter(station -> LocationUtils.distanceBetween(center, station).inMeters() <= range.inMeters() + 0.1)
                 .filter(st -> startTime == null || maxDelta == null || startTime
                         .timeUntil(st.getNextArrival(startTime))
                         .getDeltaLong() <= maxDelta.getDeltaLong())

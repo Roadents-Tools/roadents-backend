@@ -4,6 +4,9 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.tymit.projectdonut.model.distance.Distance;
+import org.tymit.projectdonut.model.distance.DistanceUnits;
+import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.utils.LoggingUtils;
@@ -28,7 +31,7 @@ public class TransitlandApiDbTest {
 
     @Test
     public void testRegion() {
-        List<TransStation> stations = instance.queryStations(TEST_COORDS, TEST_RANGE, null, null, null);
+        List<TransStation> stations = instance.queryStations(new StartPoint(TEST_COORDS), new Distance(TEST_RANGE, DistanceUnits.MILES), null, null, null);
         Assert.assertNotEquals(0, stations.size());
         stations.forEach(station -> {
             Assert.assertNotNull(station.getName());
@@ -43,7 +46,7 @@ public class TransitlandApiDbTest {
 
     @Test
     public void testChain() {
-        List<TransStation> stations = instance.queryStations(null, 0, null, null, TEST_CHAIN);
+        List<TransStation> stations = instance.queryStations(null, new Distance(0, DistanceUnits.METERS), null, null, TEST_CHAIN);
         Assert.assertNotEquals(0, stations.size());
         stations.forEach(station -> {
             Assert.assertEquals(TEST_CHAIN, station.getChain());
