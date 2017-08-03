@@ -11,6 +11,7 @@ import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.helpers.StationChainCacheHelper;
 import org.tymit.projectdonut.stations.helpers.StationDbHelper;
+import org.tymit.projectdonut.utils.StreamUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -62,7 +63,12 @@ public final class StationRetriever {
     }
 
     public static Map<LocationPoint, List<TransStation>> getStationsInArea(Map<LocationPoint, Distance> ranges, List<CostArgs> args) {
-        Map<LocationPoint, List<TransStation>> allStations = null;
+
+        Map<LocationPoint, List<TransStation>> allStations = ranges.entrySet().stream()
+                .collect(StreamUtils.collectWithMapping(
+                        Map.Entry::getKey,
+                        entry -> StationChainCacheHelper.getHelper().getStationsInArea(entry.getKey(), entry.getValue())
+                ));
 
         if (allStations != null && !allStations.isEmpty()) {
             allStations.replaceAll((key, stations) -> filterList(stations, args));
@@ -84,7 +90,8 @@ public final class StationRetriever {
 
     public static Map<TransChain, List<SchedulePoint>> getChainsForStation(TransStation station, List<CostArgs> args) {
 
-        Map<TransChain, List<SchedulePoint>> rval = null;
+        Map<TransChain, List<SchedulePoint>> rval = StationChainCacheHelper.getHelper()
+                .getChainsForStation(station);
 
         if (rval != null && !rval.isEmpty()) return rval;
         rval = StationDbHelper.getHelper()
@@ -98,7 +105,10 @@ public final class StationRetriever {
     }
 
     public static Map<TransStation, Map<TransChain, List<SchedulePoint>>> getChainsForStations(List<TransStation> stations) {
-        Map<TransStation, Map<TransChain, List<SchedulePoint>>> rval = null;
+
+        Map<TransStation, Map<TransChain, List<SchedulePoint>>> rval = stations.stream()
+                .collect(StreamUtils.collectWithValues(stat -> StationChainCacheHelper.getHelper()
+                        .getChainsForStation(stat)));
 
         if (rval != null && !rval.isEmpty()) return rval;
         rval = StationDbHelper.getHelper()
@@ -129,7 +139,9 @@ public final class StationRetriever {
 
     public static Map<TransChain, Map<TransStation, TimeDelta>> getArrivableStations(List<TransChain> chains, TimePoint startTime, TimeDelta maxDelta) {
 
-        Map<TransChain, Map<TransStation, TimeDelta>> rval = null;
+        Map<TransChain, Map<TransStation, TimeDelta>> rval = chains.stream()
+                .collect(StreamUtils.collectWithValues(chain -> StationChainCacheHelper.getHelper()
+                        .getArrivableStations(chain, startTime, maxDelta)));
 
         if (rval != null && !rval.isEmpty()) return rval;
         rval = StationDbHelper.getHelper()
@@ -144,7 +156,15 @@ public final class StationRetriever {
 
     public static Map<TransChain, Map<TransStation, TimeDelta>> getArrivableStations(Map<TransChain, TimeDelta> chainsAndExtras, TimePoint generalStart, TimeDelta maxDelta) {
 
-        Map<TransChain, Map<TransStation, TimeDelta>> rval = null;
+        Map<TransChain, Map<TransStation, TimeDelta>> rval = chainsAndExtras.entrySet().stream()
+                .collect(StreamUtils.collectWithMapping(
+                        Map.Entry::getKey,
+                        entry -> StationChainCacheHelper.getHelper().getArrivableStations(
+                                entry.getKey(),
+                                generalStart.plus(entry.getValue()),
+                                maxDelta.minus(entry.getValue())
+                        )
+                ));
 
         if (rval != null && !rval.isEmpty()) return rval;
         rval = StationDbHelper.getHelper()
