@@ -12,6 +12,7 @@ import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Created by ilan on 2/4/17.
@@ -20,13 +21,21 @@ public class TransitlandApiDbTest {
 
     private static final double[] TEST_COORDS = new double[] { 32.8801, -117.2340 };
     private static final double TEST_RANGE = 1;
-    private static final TransChain TEST_CHAIN = new TransChain("r-9mue-101 TripID: 12050379");
     private TransitlandApiDb instance;
+
+    private static TransChain TEST_CHAIN = null;
 
     @Before
     public void setup() {
         instance = new TransitlandApiDb();
         LoggingUtils.setPrintImmediate(true);
+        TEST_CHAIN = instance.queryStations(new StartPoint(TEST_COORDS), new Distance(1, DistanceUnits.MILES), null, null, null)
+                .stream()
+                .map(TransStation::getChain)
+                .filter(Objects::nonNull)
+                .findAny()
+                .orElse(null);
+
     }
 
     @Test

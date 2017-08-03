@@ -16,7 +16,7 @@ public class LocationUtilsTest {
         double[] p2 = { 42, -70 };
         double distance = LocationUtils.distanceBetween(new StartPoint(p1), new StartPoint(p2)).inMeters();
         TimeDelta timeActual = LocationUtils.timeBetween(new StartPoint(p1), new StartPoint(p2));
-        assertEqualsDelta(distance, LocationUtils.timeToWalkDistance(timeActual).inMeters(), 1. / 5280);
+        assertEqualsDelta(distance, LocationUtils.timeToWalkDistance(timeActual).inMeters(), 1);
     }
 
     private static void assertEqualsDelta(double value1, double value2, double delta) {

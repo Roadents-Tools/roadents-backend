@@ -12,27 +12,22 @@ import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.SchedulePoint;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
-import org.tymit.projectdonut.stations.gtfs.GtfsProvider;
-import org.tymit.projectdonut.stations.helpers.StationChainCacheHelper;
 import org.tymit.projectdonut.stations.interfaces.StationDbInstance;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.StringJoiner;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 /**
  * Created by ilan on 1/22/17.
@@ -63,7 +58,7 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
     public List<TransStation> queryStations(LocationPoint center, Distance range, TimePoint start, TimeDelta maxDelta, TransChain chain) {
 
         //Get scheduling info
-        String scheduleUrl = buildScheduleUrl(center.getCoordinates(), range.inMiles(), start, maxDelta, chain);
+        String scheduleUrl = buildScheduleUrl((center != null) ? center.getCoordinates() : null, range.inMiles(), start, maxDelta, chain);
         JSONObject rawobj = callUrl(scheduleUrl);
 
         if (rawobj == null) {
@@ -210,22 +205,6 @@ public class TransitlandApiDb implements StationDbInstance.ComboDb {
         }
 
         return rawobj;
-    }
-
-    private CompletableFuture<Boolean> seedStations(LocationPoint center, Distance range) {
-        return CompletableFuture.supplyAsync(() -> {
-            Stream<List<TransStation>> srcStream = getFeedsInArea(center, range, null, null)
-                    .parallelStream()
-                    .map(url -> new GtfsProvider(url)
-                            .getUpdatedStations()
-                            .values()
-                            .stream()
-                            .flatMap(Collection::stream)
-                            .collect(Collectors.toList())
-                    );
-            StationChainCacheHelper h = StationChainCacheHelper.getHelper();
-            return h.cacheStations(center, range, null, null, srcStream);
-        });
     }
 
     public List<URL> getFeedsInArea(LocationPoint center, Distance range, Map<String, String> restrict, Map<String, String> avoid) {
