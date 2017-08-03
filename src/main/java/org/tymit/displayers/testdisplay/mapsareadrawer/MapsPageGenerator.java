@@ -1,6 +1,8 @@
 package org.tymit.displayers.testdisplay.mapsareadrawer;
 
 import com.google.common.collect.Lists;
+import org.json.JSONArray;
+import org.tymit.projectdonut.jsonconvertion.routing.TravelRouteJsonConverter;
 import org.tymit.projectdonut.logic.donut.DonutLogicSupport;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.StartPoint;
@@ -14,6 +16,7 @@ import org.tymit.projectdonut.utils.StreamUtils;
 
 import java.awt.*;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,7 +26,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.StringJoiner;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -46,6 +51,7 @@ public class MapsPageGenerator {
     private static String API_KEY = "AIzaSyB0pBdXuC4VRte73qnVtE5pLmxNs3ju0Gg";
 
 
+    static AtomicLong count = new AtomicLong(0);
     public static Stream<String> generateIndividualPagesFromFile(String fileName, TimePoint startTime, TimeDelta maxDelta) {
         return readLatLngFromFile(fileName).stream()
                 .peek(a -> LoggingUtils.logMessage("MapGenerator", "Now using latlng %s.", a.toString()))
@@ -92,9 +98,15 @@ public class MapsPageGenerator {
 
         StationRetriever.prepareWorld(centroid, startTime, worldDelta);
 
-
+        TravelRouteJsonConverter conv = new TravelRouteJsonConverter();
         List<Map<LocationPoint, TimeDelta>> areas = starts.stream()
                 .map(start -> DonutLogicSupport.buildStationRouteList(start, startTime, maxDelta))
+                .peek((LoggingUtils.WrappedConsumer<Set<TravelRoute>>) routes -> {
+                    Path path = Paths.get("/home/ilan/output/routesnum" + count.getAndIncrement() + ".json");
+                    Files.createFile(path);
+                    JSONArray routesarr = new JSONArray(conv.toJson(routes));
+                    Files.write(path, routesarr.toString(3).getBytes());
+                })
                 .map(routes -> routes.stream()
                         .collect(StreamUtils.collectWithMapping(TravelRoute::getCurrentEnd, route -> maxDelta.minus(route
                                 .getTotalTime()))))
