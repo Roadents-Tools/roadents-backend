@@ -238,20 +238,6 @@ public final class DonutLogicSupport {
         return rval;
     }
 
-    /**
-     * Get all possible TransChains for a given TransStation.
-     * @param orig the original TransStation to use
-     * @return TransStations for all chains at the location of orig
-     */
-    public static Set<TransStation> getAllChainsForStop(TransStation orig) {
-        Set<TransStation> rval = StationRetriever.getChainsForStation(orig, null).entrySet()
-                .stream()
-                .map(entry -> orig.withSchedule(entry.getKey(), entry.getValue()))
-                .collect(Collectors.toSet());
-        if (orig.getChain() != null) rval.add(orig);
-        return rval;
-    }
-
     public static Predicate<TravelRoute> nextLayerFilter(TimeDelta maxDelta, Map<String, TravelRoute> currentRoutes) {
         return route -> {
             if (route.getTotalTime().getDeltaLong() >= maxDelta.getDeltaLong())

@@ -29,17 +29,6 @@ public final class PostgresqlContract {
         }
     }
 
-    public static final class CostTable {
-
-        public static final String STATION_CHAIN_COST_TABLE_NAME = "StationChainCosts";
-        public static final String COST_ID_KEY = "id";
-        public static final String COST_STATION_KEY = "stationId";
-        public static final String COST_CHAIN_KEY = "chainId";
-
-        private CostTable() {
-        }
-
-    }
 
     public static final class ScheduleTable {
 
@@ -47,28 +36,12 @@ public final class PostgresqlContract {
         public static final String ID_KEY = "id";
         public static final String FUZZ_KEY = "fuzz";
         public static final String TIME_KEY = "schedpoint";
-        public static final String COST_ID_KEY = "costid";
         public static final String CHAIN_ID_KEY = "chainid";
         public static final String STATION_ID_KEY = "stationid";
         public static final String PACKED_VALID_KEY = "validdays";
+        public static final String PACKED_TIME_KEY = "packedtime";
 
         private ScheduleTable() {
         }
     }
-
-    public static final class RangeTable {
-
-        public static final String TABLE_NAME = "ranges";
-        public static final String ID_KEY = "id";
-        public static final String FUZZ_KEY = "maxfuzz";
-        public static final String TIME_KEY = "startime";
-        public static final String LAT_KEY = "latlng";
-        public static final String BOX_KEY = "distance";
-
-        private RangeTable() {
-        }
-
-    }
-
-    public static final String JOIN_VIEW_NAME = "main_join_view";
 }

@@ -2,6 +2,8 @@ package org.tymit.projectdonut.utils;
 
 import com.google.common.collect.Sets;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -11,6 +13,7 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
+import java.util.stream.Stream;
 
 public final class StreamUtils {
 
@@ -64,7 +67,7 @@ public final class StreamUtils {
         return collectWithMapping(a -> a, applicationFunction);
     }
 
-    public static Collector<?, ?, String> joinToString(String seperator) {
+    public static Collector<Object, ?, String> joinToString(String seperator) {
         return new Collector<Object, StringJoiner, String>() {
             @Override
             public Supplier<StringJoiner> supplier() {
@@ -91,5 +94,13 @@ public final class StreamUtils {
                 return Sets.newHashSet();
             }
         };
+    }
+
+    public static Stream<Boolean> streamBoolArray(boolean[] arr) {
+        List<Boolean> buf = new ArrayList<>(arr.length);
+        for (boolean b : arr) {
+            buf.add(b);
+        }
+        return buf.stream();
     }
 }
