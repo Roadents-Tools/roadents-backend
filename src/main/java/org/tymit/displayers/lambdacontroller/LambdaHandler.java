@@ -4,6 +4,7 @@ package org.tymit.displayers.lambdacontroller;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.tymit.displayers.testdisplay.listtestdisplayer.TestDisplayer;
 import org.tymit.projectdonut.jsonconvertion.routing.TravelRouteJsonConverter;
@@ -160,11 +161,18 @@ public class LambdaHandler implements RequestStreamHandler {
     }
 
     private static void outputData(String rawOutputJson, OutputStream outputStream) throws IOException {
+        JSONObject obj;
+        try {
+            obj = new JSONObject(rawOutputJson);
+        } catch (JSONException e) {
+            obj = null;
+        }
+
         JSONObject responseJson = new JSONObject();
         JSONObject headerJson = new JSONObject();
         headerJson.put("content", "application/json");
         responseJson.put("headers", headerJson);
-        responseJson.put("body", rawOutputJson);
+        responseJson.put("body", obj == null ? rawOutputJson : obj);
         responseJson.put("statusCode", "200");
         OutputStreamWriter writer = new OutputStreamWriter(outputStream);
         writer.write(responseJson.toString());
