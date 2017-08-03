@@ -5,16 +5,20 @@ import ch.qos.logback.classic.Logger;
 import org.onebusaway.gtfs.impl.GtfsDaoImpl;
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.model.Route;
+import org.onebusaway.gtfs.model.Trip;
 import org.slf4j.LoggerFactory;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
 import org.tymit.projectdonut.model.time.SchedulePoint;
+import org.tymit.projectdonut.utils.StreamUtils;
+import org.tymit.projectdonut.utils.TimeUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Created by ilan on 7/29/16.
@@ -41,23 +45,53 @@ public class GtfsSupport {
     public static Map<String, Map<TransStation, List<SchedulePoint>>> getSchedulesForTrips(GtfsDaoImpl store) {
         Map<String, Map<TransStation, List<SchedulePoint>>> rval = new ConcurrentHashMap<>();
 
+        String debugTrip = "UP_C7-Weekday-SDon-118300_B3_116";
 
         Map<String, TransStation> stations = getBaseStops(store);
+        Map<String, boolean[]> serviceToSchedule = servicesToValid(store);
         store.getAllStopTimes().stream()
                 .filter(stopTime -> stopTime.getDepartureTime() > 0 || stopTime.getArrivalTime() > 0)
                 .forEach(stopTime -> {
                     String tripId = stopTime.getTrip().getId().getId();
-                    rval.putIfAbsent(tripId, new ConcurrentHashMap<>());
-
+                    String serviceId = stopTime.getTrip().getServiceId().getId();
                     TransStation station = stations.get(stopTime.getStop().getId().getId());
-                    rval.get(tripId).putIfAbsent(station, new ArrayList<>());
+                    int secondsSinceMidnight = stopTime.getArrivalTime();
 
-                    int secondsSinceMidnight = (stopTime.getDepartureTime() > 0) ? stopTime.getDepartureTime() : stopTime.getArrivalTime();
+                    int fuzz = (stopTime.getDepartureTime() > 0 && stopTime.getArrivalTime() > 0)
+                            ? stopTime.getDepartureTime() - stopTime.getArrivalTime()
+                            : 60;
 
-                    SchedulePoint model = new SchedulePoint((secondsSinceMidnight % 60 < 24) ? secondsSinceMidnight % 60 : secondsSinceMidnight % 60 % 24, (secondsSinceMidnight / 60) % 60, (secondsSinceMidnight / 3600) % 60, null, 60);
-                    rval.get(tripId).get(station).add(model);
+                    SchedulePoint model = TimeUtils.unpackPoint(
+                            secondsSinceMidnight,
+                            serviceToSchedule.getOrDefault(serviceId, null),
+                            fuzz,
+                            null
+                    );
+
+                    if (tripId.equals(debugTrip)) {
+                        System.out.printf("Converted %d to %d:%d:%d for stop id %s", secondsSinceMidnight,
+                                model.getHour(), model.getMinute(), model.getSecond(), stopTime.getStop()
+                                        .getId()
+                                        .getId());
+                    }
+
+                    rval.computeIfAbsent(tripId, tid -> new ConcurrentHashMap<>())
+                            .computeIfAbsent(station, st -> new ArrayList<>())
+                            .add(model);
                 });
         return rval;
+    }
+
+    public static Map<String, boolean[]> servicesToValid(GtfsDaoImpl store) {
+        return store.getAllCalendars().stream()
+                .collect(StreamUtils.collectWithMapping(
+                        cl -> cl.getServiceId().getId(),
+                        cl -> new boolean[] {
+                                cl.getSunday() == 1, cl.getMonday() == 1, cl.getTuesday() == 1,
+                                cl.getWednesday() == 1, cl.getThursday() == 1, cl.getFriday() == 1,
+                                cl.getSaturday() == 1
+                        }
+                ));
     }
 
     /**
@@ -89,16 +123,18 @@ public class GtfsSupport {
     public static Map<String, TransChain> getChainsFromTrips(GtfsDaoImpl store) {
         Map<String, TransChain> rval = new ConcurrentHashMap<>();
 
-        Map<AgencyAndId, List<AgencyAndId>> routesToTrips = getTripsForRoutes(store);
-        routesToTrips.keySet().forEach(routeId -> {
-            Route route = store.getRouteForId(routeId);
-            List<AgencyAndId> trips = routesToTrips.get(routeId);
+        Map<AgencyAndId, List<AgencyAndId>> routesToTrips = store.getAllTrips()
+                .stream()
+                .collect(Collectors.groupingBy(
+                        trip -> trip.getRoute().getId(),
+                        ConcurrentHashMap::new,
+                        Collectors.mapping(Trip::getId, Collectors.toList())
+                ));
+
+        routesToTrips.forEach((key, trips) -> {
+            Route route = store.getRouteForId(key);
             String name = (route.getLongName() == null) ? route.getShortName() : route.getLongName();
-            if (trips.size() == 1) {
-                rval.put(trips.get(0).getId(), new TransChain(name));
-                return;
-            }
-            trips.parallelStream()
+            trips.stream()
                     .filter(Objects::nonNull)
                     .forEach(tripId -> rval.put(tripId.getId(), new TransChain(name + " TripID:" + tripId.getId())));
         });
@@ -106,19 +142,4 @@ public class GtfsSupport {
         return rval;
     }
 
-    /**
-     * Get all the trips for each route in the store.
-     *
-     * @param store the store to read from
-     * @return a map from route ID to a list of trip IDs.
-     */
-    public static Map<AgencyAndId, List<AgencyAndId>> getTripsForRoutes(GtfsDaoImpl store) {
-        Map<AgencyAndId, List<AgencyAndId>> rval = new ConcurrentHashMap<>();
-        store.getAllTrips().forEach(trip -> {
-            AgencyAndId routeId = trip.getRoute().getId();
-            rval.putIfAbsent(routeId, new ArrayList<>());
-            rval.get(routeId).add(trip.getId());
-        });
-        return rval;
-    }
 }

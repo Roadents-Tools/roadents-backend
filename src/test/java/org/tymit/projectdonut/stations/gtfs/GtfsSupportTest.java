@@ -4,7 +4,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.onebusaway.gtfs.impl.GtfsDaoImpl;
-import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.serialization.GtfsReader;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
@@ -47,17 +46,6 @@ public class GtfsSupportTest {
     public void getBaseStops() throws Exception {
         Map<String, TransStation> stops = GtfsSupport.getBaseStops(store);
         Assert.assertEquals(EXPECTED_BASE_STOPS, stops.size());
-    }
-
-    @Test
-    public void getTripsForRoutes() throws Exception {
-        Map<AgencyAndId, List<AgencyAndId>> routesToTrips = GtfsSupport.getTripsForRoutes(store);
-        routesToTrips.keySet().forEach(id -> System.out.printf("%s\n", id.getId()));
-        Assert.assertEquals(EXPECTED_TRIP_ROUTES, routesToTrips.size());
-
-        int totalTrips = routesToTrips.values().stream().mapToInt(List::size).sum();
-
-        Assert.assertEquals(EXPECTED_TRIPS, totalTrips);
     }
 
     @Test
