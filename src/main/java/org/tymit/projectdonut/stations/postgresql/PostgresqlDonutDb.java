@@ -158,8 +158,8 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
                         return station.getSchedule().stream()
                                 .map(spt -> insertHeader + String.format(
                                         "VALUES (B'%s', '%d:%d:%d', %d, %d, " +
-                                                "(SELECT %s FROM %s WHERE %s=%s AND ST_DWITHIN(%s, ST_POINT(%f, %f)::geography), 1), " +
-                                                "(SELECT %s FROM %s WHERE %s=%s))",
+                                                "(SELECT %s FROM %s WHERE %s=\'%s\' AND ST_DWITHIN(%s, ST_POINT(%f, %f)::geography), 1), " +
+                                                "(SELECT %s FROM %s WHERE %s=\'%s\'))",
 
                                         StreamUtils.streamBoolArray(spt.getValidDays())
                                                 .map(bol -> bol ? '1' : '0')
@@ -170,12 +170,14 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
                                         TimeUtils.packSchedulePoint(spt),
 
                                         PostgresqlContract.StationTable.ID_KEY, PostgresqlContract.StationTable.TABLE_NAME,
-                                        PostgresqlContract.StationTable.TABLE_NAME, station.getName(),
+                                        PostgresqlContract.StationTable.NAME_KEY, station.getName().replace("'", "`"),
                                         PostgresqlContract.StationTable.LATLNG_KEY, station.getCoordinates()[0], station
                                                 .getCoordinates()[1],
 
                                         PostgresqlContract.ChainTable.ID_KEY, PostgresqlContract.ChainTable.TABLE_NAME,
-                                        PostgresqlContract.ChainTable.NAME_KEY, station.getChain().getName()
+                                        PostgresqlContract.ChainTable.NAME_KEY, station.getChain()
+                                                .getName()
+                                                .replace("'", "`")
                                 ));
                     })
                     .forEach((LoggingUtils.WrappedConsumer<String>) (sql) -> {

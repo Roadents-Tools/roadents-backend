@@ -8,7 +8,6 @@ import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.StartPoint;
 import org.tymit.projectdonut.model.location.TransChain;
 import org.tymit.projectdonut.model.location.TransStation;
-import org.tymit.projectdonut.model.time.SchedulePoint;
 import org.tymit.projectdonut.model.time.TimeDelta;
 import org.tymit.projectdonut.model.time.TimePoint;
 import org.tymit.projectdonut.stations.gtfs.GtfsProvider;
@@ -30,9 +29,9 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -58,8 +57,8 @@ public class ScratchRunner {
             }
 	    if("--load".equals(args[i]))  {
 	    	loadtransitzips(args);
-		return;
-	    }
+            return;
+        }
             if ("-f".equals(args[i]) && args.length > i + 1) {
                 String filePath = args[i + 1];
                 data = new ArrayList<>(Files.readAllLines(Paths.get(filePath)));
