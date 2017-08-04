@@ -158,7 +158,7 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
                         return station.getSchedule().stream()
                                 .map(spt -> insertHeader + String.format(
                                         "VALUES (B'%s', '%d:%d:%d', %d, %d, " +
-                                                "(SELECT %s FROM %s WHERE %s=\'%s\' AND ST_DWITHIN(%s, ST_POINT(%f, %f)::geography), 1), " +
+                                                "(SELECT %s FROM %s WHERE %s=\'%s\' AND ST_DWITHIN(%s, ST_POINT(%f, %f)::geography, 1)), " +
                                                 "(SELECT %s FROM %s WHERE %s=\'%s\'))",
 
                                         StreamUtils.streamBoolArray(spt.getValidDays())
