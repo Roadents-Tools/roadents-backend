@@ -111,7 +111,7 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
                     .filter(Objects::nonNull)
                     .distinct()
                     .map(TransChain::getName)
-                    .map(chainName -> String.format("INSERT INTO %s(%s) VALUES ('%s');",
+                    .map(chainName -> String.format("INSERT INTO %s(%s) VALUES ('%s') ON CONFLICT DO NOTHING;",
                             PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.ChainTable.NAME_KEY,
                             chainName.replace("'", "`"))
                     )
@@ -130,7 +130,7 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
             stations.stream()
                     .map(TransStation::stripSchedule)
                     .distinct()
-                    .map(station -> String.format("INSERT INTO %s(%s, %s) VALUES (\'%s\', ST_POINT(%f,%f)::geography);",
+                    .map(station -> String.format("INSERT INTO %s(%s, %s) VALUES (\'%s\', ST_POINT(%f,%f)::geography) ON CONFLICT DO NOTHING;",
                             PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.NAME_KEY, PostgresqlContract.StationTable.LATLNG_KEY,
                             station.getName()
                                     .replace("'", "`"), station.getCoordinates()[0], station
