@@ -68,13 +68,6 @@ public class GtfsSupport {
                             null
                     );
 
-                    if (tripId.equals(debugTrip)) {
-                        System.out.printf("Converted %d to %d:%d:%d for stop id %s", secondsSinceMidnight,
-                                model.getHour(), model.getMinute(), model.getSecond(), stopTime.getStop()
-                                        .getId()
-                                        .getId());
-                    }
-
                     rval.computeIfAbsent(tripId, tid -> new ConcurrentHashMap<>())
                             .computeIfAbsent(station, st -> new ArrayList<>())
                             .add(model);

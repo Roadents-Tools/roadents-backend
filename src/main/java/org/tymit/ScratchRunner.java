@@ -209,7 +209,9 @@ public class ScratchRunner {
         return Arrays.stream(rootFile.listFiles())
                 .parallel()
                 .map(GtfsProvider::new)
+                .peek(pov -> LoggingUtils.logMessage("Db Loader", "Got loader %s.", pov.getSource()))
                 .map(GtfsProvider::getUpdatedStations)
+                .peek(mp -> LoggingUtils.logMessage("Db Loader", "Got %d chains.", mp.size()))
                 .allMatch(col -> col.values().stream().allMatch(db::putStations));
     }
 

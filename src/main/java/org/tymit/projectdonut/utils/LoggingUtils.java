@@ -2,6 +2,8 @@ package org.tymit.projectdonut.utils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -9,8 +11,8 @@ import java.util.function.Function;
  * Created by ilan on 7/8/16.
  */
 public class LoggingUtils {
-    private static final List<String[]> log = new ArrayList<>();
-    private static final List<Exception> errors = new ArrayList<>();
+    private static final Queue<String[]> log = new ConcurrentLinkedQueue<>();
+    private static final Queue<Exception> errors = new ConcurrentLinkedQueue<>();
 
     private static boolean printImmediate;
 
