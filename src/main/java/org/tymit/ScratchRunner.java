@@ -108,7 +108,7 @@ public class ScratchRunner {
         Distance range = new Distance(1, DistanceUnits.METERS);
         Double lat = null;
         Double lng = null;
-	
+
 
         for (int i = 0; i < args.length; i++) {
             if ("-lat".equals(args[i]) && args.length > i + 1) {
@@ -206,13 +206,16 @@ public class ScratchRunner {
     private static boolean loadtransitzips(String rootdirectory, String dburl) {
         PostgresqlDonutDb db = new PostgresqlDonutDb(dburl);
         File rootFile = new File(rootdirectory);
-        return Arrays.stream(rootFile.listFiles())
-                .parallel()
-                .map(GtfsProvider::new)
-                .peek(pov -> LoggingUtils.logMessage("Db Loader", "Got loader %s.", pov.getSource()))
-                .map(GtfsProvider::getUpdatedStations)
-                .peek(mp -> LoggingUtils.logMessage("Db Loader", "Got %d chains.", mp.size()))
-                .allMatch(col -> col.values().stream().allMatch(db::putStations));
+        return Arrays.stream(rootFile.listFiles()).parallel().allMatch(file -> {
+            LoggingUtils.logMessage("DB Loader", "Starting URL %s.", file.getName());
+            Map<TransChain, List<TransStation>> mp = new GtfsProvider(file).getUpdatedStations();
+            if (!mp.values().stream().allMatch(db::putStations)) {
+                LoggingUtils.logError("DB Loader", "ERR on URL %s.", file.getName());
+                return false;
+            }
+            LoggingUtils.logMessage("DB Loader", "Finished URL %s.", file.getName());
+            return true;
+        });
     }
 
     private static String dlZips(URL url) {

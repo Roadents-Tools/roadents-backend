@@ -45,8 +45,6 @@ public class GtfsSupport {
     public static Map<String, Map<TransStation, List<SchedulePoint>>> getSchedulesForTrips(GtfsDaoImpl store) {
         Map<String, Map<TransStation, List<SchedulePoint>>> rval = new ConcurrentHashMap<>();
 
-        String debugTrip = "UP_C7-Weekday-SDon-118300_B3_116";
-
         Map<String, TransStation> stations = getBaseStops(store);
         Map<String, boolean[]> serviceToSchedule = servicesToValid(store);
         store.getAllStopTimes().stream()
