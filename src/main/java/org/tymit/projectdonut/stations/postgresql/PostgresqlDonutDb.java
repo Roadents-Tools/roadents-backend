@@ -22,7 +22,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -107,14 +106,14 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
 
             //Insert the chains into the database in a batch
             AtomicInteger ctprev = new AtomicInteger(0);
-            ((Collection<? extends TransStation>) stations).stream()
+            stations.stream()
                     .map(TransStation::getChain)
                     .filter(Objects::nonNull)
                     .distinct()
                     .map(TransChain::getName)
-                    .map(chainName -> String.format("INSERT INTO %s(%s) VALUES ('%s') ON CONFLICT(%s) DO NOTHING;",
-                            PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.ChainTable.NAME_KEY, chainName
-                                    .replace("'", "`"), PostgresqlContract.ChainTable.NAME_KEY)
+                    .map(chainName -> String.format("INSERT INTO %s(%s) VALUES ('%s');",
+                            PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.ChainTable.NAME_KEY,
+                            chainName.replace("'", "`"))
                     )
                     .filter(Objects::nonNull)
                     .forEach((LoggingUtils.WrappedConsumer<String>) (sql1) -> {
@@ -128,10 +127,10 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
 
             //Then the stations using a batch
             ctprev.set(0);
-            ((Collection<? extends TransStation>) stations).stream()
+            stations.stream()
                     .map(TransStation::stripSchedule)
                     .distinct()
-                    .map(station -> String.format("INSERT INTO %s(%s, %s) VALUES (\'%s\', ST_POINT(%f,%f)::geography) ON CONFLICT DO NOTHING;",
+                    .map(station -> String.format("INSERT INTO %s(%s, %s) VALUES (\'%s\', ST_POINT(%f,%f)::geography);",
                             PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.NAME_KEY, PostgresqlContract.StationTable.LATLNG_KEY,
                             station.getName()
                                     .replace("'", "`"), station.getCoordinates()[0], station
@@ -147,9 +146,8 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
 
             //Insert schedule information
             ctprev.set(0);
-            ((Collection<? extends TransStation>) stations).stream()
+            stations.stream()
                     .flatMap(station -> {
-
                         String insertHeader = "INSERT INTO " + PostgresqlContract.ScheduleTable.TABLE_NAME + "(" +
                                 PostgresqlContract.ScheduleTable.PACKED_VALID_KEY + ", " +
                                 PostgresqlContract.ScheduleTable.TIME_KEY + ", " +
@@ -157,10 +155,11 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
                                 PostgresqlContract.ScheduleTable.PACKED_TIME_KEY + ", " +
                                 PostgresqlContract.ScheduleTable.STATION_ID_KEY + ", " +
                                 PostgresqlContract.ScheduleTable.CHAIN_ID_KEY + ")";
-
                         return station.getSchedule().stream()
                                 .map(spt -> insertHeader + String.format(
-                                        "VALUES (B'%s', '%d:%d:%d', %d, %d, (SELECT %s FROM %s WHERE %s=%s AND ST_DWITHIN(%s, ST_POINT(%f, %f)::geography), 1), (SELECT %s FROM %s WHERE %s=%s))",
+                                        "VALUES (B'%s', '%d:%d:%d', %d, %d, " +
+                                                "(SELECT %s FROM %s WHERE %s=%s AND ST_DWITHIN(%s, ST_POINT(%f, %f)::geography), 1), " +
+                                                "(SELECT %s FROM %s WHERE %s=%s))",
 
                                         StreamUtils.streamBoolArray(spt.getValidDays())
                                                 .map(bol -> bol ? '1' : '0')
