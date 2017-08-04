@@ -16,6 +16,7 @@ import org.tymit.projectdonut.stations.postgresql.PostgresqlDonutDb;
 import org.tymit.projectdonut.stations.transitland.TransitlandApiDb;
 import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
+import org.tymit.projectdonut.utils.TimeUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -31,6 +32,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -54,6 +56,10 @@ public class ScratchRunner {
                 listUrls(args);
                 return;
             }
+	    if("--load".equals(args[i]))  {
+	    	loadtransitzips(args);
+		return;
+	    }
             if ("-f".equals(args[i]) && args.length > i + 1) {
                 String filePath = args[i + 1];
                 data = new ArrayList<>(Files.readAllLines(Paths.get(filePath)));
@@ -103,14 +109,16 @@ public class ScratchRunner {
         Distance range = new Distance(1, DistanceUnits.METERS);
         Double lat = null;
         Double lng = null;
-
+	
 
         for (int i = 0; i < args.length; i++) {
             if ("-lat".equals(args[i]) && args.length > i + 1) {
                 lat = Double.parseDouble(args[i + 1]);
             } else if ("-lng".equals(args[i]) && args.length > i + 1) {
                 lng = Double.parseDouble(args[i + 1]);
-            }
+            } else if("-d".equals(args[i]) && args.length > i + 1) {
+	    	range = new Distance(Double.parseDouble(args[i + 1]), DistanceUnits.METERS);
+	    }
         }
 
         if (lat == null || lng == null) {
@@ -124,10 +132,11 @@ public class ScratchRunner {
 
     private static void listUrls(LocationPoint center, Distance range) {
         TransitlandApiDb apidb = new TransitlandApiDb();
-        apidb.getFeedsInArea(center, range, null, null).stream()
+        Map<String, String> skipBad = new HashMap<>();
+	skipBad.put("license_use_without_attribution", "no");
+	apidb.getFeedsInArea(center, range, null, skipBad).stream()
                 .peek(System.out::println)
-                .map(ScratchRunner::dlZips)
-                .forEach(fname -> checkZip(fname, new TransChain("Sea Gate / Bensonhurst - Manhattan Express TripID:UP_C7-Weekday-SDon-118300_B3_116")));
+                .forEach(ScratchRunner::dlZips);
     }
 
     private static void mapLocations(String file, TimePoint startTime, TimeDelta maxDelta, String outputDir) {
@@ -157,13 +166,13 @@ public class ScratchRunner {
         System.out.printf(" Found %s in %s.\n", toFind.getName(), file);
         System.out.printf(" Stations: \n");
         int bound = foundEntry.getValue().size();
-        foundEntry.getValue().sort(Comparator.comparingLong(o -> packSchedule(o.getSchedule().get(0))));
+        foundEntry.getValue().sort(Comparator.comparingLong(o -> TimeUtils.packSchedulePoint(o.getSchedule().get(0))));
         for (int i = 0; i < bound; i++) {
             if (i > 0) {
                 TransStation cur = foundEntry.getValue().get(i);
-                long curPackedSched = packSchedule(cur.getSchedule().get(0));
+                long curPackedSched = TimeUtils.packSchedulePoint(cur.getSchedule().get(0));
                 TransStation prev = foundEntry.getValue().get(i - 1);
-                long prevPackedSched = packSchedule(prev.getSchedule().get(0));
+                long prevPackedSched = TimeUtils.packSchedulePoint(prev.getSchedule().get(0));
                 System.out.printf("      Dist: %f meters, %d seconds, %f mph\n\n",
                         LocationUtils.distanceBetween(cur, prev).inMeters(),
                         curPackedSched - prevPackedSched,
@@ -175,12 +184,8 @@ public class ScratchRunner {
         return true;
     }
 
-    private static long packSchedule(SchedulePoint pt) {
-        return pt.getHour() * 3600 + pt.getMinute() * 60 + pt.getSecond();
-    }
-
     private static void loadtransitzips(String[] args) {
-        String dburl = null;
+        String dburl = PostgresqlDonutDb.DB_URLS[1];
         String rootdir = null;
         for (int i = 0; i < args.length; i++) {
             if ("-d".equals(args[i]) && args.length > i + 1) {
@@ -211,7 +216,7 @@ public class ScratchRunner {
 
     private static String dlZips(URL url) {
 
-        String rval = "/home/ilan/Downloads/tzip/" + url.getFile().replaceAll("/", "__");
+        String rval = "/home/main/Downloads/tzip/" + url.getFile().replaceAll("/", "__");
 
         File zipFile = new File(rval);
         try {
