@@ -15,6 +15,7 @@ public class LocationUtils {
      **/
     private static final double EARTH_RADIUS_KM = 6367.449; //kilometers
     private static final double AVG_WALKING_SPEED_KPH = 5.0;
+    private static final Distance MAX_TRANSIT_PER_HOUR = new Distance(65, DistanceUnits.MILES);
     private static final double SAFETY_FACTOR = 1;
 
     public static TimeDelta timeBetween(LocationPoint a, LocationPoint b) {
@@ -45,9 +46,12 @@ public class LocationUtils {
         return new TimeDelta((long) millis);
     }
 
+    public static Distance timeToMaxTransit(TimeDelta delta) {
+        return MAX_TRANSIT_PER_HOUR.mul(delta.inHours());
+    }
+
     public static Distance timeToWalkDistance(TimeDelta time) {
-        double timeHours = time.getDeltaLong() / 1000.0 / 60.0 / 60.0;
-        double km = (AVG_WALKING_SPEED_KPH * timeHours) / SAFETY_FACTOR;
+        double km = (AVG_WALKING_SPEED_KPH * time.inHours()) / SAFETY_FACTOR;
         return new Distance(km, DistanceUnits.KILOMETERS);
     }
 
