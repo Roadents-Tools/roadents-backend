@@ -6,6 +6,10 @@ package org.tymit.projectdonut.model.time;
 public class TimeDelta implements Comparable<TimeDelta> {
 
     public static final TimeDelta NULL = new TimeDelta(0);
+    private static final double IN_SECONDS = 1000;
+    private static final double IN_MINUTES = 60 * IN_SECONDS;
+    private static final double IN_HOURS = 60 * IN_MINUTES;
+    private static final double IN_DAYS = 24 * IN_HOURS;
 
     private final long delta;
 
@@ -19,14 +23,30 @@ public class TimeDelta implements Comparable<TimeDelta> {
         return new TimeDelta(delta + other.getDeltaLong());
     }
 
-    public long getDeltaLong() {
-        return delta;
-    }
-
     public TimeDelta minus(TimeDelta other) {
         if (this == NULL) return other;
         if (other == null || other == NULL) return this;
         return new TimeDelta(delta - other.getDeltaLong());
+    }
+
+    public long getDeltaLong() {
+        return delta;
+    }
+
+    public double inSeconds() {
+        return delta / IN_SECONDS;
+    }
+
+    public double inMinutes() {
+        return delta / IN_MINUTES;
+    }
+
+    public double inHours() {
+        return delta / IN_HOURS;
+    }
+
+    public double inDays() {
+        return delta / IN_DAYS;
     }
 
     @Override
