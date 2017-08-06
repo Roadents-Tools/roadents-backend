@@ -3,9 +3,17 @@ package com.reroute.displayers.lambdacontroller;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler;
+import com.google.common.collect.Lists;
+import com.moodysalem.TimezoneMapper;
 import com.reroute.backend.jsonconvertion.routing.TravelRouteJsonConverter;
+import com.reroute.backend.logic.ApplicationRequest;
+import com.reroute.backend.logic.ApplicationResult;
 import com.reroute.backend.logic.ApplicationRunner;
+import com.reroute.backend.model.location.LocationType;
+import com.reroute.backend.model.location.StartPoint;
 import com.reroute.backend.model.routing.TravelRoute;
+import com.reroute.backend.model.time.TimeDelta;
+import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.utils.LoggingUtils;
 import com.reroute.displayers.testdisplay.listtestdisplayer.TestDisplayer;
 import org.json.JSONArray;
@@ -18,9 +26,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -66,58 +72,62 @@ public class LambdaHandler implements RequestStreamHandler {
         long callTime = System.currentTimeMillis();
 
         String tag = urlArgs.getOrDefault("tag", TAG);
-        Map<String, Object> args = new HashMap<>();
-
+        ApplicationRequest.Builder builder = new ApplicationRequest.Builder(tag);
         try {
 
-            long startTime = (urlArgs.containsKey(START_TIME_TAG))
-                    ? 1000L * Long.valueOf(urlArgs.get(START_TIME_TAG))
-                    : System.currentTimeMillis();
-            args.put(START_TIME_TAG, startTime);
-            args.put(LAT_TAG, Double.valueOf(urlArgs.get(LAT_TAG)));
-            args.put(LONG_TAG, Double.valueOf(urlArgs.get(LONG_TAG)));
-            args.put(TIME_DELTA_TAG, 1000L * Long.valueOf(urlArgs.get(TIME_DELTA_TAG)));
+            StartPoint st = new StartPoint(new double[] {
+                    Double.valueOf(urlArgs.get(LAT_TAG)),
+                    Double.valueOf(urlArgs.get(LONG_TAG))
+            });
+
+            String timeZone = TimezoneMapper.tzNameAt(st.getCoordinates()[0], st.getCoordinates()[1]);
+
+            TimePoint startTime = urlArgs.containsKey(START_TIME_TAG)
+                    ? new TimePoint(1000L * Long.valueOf(START_TIME_TAG), timeZone)
+                    : TimePoint.now(timeZone);
+
+            TimeDelta maxDelta = new TimeDelta(1000L * Long.valueOf(urlArgs.get(TIME_DELTA_TAG)));
+
+            builder.withStartPoint(st)
+                    .withStartTime(startTime)
+                    .withMaxDelta(maxDelta);
         } catch (NumberFormatException e) {
             outputArgsError(urlArgs, output);
         }
 
         boolean test = Boolean.valueOf(urlArgs.get(TEST_TAG));
-        args.put(TEST_TAG, test);
-        args.put(TYPE_TAG, urlArgs.get(TYPE_TAG));
+        builder.isTest(test);
+        builder.withQuery(new LocationType(urlArgs.get(TYPE_TAG), urlArgs.get(TYPE_TAG)));
         boolean humanReadable = Boolean.valueOf(urlArgs.getOrDefault(HUMAN_READABLE_TAG, "false"));
 
 
-        Map<String, List<Object>> results = null;
+        ApplicationResult results = null;
         try {
-            results = ApplicationRunner.runApplication(tag, args);
+            results = ApplicationRunner.runApplication(builder.build());
         } catch (Exception e) {
             LoggingUtils.logError(e);
             outputInternalErrors(Stream.of(e), output);
         }
 
-        if (results == null || !results.containsKey("ROUTES")) {
-            results = new HashMap<>();
-            results.put("ERRORS", new ArrayList<>());
-            results.get("ERRORS").add(new Exception("Null results set."));
+        if (results == null || (results.getResult().isEmpty() && results.getErrors().isEmpty())) {
+            results = ApplicationResult.err(Lists.newArrayList(new Exception("Null results set.")));
         }
-        if (results.containsKey("ERRORS")) {
-            results.get("ERRORS").forEach(errObj -> LoggingUtils.logError((Exception) errObj));
-            outputInternalErrors(results.get("ERRORS").stream().map(obj -> (Exception) obj), output);
+        if (results.hasErrors()) {
+            results.getErrors().forEach(LoggingUtils::logError);
+            outputInternalErrors(results.getErrors().stream(), output);
             return;
         }
         String rval;
         if (humanReadable) {
-            List<TravelRoute> routes = results.get("ROUTES")
+            List<TravelRoute> routes = results.getResult()
                     .parallelStream()
-                    .map(routeObj -> (TravelRoute) routeObj)
                     .collect(Collectors.toList());
             rval = TestDisplayer.buildDisplay(routes);
         } else {
             TravelRouteJsonConverter converter = new TravelRouteJsonConverter();
             JSONArray routesArray = results
-                    .get("ROUTES")
+                    .getResult()
                     .parallelStream()
-                    .map(routeObj -> (TravelRoute) routeObj)
                     .map(converter::toJson)
                     .collect(JSONArray::new, (r, s) -> r.put(new JSONObject(s)), (r, r2) -> {
                         for (int i = 0; i < r2.length(); i++) {
@@ -133,7 +143,7 @@ public class LambdaHandler implements RequestStreamHandler {
         LoggingUtils.logMessage(
                 "DonutLambda",
                 "Got %d routes in %f seconds.",
-                results.get("ROUTES").size(),
+                results.getResult().size(),
                 diffTime / 1000.0
         );
 

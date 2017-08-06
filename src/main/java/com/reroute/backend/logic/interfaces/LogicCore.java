@@ -1,10 +1,15 @@
 package com.reroute.backend.logic.interfaces;
 
-import java.util.List;
-import java.util.Map;
+import com.reroute.backend.logic.ApplicationRequest;
+import com.reroute.backend.logic.ApplicationResult;
+
+import java.util.Set;
 
 public interface LogicCore {
-    Map<String, List<Object>> performLogic(Map<String, Object> args);
+    ApplicationResult performLogic(ApplicationRequest request);
 
-    String getTag();
+    Set<String> getTags();
+
+    boolean isValid(ApplicationRequest request);
+
 }

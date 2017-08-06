@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import com.reroute.backend.costs.arguments.BulkCostArgs;
 import com.reroute.backend.costs.arguments.CostArgs;
 import com.reroute.backend.costs.interfaces.BulkCostProvider;
+import com.reroute.backend.logic.ApplicationRequest;
 import com.reroute.backend.logic.ApplicationRunner;
 import com.reroute.backend.model.location.DestinationLocation;
 import com.reroute.backend.model.location.StartPoint;
@@ -13,7 +14,6 @@ import com.reroute.backend.utils.StreamUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -35,27 +35,16 @@ public class PathmakerMultiRouteCostProvider extends MultiRouteCostProvider impl
 
     protected Map<DestinationLocation, List<TravelRoute>> buildRoutes(StartPoint a, List<DestinationLocation> b, TimePoint startTime) {
 
-        Map<String, DestinationLocation> destToString = b.stream()
-                .collect(StreamUtils.collectWithKeys(DestinationLocation::toString));
+        ApplicationRequest request = new ApplicationRequest.Builder("DONUTAB_MULTI")
+                .withStartPoint(a)
+                .withEndPoints(b)
+                .withStartTime(startTime)
+                .build();
 
-        Map<String, Object> donutRoutingArgs = new HashMap<>();
-        donutRoutingArgs.put("latitude", a.getCoordinates()[0]);
-        donutRoutingArgs.put("longitude", a.getCoordinates()[1]);
-        donutRoutingArgs.put("starttime", startTime.getUnixTime());
-        for (int i = 0; i < b.size(); i++) {
-            donutRoutingArgs.put("latitude" + (i + 2), b.get(i).getCoordinates()[0]);
-            donutRoutingArgs.put("longitude" + (i + 2), b.get(i).getCoordinates()[1]);
-            donutRoutingArgs.put("bestonly", false);
-        }
+        List<TravelRoute> fullResSet = ApplicationRunner.runApplication(request).getResult();
 
-        return ApplicationRunner.runApplication("DONUTAB", donutRoutingArgs).entrySet().stream()
-                .filter(entry -> !entry.getKey().equals("ERROR"))
-                .collect(StreamUtils.collectWithMapping(
-                        entry -> destToString.get(entry.getKey()),
-                        entry -> entry.getValue().stream()
-                                .map(obj -> (TravelRoute) obj)
-                                .collect(Collectors.toList())
-                ));
+        return fullResSet.stream().collect(Collectors.groupingBy(TravelRoute::getDestination));
+
     }
 
     @Override

@@ -1,19 +1,23 @@
 package com.reroute.backend.logic.finder;
 
+import com.google.common.collect.Lists;
 import com.reroute.backend.costs.CostCalculator;
 import com.reroute.backend.costs.arguments.BulkCostArgs;
+import com.reroute.backend.logic.ApplicationRequest;
+import com.reroute.backend.logic.ApplicationResult;
 import com.reroute.backend.logic.helpers.LogicCoreHelper;
 import com.reroute.backend.logic.interfaces.LogicCore;
 import com.reroute.backend.model.location.DestinationLocation;
 import com.reroute.backend.model.location.StartPoint;
 import com.reroute.backend.model.routing.TravelRoute;
+import com.reroute.backend.model.time.TimeDelta;
+import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.utils.StreamUtils;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -21,12 +25,6 @@ import java.util.stream.Collectors;
  */
 public class FinderCore implements LogicCore {
 
-    public static final String LAT_TAG = "latitude";
-    public static final String LONG_TAG = "longitude";
-    public static final String TIME_DELTA_TAG = "timedelta";
-    public static final String DEST_LIST_TAG = "DESTS";
-    public static final String START_TIME_TAG = "starttime";
-    public static final String ROUTE_LIST_TAG = "ROUTES";
     public static final String TAG = "WEASEL";
     private static final String TIME_COST_START_TIME_TAG = "starttime";
     private static final String TIME_COST_COMPARISON_TAG = "comparison";
@@ -35,32 +33,27 @@ public class FinderCore implements LogicCore {
     private final static String TIME_COST_TAG = "time";
 
     @Override
-    public Map<String, List<Object>> performLogic(Map<String, Object> args) {
+    public ApplicationResult performLogic(ApplicationRequest args) {
 
-        List<StartPoint> locs = new ArrayList<>();
-        locs.add(new StartPoint(new double[] { (double) args.get(LAT_TAG), (double) args.get(LONG_TAG) }));
-        for (int i = 2; args.containsKey(LAT_TAG + i); i++) {
-            double lat = (double) args.get(LAT_TAG + i);
-            if (!args.containsKey(LONG_TAG + i)) {
-                break;
-            }
-            double lng = (double) args.get(LONG_TAG + i);
-            locs.add(new StartPoint(new double[] { lat, lng }));
-        }
+        List<StartPoint> locs = args.getStarts();
 
-        Map<String, List<Object>> donutResults = LogicCoreHelper.getHelper().runCore("DONUT", args);
+        ApplicationRequest donutArgs = new ApplicationRequest.Builder("DONUT")
+                .withStartPoint(args.getStarts().get(0))
+                .withStartTime(args.getStartTime())
+                .withMaxDelta(args.getMaxDelta())
+                .withQuery(args.getQuery())
+                .build();
 
-        List<Object> unfilteredRouteObjList = donutResults.get(ROUTE_LIST_TAG);
+        ApplicationResult donutResults = LogicCoreHelper.getHelper().runCore(donutArgs);
 
-        Map<DestinationLocation, TravelRoute> routeMap = unfilteredRouteObjList.stream()
-                .map(obj -> (TravelRoute) obj)
+        Map<DestinationLocation, TravelRoute> routeMap = donutResults.getResult().stream()
                 .collect(StreamUtils.collectWithKeys(TravelRoute::getDestination));
 
         Set<BulkCostArgs> ags = locs.stream()
                 .map(pt -> new BulkCostArgs()
                         .setCostTag(TIME_COST_TAG)
-                        .setArg(TIME_COST_START_TIME_TAG, args.get(START_TIME_TAG))
-                        .setArg(TIME_COST_COMPARE_VALUE_TAG, args.get(TIME_DELTA_TAG))
+                        .setArg(TIME_COST_START_TIME_TAG, args.getStartTime())
+                        .setArg(TIME_COST_COMPARE_VALUE_TAG, args.getMaxDelta())
                         .setArg(TIME_COST_COMPARISON_TAG, "<=")
                         .setArg(TIME_COST_POINT_ONE_TAG, pt))
                 .peek(bkarg -> routeMap.keySet().forEach(bkarg::addSubject))
@@ -74,15 +67,21 @@ public class FinderCore implements LogicCore {
         }
 
 
-        Map<String, List<Object>> rval = new ConcurrentHashMap<>();
-        rval.put(ROUTE_LIST_TAG, new ArrayList<>(routeMap.values()));
-        rval.put(DEST_LIST_TAG, new ArrayList<>(routeMap.keySet()));
-        return rval;
+        return ApplicationResult.ret(Lists.newArrayList(routeMap.values()));
+
     }
 
     @Override
-    public String getTag() {
-        return TAG;
+    public Set<String> getTags() {
+        return Collections.singleton(TAG);
+    }
+
+    @Override
+    public boolean isValid(ApplicationRequest request) {
+        return request.getStarts() != null && !request.getStarts().isEmpty() && request.getStarts().size() > 1
+                && request.getStartTime() != null && !TimePoint.NULL.equals(request.getStartTime())
+                && request.getMaxDelta() != null && !TimeDelta.NULL.equals(request.getMaxDelta())
+                && request.getQuery() != null;
     }
 
 

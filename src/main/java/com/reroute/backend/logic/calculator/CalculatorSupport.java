@@ -2,10 +2,13 @@ package com.reroute.backend.logic.calculator;
 
 import com.reroute.backend.costs.CostCalculator;
 import com.reroute.backend.costs.arguments.CostArgs;
+import com.reroute.backend.logic.ApplicationRequest;
+import com.reroute.backend.logic.ApplicationResult;
 import com.reroute.backend.logic.ApplicationRunner;
 import com.reroute.backend.logic.generator.GeneratorCore;
 import com.reroute.backend.model.location.LocationPoint;
 import com.reroute.backend.model.location.LocationType;
+import com.reroute.backend.model.location.StartPoint;
 import com.reroute.backend.model.location.TransChain;
 import com.reroute.backend.model.location.TransStation;
 import com.reroute.backend.model.routing.TravelRoute;
@@ -15,12 +18,9 @@ import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.stations.StationRetriever;
 import com.reroute.backend.utils.LoggingUtils;
 
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -136,21 +136,19 @@ public class CalculatorSupport {
 
         TravelRouteNode node = route.getRoute().get(index);
 
-        Map<String, Object> donutParams = new ConcurrentHashMap<>();
-        donutParams.put(GeneratorCore.TYPE_TAG, type.getEncodedname());
-        donutParams.put(GeneratorCore.TIME_DELTA_TAG, delta.getDeltaLong());
-        donutParams.put(GeneratorCore.LAT_TAG, node.getPt().getCoordinates()[0]);
-        donutParams.put(GeneratorCore.LONG_TAG, node.getPt().getCoordinates()[1]);
-        donutParams.put(GeneratorCore.START_TIME_TAG, route.getTimeAtNode(index));
+        ApplicationRequest request = new ApplicationRequest.Builder(GeneratorCore.TAG)
+                .withQuery(type)
+                .withStartPoint(new StartPoint(node.getPt().getCoordinates()))
+                .withStartTime(route.getTimeAtNode(index))
+                .withMaxDelta(delta)
+                .build();
 
-        Map<String, List<Object>> rval = ApplicationRunner.runApplication(GeneratorCore.TAG, donutParams);
-        if (rval.containsKey("ERRORS")) {
-            rval.get("ERRORS").forEach(err -> LoggingUtils.logError((Exception) err));
+        ApplicationResult rval = ApplicationRunner.runApplication(request);
+        if (rval.hasErrors()) {
+            rval.getErrors().forEach(LoggingUtils::logError);
         }
-        List<Object> routeList = rval.getOrDefault("ROUTES", Collections.emptyList());
 
-        return routeList.parallelStream()
-                .map(obj -> (TravelRoute) obj)
+        return rval.getResult().stream()
                 .map(destRoute -> {
                     TravelRoute base = route.cloneAtNode(index);
                     destRoute.getRoute().stream().skip(1).forEach(base::addNode);

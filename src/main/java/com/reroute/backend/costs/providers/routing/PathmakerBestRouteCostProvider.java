@@ -4,6 +4,8 @@ import com.google.common.collect.Lists;
 import com.reroute.backend.costs.arguments.BulkCostArgs;
 import com.reroute.backend.costs.arguments.CostArgs;
 import com.reroute.backend.costs.interfaces.BulkCostProvider;
+import com.reroute.backend.logic.ApplicationRequest;
+import com.reroute.backend.logic.ApplicationResult;
 import com.reroute.backend.logic.ApplicationRunner;
 import com.reroute.backend.model.location.DestinationLocation;
 import com.reroute.backend.model.location.StartPoint;
@@ -12,11 +14,9 @@ import com.reroute.backend.model.time.TimePoint;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * Created by ilan on 5/23/17.
@@ -35,17 +35,15 @@ public class PathmakerBestRouteCostProvider extends BestRouteCostProvider implem
 
     protected List<TravelRoute> buildRoutes(StartPoint a, List<DestinationLocation> b, TimePoint startTime) {
 
-        Map<String, Object> donutRoutingArgs = new HashMap<>();
-        donutRoutingArgs.put("latitude", a.getCoordinates()[0]);
-        donutRoutingArgs.put("longitude", a.getCoordinates()[1]);
-        donutRoutingArgs.put("starttime", startTime.getUnixTime());
-        for (int i = 0; i < b.size(); i++) {
-            donutRoutingArgs.put("latitude" + (i + 2), b.get(i).getCoordinates()[0]);
-            donutRoutingArgs.put("longitude" + (i + 2), b.get(i).getCoordinates()[1]);
-        }
+        ApplicationRequest bestRouteRequest = new ApplicationRequest.Builder("DONUTAB_BEST")
+                .withStartPoint(a)
+                .withEndPoints(b)
+                .withStartTime(startTime)
+                .build();
 
-        Map<String, List<Object>> callVal = ApplicationRunner.runApplication("DONUTAB", donutRoutingArgs);
-        return callVal.get("ROUTES").stream().map(rt -> (TravelRoute) rt).collect(Collectors.toList());
+        ApplicationResult callVal = ApplicationRunner.runApplication(bestRouteRequest);
+
+        return callVal.getResult();
     }
 
     @Override
