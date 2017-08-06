@@ -10,13 +10,14 @@ import com.reroute.backend.model.routing.TravelRoute;
 import com.reroute.backend.model.time.TimePoint;
 
 import java.util.Calendar;
+import java.util.List;
 
 /**
  * Created by ilan on 5/23/17.
  */
-public abstract class RouteCostProvider implements CostProvider {
+public abstract class MultiRouteCostProvider implements CostProvider {
 
-    public static final String TAG = "route";
+    public static final String TAG = "routes";
 
     public static final String START_TIME_TAG = "starttime";
     public static final String COMPARISON_TAG = "comparison";
@@ -45,7 +46,7 @@ public abstract class RouteCostProvider implements CostProvider {
         return buildRoute(start, end, startTime);
     }
 
-    protected abstract TravelRoute buildRoute(StartPoint a, DestinationLocation b, TimePoint start);
+    protected abstract List<TravelRoute> buildRoute(StartPoint a, DestinationLocation b, TimePoint start);
 
     protected static StartPoint extractStart(CostArgs args) {
         Object startArg = args.getArgs().containsKey(POINT_ONE_TAG)

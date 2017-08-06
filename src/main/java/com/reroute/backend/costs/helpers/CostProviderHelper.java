@@ -5,7 +5,8 @@ import com.reroute.backend.costs.arguments.BulkCostArgs;
 import com.reroute.backend.costs.arguments.CostArgs;
 import com.reroute.backend.costs.interfaces.BulkCostProvider;
 import com.reroute.backend.costs.interfaces.CostProvider;
-import com.reroute.backend.costs.providers.routing.PathmakerRouteCostProvider;
+import com.reroute.backend.costs.providers.routing.PathmakerBestRouteCostProvider;
+import com.reroute.backend.costs.providers.routing.PathmakerMultiRouteCostProvider;
 import com.reroute.backend.costs.providers.timing.GoogleTimeCostProvider;
 import com.reroute.backend.costs.providers.timing.MapzenTimeCostProvider;
 import com.reroute.backend.utils.LoggingUtils;
@@ -44,7 +45,8 @@ public class CostProviderHelper {
 
     private static Collection<? extends CostProvider> initializeProvidersList() {
         Set<CostProvider> rval = Sets.newConcurrentHashSet();
-        rval.add(new PathmakerRouteCostProvider());
+        rval.add(new PathmakerBestRouteCostProvider());
+        rval.add(new PathmakerMultiRouteCostProvider());
 
         Arrays.stream(GoogleTimeCostProvider.API_KEYS)
                 .map(GoogleTimeCostProvider::new)

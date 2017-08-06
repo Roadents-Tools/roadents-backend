@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 /**
  * Created by ilan on 5/23/17.
  */
-public class PathmakerRouteCostProvider extends RouteCostProvider implements BulkCostProvider {
+public class PathmakerBestRouteCostProvider extends BestRouteCostProvider implements BulkCostProvider {
 
     @Override
     public boolean isUp() {

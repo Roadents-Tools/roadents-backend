@@ -21,6 +21,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -37,6 +38,7 @@ public class PathmakerCore implements LogicCore {
     public static final String A_LONG_TAG = "longitude";
     public static final String B_LAT_TAG_FORMAT = "latitude%d";
     public static final String B_LONG_TAG = "longitude%d";
+    public static final String BEST_ONLY_TAG = "bestonly";
 
     public static final String ROUTE_LIST_TAG = "ROUTES";
 
@@ -50,6 +52,10 @@ public class PathmakerCore implements LogicCore {
         TimePoint startTime = new TimePoint(startUnixTime, "America/Los_Angeles");
         double startLat = (double) args.get(A_LAT_TAG);
         double startLong = (double) args.get(A_LONG_TAG);
+        boolean bestonly = Optional.ofNullable(args.get(BEST_ONLY_TAG))
+                .map(obj -> Boolean.parseBoolean(obj.toString()))
+                .orElse(true);
+
 
         List<DestinationLocation> ends = new ArrayList<>();
         for (int i = 2; args.containsKey(String.format(B_LAT_TAG_FORMAT, i)); i++) {
@@ -62,21 +68,30 @@ public class PathmakerCore implements LogicCore {
             ));
         }
 
+        StartPoint st = new StartPoint(new double[] { startLat, startLong });
         //Run the core
-        List<TravelRoute> destsToRoutes = runDonutRouting(
-                new StartPoint(new double[] { startLat, startLong }),
-                startTime,
-                ends
-        );
+        if (bestonly) {
+            List<TravelRoute> destsToRoutes = runDonutRouting(st, startTime, ends);
 
-        //Build the output
-        Map<String, List<Object>> output = new HashMap<>();
-        if (LoggingUtils.hasErrors()) {
-            List<Object> errs = new ArrayList<>(LoggingUtils.getErrors());
-            output.put("ERRORS", errs);
+            //Build the output
+            Map<String, List<Object>> output = new HashMap<>();
+            if (LoggingUtils.hasErrors()) {
+                List<Object> errs = new ArrayList<>(LoggingUtils.getErrors());
+                output.put("ERRORS", errs);
+            }
+            output.put(ROUTE_LIST_TAG, new ArrayList<>(destsToRoutes));
+            return output;
+        } else {
+            Map<DestinationLocation, List<TravelRoute>> rval = buildAllRoutesFrom(st, ends, startTime);
+
+            Map<String, List<Object>> output = new HashMap<>();
+            if (LoggingUtils.hasErrors()) {
+                List<Object> errs = new ArrayList<>(LoggingUtils.getErrors());
+                output.put("ERRORS", errs);
+            }
+            rval.forEach((key, value) -> output.put(key.toString(), new ArrayList<Object>(value)));
+            return output;
         }
-        output.put(ROUTE_LIST_TAG, new ArrayList<>(destsToRoutes));
-        return output;
     }
 
     @Override

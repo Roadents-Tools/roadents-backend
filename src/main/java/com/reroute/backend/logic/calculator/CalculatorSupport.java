@@ -160,20 +160,19 @@ public class CalculatorSupport {
     }
 
     /**
-     * Builds a route from a to b. Mainly a helper method in case other optimizations are necessary.
+     * Builds seed routes from A to B.
      *
      * @param a         the point to start at
      * @param b         the point to end at
      * @param startTime the time to start at
-     * @return the route from a to b starting at time startTime
+     * @return the list of routes from a to b starting at time startTime
      */
-    public static TravelRoute buildRoute(LocationPoint a, LocationPoint b, TimePoint startTime) {
-        CostArgs arg = new CostArgs()
+    public static List<TravelRoute> buildRoute(LocationPoint a, LocationPoint b, TimePoint startTime) {
+        return (List<TravelRoute>) CostCalculator.getCostValue(new CostArgs()
                 .setCostTag("routes")
                 .setSubject(b)
                 .setArg("p1", a)
-                .setArg("starttime", startTime);
-        return (TravelRoute) CostCalculator.getCostValue(arg);
+                .setArg("starttime", startTime));
     }
 
 
