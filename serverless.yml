@@ -1,4 +1,4 @@
-service: project-donut-server
+service: project-generator-server
 
 
 provider:
@@ -6,11 +6,11 @@ provider:
   runtime: java8
   
 package:
-  artifact: build/distributions/project-donut-server.zip
+  artifact: build/distributions/project-generator-server.zip
 
 functions:
   Donut:
-    handler: org.tymit.displayers.lambdacontroller.LambdaHandler
+    handler: LambdaHandler
     events:
       - http:
           path: Donut
