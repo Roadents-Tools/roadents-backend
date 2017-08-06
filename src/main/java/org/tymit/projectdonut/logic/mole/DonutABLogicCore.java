@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 
 /**
@@ -83,11 +84,28 @@ public class DonutABLogicCore implements LogicCore {
         return TAG;
     }
 
-    public List<TravelRoute> runDonutRouting(StartPoint start, TimePoint startTime, List<DestinationLocation> ends) {
+    public static List<TravelRoute> runDonutRouting(StartPoint start, TimePoint startTime, List<DestinationLocation> ends) {
 
         //Prepare the call
         if (start == null || startTime == null || ends == null || ends.isEmpty()) {
             return Collections.emptyList();
+        }
+
+        Map<DestinationLocation, List<TravelRoute>> endsToRoutes = buildAllRoutesFrom(start, ends, startTime);
+        return ends.stream()
+                .map(end -> endsToRoutes.get(end)
+                        .stream()
+                        .min(Comparator.comparing(rt -> rt.getTotalTime().getDeltaLong()))
+                        .get()
+                )
+                .collect(Collectors.toList());
+    }
+
+    public static Map<DestinationLocation, List<TravelRoute>> buildAllRoutesFrom(StartPoint start, List<DestinationLocation> ends, TimePoint startTime) {
+
+        //Prepare the call
+        if (start == null || startTime == null || ends == null || ends.isEmpty()) {
+            return Collections.emptyMap();
         }
 
         TimeDelta maxTimeDelta = ends.stream()
@@ -105,28 +123,24 @@ public class DonutABLogicCore implements LogicCore {
 
         //Get the station routes
         Set<TravelRoute> stationRoutes = DonutLogicSupport.buildStationRouteList(start, startTime, maxTimeDelta, isInAnyRange);
-        LoggingUtils.logMessage(getClass().getName(), "Got %d station routes.", stationRoutes.size());
+        LoggingUtils.logMessage(DonutABLogicCore.class.getName(), "Got %d station routes.", stationRoutes.size());
 
         //Optimize and attach the ends
-        List<TravelRoute> destRoutes = new ArrayList<>();
-        for (LocationPoint end : ends) {
-            TravelRoute base = stationRoutes.stream()
-                    .min(Comparator.comparing(route -> LocationUtils.timeBetween(route.getCurrentEnd(), end)
-                            .getDeltaLong()))
-                    .orElse(stationRoutes.iterator().next()) //Pick a random on error
-                    .clone();
-
-            TravelRouteNode endNode = new TravelRouteNode.Builder()
-                    .setPoint(end)
-                    .setWalkTime(LocationUtils.timeBetween(base.getCurrentEnd(), end).getDeltaLong())
-                    .build();
-            TravelRoute route = base.setDestinationNode(endNode);
-            destRoutes.add(route);
+        Map<DestinationLocation, List<TravelRoute>> endsToRoutes = new HashMap<>();
+        for (DestinationLocation end : ends) {
+            List<TravelRoute> allRoutes = stationRoutes.stream()
+                    .filter(route -> LocationUtils.timeBetween(route.getCurrentEnd(), end)
+                            .getDeltaLong() <= LocationUtils.timeBetween(start, end).getDeltaLong())
+                    .map(base -> base.clone().setDestinationNode(new TravelRouteNode.Builder()
+                            .setPoint(end)
+                            .setWalkTime(LocationUtils.timeBetween(base.getCurrentEnd(), end)
+                                    .getDeltaLong())
+                            .build()
+                    ))
+                    .collect(Collectors.toList());
+            endsToRoutes.put(end, allRoutes);
         }
-        LoggingUtils.logMessage(getClass().getName(),
-                "Got %d -> %d dest routes.", stationRoutes.size(), destRoutes.size()
-        );
-        return destRoutes;
+        return endsToRoutes;
     }
 
     private static Predicate<TravelRoute> isRouteInRange(LocationPoint end, TimeDelta maxDelta) {
