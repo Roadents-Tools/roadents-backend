@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
@@ -92,6 +93,10 @@ public final class DonutLogicSupport {
     private DonutLogicSupport() {
     }
 
+    public static Set<TravelRoute> buildStationRouteList(StartPoint initialPoint, TimePoint startTime, TimeDelta maxDelta) {
+        return buildStationRouteList(initialPoint, startTime, maxDelta, null);
+    }
+
     /**
      * Builds a list of possible routes to stations given initial requirements. Assuming we start at initialPoint
      * at time startTime, each of the returned routes will be to a station no more than maxDelta time away.
@@ -99,19 +104,22 @@ public final class DonutLogicSupport {
      * @param initialPoint the location we are starting from
      * @param startTime    the time we begin looking for stations
      * @param maxDelta     the maximum time from start we are allowed to travel to get to the stations
+     * @param layerFilters  other filters to apply to each layer to make sure it should be iterated through
      * @return the possible routes
      */
-    public static Set<TravelRoute> buildStationRouteList(StartPoint initialPoint, TimePoint startTime, TimeDelta maxDelta) {
+    @SafeVarargs
+    public static Set<TravelRoute> buildStationRouteList(StartPoint initialPoint, TimePoint startTime, TimeDelta maxDelta, Predicate<TravelRoute>... layerFilters) {
         Map<String, TravelRoute> rval = new ConcurrentHashMap<>();
         TravelRoute startRoute = new TravelRoute(initialPoint, startTime);
         rval.put(getLocationTag(initialPoint), startRoute);
         List<TravelRoute> currentLayer = new ArrayList<>(Sets.newHashSet(startRoute));
 
         Function<TravelRoute, Stream<TravelRoute>> unfilteredLayerBuilder = buildNextLayerFunction(startTime, maxDelta);
+        Predicate<TravelRoute> layerFilter = nextLayerFilter(maxDelta, rval, layerFilters);
         while (!currentLayer.isEmpty()) {
             List<TravelRoute> nextLayer = currentLayer.stream()
                     .flatMap(unfilteredLayerBuilder)
-                    .filter(nextLayerFilter(maxDelta, rval))
+                    .filter(layerFilter)
                     .peek(newRoute -> rval.put(getLocationTag(newRoute.getCurrentEnd()), newRoute))
                     .collect(Collectors.toList());
 
@@ -238,16 +246,27 @@ public final class DonutLogicSupport {
         return rval;
     }
 
-    public static Predicate<TravelRoute> nextLayerFilter(TimeDelta maxDelta, Map<String, TravelRoute> currentRoutes) {
-        return route -> {
-            if (route.getTotalTime().getDeltaLong() >= maxDelta.getDeltaLong())
-                return false;
-            if (isMiddleMan(route))
-                return false; //TODO: Not bandaid the middleman issue
-            TravelRoute currentInMap = currentRoutes.get(getLocationTag(route.getCurrentEnd()));
-            return currentInMap == null
-                    || currentInMap.getTotalTime().getDeltaLong() > route.getTotalTime().getDeltaLong();
-        };
+    @SafeVarargs
+    public static Predicate<TravelRoute> nextLayerFilter(TimeDelta maxDelta, Map<String, TravelRoute> currentRoutes, Predicate<TravelRoute>... others) {
+        Predicate<TravelRoute> rval = route -> route.getTotalTime().getDeltaLong() <= maxDelta.getDeltaLong();
+        rval = rval.and(route -> Optional.of(currentRoutes.get(getLocationTag(route.getCurrentEnd())))
+                .map(rt -> rt.getTotalTime().getDeltaLong() > route.getTotalTime().getDeltaLong())
+                .orElse(true)
+        );
+        for (Predicate<TravelRoute> passed : others) {
+            rval = rval.and(passed);
+        }
+        return rval;
+    }
+
+    /**
+     * Get a tag to represent a single location, for filtering purposes.
+     *
+     * @param pt the location
+     * @return the location's tag
+     */
+    private static String getLocationTag(LocationPoint pt) {
+        return pt.getCoordinates()[0] + ", " + pt.getCoordinates()[1];
     }
 
     /**
@@ -264,20 +283,30 @@ public final class DonutLogicSupport {
         return IntStream.range(1, rtSize)
                 .boxed()
                 .parallel()
-                .anyMatch(i -> route.getRoute()
-                        .get(i - 1)
-                        .arrivesByFoot() && route.getRoute()
-                        .get(i)
-                        .arrivesByFoot());
+                .anyMatch(i -> route.getRoute().get(i - 1).arrivesByFoot() && route.getRoute().get(i).arrivesByFoot());
     }
 
     /**
-     * Get a tag to represent a single location, for filtering purposes.
-     * @param pt the location
-     * @return the location's tag
+     * Checks to see if a travelroute suffered from the Flash issue.
+     * This is defined as a route involving going faster than what we currently consider the maximum speed of public
+     * transit, which is currently 65 miles per hour.
+     * @param route the route to check
+     * @return whether or not this is a flash error
      */
-    public static String getLocationTag(LocationPoint pt) {
-        return pt.getCoordinates()[0] + ", " + pt.getCoordinates()[1];
+    public static boolean isFlash(TravelRoute route) {
+        int rtSize = route.getRoute().size();
+        return IntStream.range(1, rtSize)
+                .boxed()
+                .parallel()
+                .anyMatch(i -> {
+                    TravelRouteNode curnode = route.getRoute().get(i);
+                    LocationPoint prevpt = route.getRoute().get(i - 1).getPt();
+                    Distance dx = LocationUtils.distanceBetween(curnode.getPt(), prevpt);
+                    TimeDelta dt = curnode.arrivesByFoot()
+                            ? curnode.getWalkTimeFromPrev()
+                            : curnode.getTravelTimeFromPrev();
+                    return LocationUtils.timeToMaxTransit(dt).inMeters() <= dx.inMeters();
+                });
     }
 
     /**

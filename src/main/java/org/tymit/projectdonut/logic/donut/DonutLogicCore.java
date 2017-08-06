@@ -107,6 +107,7 @@ public class DonutLogicCore implements LogicCore {
         //Filter and correct the dest routes
         Map<DestinationLocation, TravelRoute> destToShortest = destRoutes.stream()
                 .filter(rt -> !DonutLogicSupport.isMiddleMan(rt))
+                .filter(rt -> !DonutLogicSupport.isFlash(rt))
                 .collect(DonutLogicSupport.OPTIMAL_ROUTES_FOR_DESTINATIONS);
 
         LoggingUtils.logMessage(

@@ -2,6 +2,7 @@ package org.tymit.projectdonut.logic.mole;
 
 import org.tymit.projectdonut.logic.donut.DonutLogicSupport;
 import org.tymit.projectdonut.logic.interfaces.LogicCore;
+import org.tymit.projectdonut.model.distance.Distance;
 import org.tymit.projectdonut.model.location.DestinationLocation;
 import org.tymit.projectdonut.model.location.LocationPoint;
 import org.tymit.projectdonut.model.location.LocationType;
@@ -15,11 +16,13 @@ import org.tymit.projectdonut.utils.LocationUtils;
 import org.tymit.projectdonut.utils.LoggingUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 
 /**
@@ -83,31 +86,31 @@ public class DonutABLogicCore implements LogicCore {
     public List<TravelRoute> runDonutRouting(StartPoint start, TimePoint startTime, List<DestinationLocation> ends) {
 
         //Prepare the call
-        for (LocationPoint end : ends) {
-            double centerlag = (start.getCoordinates()[0] + end.getCoordinates()[0]) / 2;
-            double centerlng = (start.getCoordinates()[1] + end.getCoordinates()[1]) / 2;
-            final double[] center = new double[] { centerlag, centerlng };
-            final TimeDelta maxDelta = LocationUtils.timeBetween(start, end);
-            StationRetriever.prepareWorld(new StartPoint(center), startTime, maxDelta);
+        if (start == null || startTime == null || ends == null || ends.isEmpty()) {
+            return Collections.emptyList();
         }
 
         TimeDelta maxTimeDelta = ends.stream()
                 .map(end -> LocationUtils.timeBetween(start, end))
                 .max(Comparator.comparing(TimeDelta::getDeltaLong))
-                .orElse(new TimeDelta(-1));
+                .orElse(TimeDelta.NULL);
+
+        StationRetriever.prepareWorld(start, startTime, maxTimeDelta);
+
+        Predicate<TravelRoute> isInAnyRange = ends.stream()
+                .map(end -> isRouteInRange(end, maxTimeDelta))
+                .reduce(Predicate::or)
+                .orElse(rt -> false); //If the predicate is null, then we have no ends; filter everything immediately.
+
 
         //Get the station routes
-        Set<TravelRoute> stationRoutes = DonutLogicSupport.buildStationRouteList(start, startTime, maxTimeDelta);
+        Set<TravelRoute> stationRoutes = DonutLogicSupport.buildStationRouteList(start, startTime, maxTimeDelta, isInAnyRange);
         LoggingUtils.logMessage(getClass().getName(), "Got %d station routes.", stationRoutes.size());
 
         //Optimize and attach the ends
         List<TravelRoute> destRoutes = new ArrayList<>();
         for (LocationPoint end : ends) {
             TravelRoute base = stationRoutes.stream()
-                    .filter(route -> !DonutLogicSupport.isMiddleMan(route)) //Filter the middlemen immediately
-                    .filter(route -> !route.getRoute()
-                            .get(route.getRoute().size() - 1)
-                            .arrivesByFoot()) //Would be a future middleman
                     .min(Comparator.comparing(route -> LocationUtils.timeBetween(route.getCurrentEnd(), end)
                             .getDeltaLong()))
                     .orElse(stationRoutes.iterator().next()) //Pick a random on error
@@ -124,5 +127,14 @@ public class DonutABLogicCore implements LogicCore {
                 "Got %d -> %d dest routes.", stationRoutes.size(), destRoutes.size()
         );
         return destRoutes;
+    }
+
+    private static Predicate<TravelRoute> isRouteInRange(LocationPoint end, TimeDelta maxDelta) {
+        if (null == maxDelta || TimeDelta.NULL.equals(maxDelta)) return route -> false;
+        return route -> {
+            TimeDelta left = maxDelta.minus(route.getTotalTime());
+            Distance maxDistance = LocationUtils.timeToMaxTransit(left);
+            return LocationUtils.distanceBetween(end, route.getCurrentEnd()).inMeters() <= maxDistance.inMeters();
+        };
     }
 }
