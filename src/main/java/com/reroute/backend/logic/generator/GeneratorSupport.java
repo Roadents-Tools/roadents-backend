@@ -249,9 +249,10 @@ public final class GeneratorSupport {
     @SafeVarargs
     public static Predicate<TravelRoute> nextLayerFilter(TimeDelta maxDelta, Map<String, TravelRoute> currentRoutes, Predicate<TravelRoute>... others) {
         Predicate<TravelRoute> rval = route -> route.getTotalTime().getDeltaLong() <= maxDelta.getDeltaLong();
-        rval = rval.and(route -> Optional.of(currentRoutes.get(getLocationTag(route.getCurrentEnd())))
-                .map(rt -> rt.getTotalTime().getDeltaLong() > route.getTotalTime().getDeltaLong())
-                .orElse(true)
+        rval = rval.and(
+                route -> Optional.ofNullable(currentRoutes.get(getLocationTag(route.getCurrentEnd())))
+                        .map(rt -> rt.getTotalTime().getDeltaLong() > route.getTotalTime().getDeltaLong())
+                        .orElse(true)
         );
         for (Predicate<TravelRoute> passed : others) {
             rval = rval.and(passed);
