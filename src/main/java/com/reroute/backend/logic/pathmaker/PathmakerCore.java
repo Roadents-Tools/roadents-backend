@@ -3,11 +3,9 @@ package com.reroute.backend.logic.pathmaker;
 import com.google.common.collect.Sets;
 import com.reroute.backend.logic.ApplicationRequest;
 import com.reroute.backend.logic.ApplicationResult;
-import com.reroute.backend.logic.generator.GeneratorSupport;
 import com.reroute.backend.logic.interfaces.LogicCore;
-import com.reroute.backend.model.distance.Distance;
+import com.reroute.backend.logic.utils.LogicUtils;
 import com.reroute.backend.model.location.DestinationLocation;
-import com.reroute.backend.model.location.LocationPoint;
 import com.reroute.backend.model.location.StartPoint;
 import com.reroute.backend.model.routing.TravelRoute;
 import com.reroute.backend.model.routing.TravelRouteNode;
@@ -62,13 +60,13 @@ public class PathmakerCore implements LogicCore {
         StationRetriever.prepareWorld(start, startTime, maxTimeDelta);
 
         Predicate<TravelRoute> isInAnyRange = ends.stream()
-                .map(end -> isRouteInRange(end, maxTimeDelta))
+                .map(end -> LogicUtils.isRouteInRange(end, maxTimeDelta))
                 .reduce(Predicate::or)
                 .orElse(rt -> false); //If the predicate is null, then we have no ends; filter everything immediately.
 
 
         //Get the station routes
-        Set<TravelRoute> stationRoutes = GeneratorSupport.buildStationRouteList(start, startTime, maxTimeDelta, isInAnyRange);
+        Set<TravelRoute> stationRoutes = LogicUtils.buildStationRouteList(start, startTime, maxTimeDelta, isInAnyRange);
         LoggingUtils.logMessage(PathmakerCore.class.getName(), "Got %d station routes.", stationRoutes.size());
 
         //Optimize and attach the ends
@@ -126,12 +124,4 @@ public class PathmakerCore implements LogicCore {
                 && request.getStartTime() != null && !TimePoint.NULL.equals(request.getStartTime());
     }
 
-    private static Predicate<TravelRoute> isRouteInRange(LocationPoint end, TimeDelta maxDelta) {
-        if (null == maxDelta || TimeDelta.NULL.equals(maxDelta)) return route -> false;
-        return route -> {
-            TimeDelta left = maxDelta.minus(route.getTotalTime());
-            Distance maxDistance = LocationUtils.timeToMaxTransit(left);
-            return LocationUtils.distanceBetween(end, route.getCurrentEnd()).inMeters() <= maxDistance.inMeters();
-        };
-    }
 }

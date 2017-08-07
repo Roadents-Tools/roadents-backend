@@ -1,11 +1,9 @@
-package com.reroute.backend.logic.generator;
+package com.reroute.backend.logic.utils;
 
 import com.google.common.collect.Sets;
-import com.reroute.backend.locations.LocationRetriever;
 import com.reroute.backend.model.distance.Distance;
 import com.reroute.backend.model.location.DestinationLocation;
 import com.reroute.backend.model.location.LocationPoint;
-import com.reroute.backend.model.location.LocationType;
 import com.reroute.backend.model.location.StartPoint;
 import com.reroute.backend.model.location.TransChain;
 import com.reroute.backend.model.location.TransStation;
@@ -38,10 +36,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-/**
- * Static utilities for the GeneratorCore.
- */
-public final class GeneratorSupport {
+public class LogicUtils {
 
     public static final Collector<? super TravelRoute, ?, Map<DestinationLocation, TravelRoute>> OPTIMAL_ROUTES_FOR_DESTINATIONS = new Collector<TravelRoute, Map<DestinationLocation, TravelRoute>, Map<DestinationLocation, TravelRoute>>() {
 
@@ -84,18 +79,7 @@ public final class GeneratorSupport {
             return Sets.newHashSet(Characteristics.IDENTITY_FINISH, Characteristics.UNORDERED);
         }
     };
-
-    private static final String TAG = "GeneratorSupport";
-
-    /**
-     * Utility classes cannot be initialized.
-     */
-    private GeneratorSupport() {
-    }
-
-    public static Set<TravelRoute> buildStationRouteList(StartPoint initialPoint, TimePoint startTime, TimeDelta maxDelta) {
-        return buildStationRouteList(initialPoint, startTime, maxDelta, null);
-    }
+    private static final String TAG = "LogicUtils";
 
     /**
      * Builds a list of possible routes to stations given initial requirements. Assuming we start at initialPoint
@@ -104,7 +88,7 @@ public final class GeneratorSupport {
      * @param initialPoint the location we are starting from
      * @param startTime    the time we begin looking for stations
      * @param maxDelta     the maximum time from start we are allowed to travel to get to the stations
-     * @param layerFilters  other filters to apply to each layer to make sure it should be iterated through
+     * @param layerFilters other filters to apply to each layer to make sure it should be iterated through
      * @return the possible routes
      */
     @SafeVarargs
@@ -129,7 +113,7 @@ public final class GeneratorSupport {
         return new HashSet<>(rval.values());
     }
 
-    public static Function<TravelRoute, Stream<TravelRoute>> buildNextLayerFunction(TimePoint startTime, TimeDelta maxDelta) {
+    private static Function<TravelRoute, Stream<TravelRoute>> buildNextLayerFunction(TimePoint startTime, TimeDelta maxDelta) {
         return route -> {
             TimePoint effectiveTime = startTime.plus(route.getTotalTime());
             TimeDelta effectiveDelta = maxDelta.minus(route.getTotalTime());
@@ -150,7 +134,7 @@ public final class GeneratorSupport {
         };
     }
 
-    public static Stream<TravelRouteNode> getArrivalNodesForBase(TravelRouteNode base, TimePoint startTime, TimeDelta effectiveDelta) {
+    private static Stream<TravelRouteNode> getArrivalNodesForBase(TravelRouteNode base, TimePoint startTime, TimeDelta effectiveDelta) {
         TimeDelta truDelta = effectiveDelta.minus(base.getTotalTimeToArrive());
         TimePoint truStart = startTime.plus(base.getTotalTimeToArrive());
         TransStation pt = (TransStation) base.getPt();
@@ -162,9 +146,10 @@ public final class GeneratorSupport {
 
     /**
      * Get all stations directly travelable to within a given time.
-     * @param station the station to start at
+     *
+     * @param station   the station to start at
      * @param startTime the time to start at
-     * @param maxDelta the maximum time to travel
+     * @param maxDelta  the maximum time to travel
      * @return nodes representing directly travelling from station to all possible stations
      */
     public static Set<TravelRouteNode> getArrivableStations(TransStation station, TimePoint startTime, TimeDelta maxDelta) {
@@ -179,9 +164,8 @@ public final class GeneratorSupport {
             return Collections.emptySet();
         }
 
-        Map<TransStation, TimeDelta> arrivable = StationRetriever.getArrivableStations(station.getChain(), trueStart, trueDelta);
-
-        Set<TravelRouteNode> rval2 = arrivable.entrySet().stream()
+        return StationRetriever.getArrivableStations(station.getChain(), trueStart, trueDelta)
+                .entrySet().stream()
                 .filter(entry -> !Arrays.equals(entry.getKey().getCoordinates(), station.getCoordinates()))
                 .filter(entry -> entry.getValue().getDeltaLong() <= trueDelta.getDeltaLong())
                 .map(entry -> new TravelRouteNode.Builder()
@@ -190,15 +174,15 @@ public final class GeneratorSupport {
                         .setTravelTime(entry.getValue().getDeltaLong())
                         .build())
                 .collect(Collectors.toSet());
-        return rval2;
     }
 
     /**
      * Get the schedule for a given station.
+     *
      * @param station the possibly schedule free station to use
      * @return the station complete with schedule
      */
-    public static TransStation getStationWithSchedule(TransStation station) {
+    private static TransStation getStationWithSchedule(TransStation station) {
 
         if (station.getChain() == null || (station.getSchedule() != null && !station.getSchedule().isEmpty())) {
             return station;
@@ -213,7 +197,7 @@ public final class GeneratorSupport {
         return station.withSchedule(station.getChain(), schedule);
     }
 
-    public static Set<TransStation> getAllChainsForStop(TransStation orig, TimePoint startTime, TimeDelta maxDelta) {
+    private static Set<TransStation> getAllChainsForStop(TransStation orig, TimePoint startTime, TimeDelta maxDelta) {
         Set<TransStation> rval = StationRetriever.getChainsForStation(orig, null).entrySet().stream()
                 .map(entry -> orig.withSchedule(entry.getKey(), entry.getValue()))
                 .filter(stat -> startTime.timeUntil(stat.getNextArrival(startTime))
@@ -231,23 +215,19 @@ public final class GeneratorSupport {
      * @param maxDelta the maximum walking time
      * @return nodes representing walking to all possible stations
      */
-    public static Set<TravelRouteNode> getWalkableStations(LocationPoint begin, TimePoint startTime, TimeDelta maxDelta) {
-
+    private static Set<TravelRouteNode> getWalkableStations(LocationPoint begin, TimePoint startTime, TimeDelta maxDelta) {
         Distance range = LocationUtils.timeToWalkDistance(maxDelta);
-        List<TransStation> stations = StationRetriever.getStationsInArea(begin, range, null);
-        Set<TravelRouteNode> rval = stations
-                .stream()
+        return StationRetriever.getStationsInArea(begin, range, null).stream()
                 .map(point -> new TravelRouteNode.Builder()
                         .setWalkTime(LocationUtils.timeBetween(begin, point).getDeltaLong())
                         .setPoint(point)
                         .build()
                 )
                 .collect(Collectors.toSet());
-        return rval;
     }
 
     @SafeVarargs
-    public static Predicate<TravelRoute> nextLayerFilter(TimeDelta maxDelta, Map<String, TravelRoute> currentRoutes, Predicate<TravelRoute>... others) {
+    private static Predicate<TravelRoute> nextLayerFilter(TimeDelta maxDelta, Map<String, TravelRoute> currentRoutes, Predicate<TravelRoute>... others) {
         Predicate<TravelRoute> rval = route -> route.getTotalTime().getDeltaLong() <= maxDelta.getDeltaLong();
         rval = rval.and(
                 route -> Optional.ofNullable(currentRoutes.get(getLocationTag(route.getCurrentEnd())))
@@ -291,6 +271,7 @@ public final class GeneratorSupport {
      * Checks to see if a travelroute suffered from the Flash issue.
      * This is defined as a route involving going faster than what we currently consider the maximum speed of public
      * transit, which is currently 65 miles per hour.
+     *
      * @param route the route to check
      * @return whether or not this is a flash error
      */
@@ -310,22 +291,8 @@ public final class GeneratorSupport {
                 });
     }
 
-    /**
-     * Get all the destinations walkable in a given area.
-     *
-     * @param center   the center of the area
-     * @param maxDelta the maximum time we will walk
-     * @param type     the type of destination to find
-     * @return the found destinations
-     */
-    public static Set<TravelRouteNode> getWalkableDestinations(LocationPoint center, TimeDelta maxDelta, LocationType type) {
-        return LocationRetriever.getLocations(center, LocationUtils.timeToWalkDistance(maxDelta), type, null)
-                .stream()
-                .map(point -> new TravelRouteNode.Builder()
-                        .setWalkTime(LocationUtils.timeBetween(center, point).getDeltaLong())
-                        .setPoint(point)
-                        .build()
-                )
-                .collect(Collectors.toSet());
+    public static Predicate<TravelRoute> isRouteInRange(LocationPoint end, TimeDelta maxDelta) {
+        return route -> LocationUtils.distanceBetween(end, route.getCurrentEnd()).inMeters()
+                <= LocationUtils.timeToMaxTransit(maxDelta.minus(route.getTotalTime())).inMeters();
     }
 }

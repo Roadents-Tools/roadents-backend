@@ -2,7 +2,7 @@ package com.reroute.displayers.testdisplay.mapsareadrawer;
 
 import com.google.common.collect.Lists;
 import com.reroute.backend.jsonconvertion.routing.TravelRouteJsonConverter;
-import com.reroute.backend.logic.generator.GeneratorSupport;
+import com.reroute.backend.logic.utils.LogicUtils;
 import com.reroute.backend.model.location.LocationPoint;
 import com.reroute.backend.model.location.StartPoint;
 import com.reroute.backend.model.routing.TravelRoute;
@@ -100,7 +100,7 @@ public class MapsPageGenerator {
 
         TravelRouteJsonConverter conv = new TravelRouteJsonConverter();
         List<Map<LocationPoint, TimeDelta>> areas = starts.stream()
-                .map(start -> GeneratorSupport.buildStationRouteList(start, startTime, maxDelta))
+                .map(start -> LogicUtils.buildStationRouteList(start, startTime, maxDelta, null))
                 .peek((LoggingUtils.WrappedConsumer<Set<TravelRoute>>) routes -> {
                     Path path = Paths.get("/home/ilan/output/routesnum" + count.getAndIncrement() + ".json");
                     Files.createFile(path);
