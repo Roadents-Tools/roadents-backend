@@ -38,7 +38,7 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
             "jdbc:postgresql://192.168.1.71:5432/Donut"
     };
     private static final String TAG = "PostgresDonutDb";
-    private static final String USER = "generator";
+    private static final String USER = "donut";
     private static final String PASS = "donutpass";
 
     private static final String LAT_KEY = "statlatman";

@@ -1,8 +1,14 @@
 package com.reroute;
 
+import com.moodysalem.TimezoneMapper;
+import com.reroute.backend.jsonconvertion.routing.TravelRouteJsonConverter;
+import com.reroute.backend.logic.ApplicationRequest;
+import com.reroute.backend.logic.ApplicationResult;
+import com.reroute.backend.logic.ApplicationRunner;
 import com.reroute.backend.model.distance.Distance;
 import com.reroute.backend.model.distance.DistanceUnits;
-import com.reroute.backend.model.location.LocationPoint;
+import com.reroute.backend.model.location.DestinationLocation;
+import com.reroute.backend.model.location.LocationType;
 import com.reroute.backend.model.location.StartPoint;
 import com.reroute.backend.model.location.TransChain;
 import com.reroute.backend.model.location.TransStation;
@@ -20,6 +26,7 @@ import com.reroute.displayers.testdisplay.mapsareadrawer.MapsPageGenerator;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
@@ -33,6 +40,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
  * Created by ilan on 1/5/17.
@@ -44,21 +52,37 @@ public class ScratchRunner {
 
         LoggingUtils.setPrintImmediate(true);
 
-        List<String> data = null;
-        String outputFile = null;
-        for (int i = 0; i < args.length; i++) {
-            if ("--map".equals(args[i])) {
+        for (String arg : args) {
+            if ("--map".equals(arg)) {
                 mapLocations(args);
                 return;
             }
-            if ("--urls".equals(args[i])) {
+            if ("--urls".equals(arg)) {
                 listUrls(args);
                 return;
             }
-	    if("--load".equals(args[i]))  {
-	    	loadtransitzips(args);
-            return;
+            if ("--load".equals(arg)) {
+                loadtransitzips(args);
+                return;
+            }
+
+            if ("--route".equals(arg)) {
+                generateBestRoutes(args);
+                return;
+            }
         }
+
+        runFinder(args);
+
+    }
+
+    private static void runFinder(String[] args) throws IOException {
+
+        List<String> data = null;
+        String outputFile = null;
+
+        for (int i = 0; i < args.length; i++) {
+
             if ("-f".equals(args[i]) && args.length > i + 1) {
                 String filePath = args[i + 1];
                 data = new ArrayList<>(Files.readAllLines(Paths.get(filePath)));
@@ -101,7 +125,16 @@ public class ScratchRunner {
         }
 
         if (filePath == null) LoggingUtils.logError("ScratchRunner", "Need an input to run.");
-        mapLocations(filePath, startTime, maxDelta, outputDir);
+        AtomicLong count = new AtomicLong(0);
+        String finalOutputDir = outputDir;
+        MapsPageGenerator.generateIndividualPagesFromFile(filePath, startTime, maxDelta)
+                .forEach((LoggingUtils.WrappedConsumer<String>) pg -> {
+                    String filename = "mapnum" + count.getAndIncrement() + ".html";
+                    String path = finalOutputDir + "/" + filename;
+                    Files.createFile(Paths.get(path));
+                    Files.write(Paths.get(path), pg.getBytes());
+                });
+
     }
 
     private static void listUrls(String[] args) {
@@ -126,28 +159,12 @@ public class ScratchRunner {
         }
 
         StartPoint center = new StartPoint(new double[] { lat, lng });
-        listUrls(center, range);
-    }
-
-    private static void listUrls(LocationPoint center, Distance range) {
         TransitlandApiDb apidb = new TransitlandApiDb();
         Map<String, String> skipBad = new HashMap<>();
-	skipBad.put("license_use_without_attribution", "no");
-	apidb.getFeedsInArea(center, range, null, skipBad).stream()
+        skipBad.put("license_use_without_attribution", "no");
+        apidb.getFeedsInArea(center, range, null, skipBad).stream()
                 .peek(System.out::println)
                 .forEach(ScratchRunner::dlZips);
-    }
-
-    private static void mapLocations(String file, TimePoint startTime, TimeDelta maxDelta, String outputDir) {
-        AtomicLong count = new AtomicLong(0);
-        MapsPageGenerator.generateIndividualPagesFromFile(file, startTime, maxDelta)
-                .forEach((LoggingUtils.WrappedConsumer<String>) pg -> {
-                    String filename = "mapnum" + count.getAndIncrement() + ".html";
-                    String path = outputDir + "/" + filename;
-                    Files.createFile(Paths.get(path));
-                    Files.write(Paths.get(path), pg.getBytes());
-                });
-
     }
 
     private static boolean checkZip(String file, TransChain toFind) {
@@ -200,13 +217,9 @@ public class ScratchRunner {
             return;
         }
 
-        loadtransitzips(rootdir, dburl);
-    }
-
-    private static boolean loadtransitzips(String rootdirectory, String dburl) {
         PostgresqlDonutDb db = new PostgresqlDonutDb(dburl);
-        File rootFile = new File(rootdirectory);
-        return Arrays.stream(rootFile.listFiles()).parallel().allMatch(file -> {
+        File rootFile = new File(rootdir);
+        Arrays.stream(rootFile.listFiles()).parallel().allMatch(file -> {
             LoggingUtils.logMessage("DB Loader", "Starting URL %s.", file.getName());
             Map<TransChain, List<TransStation>> mp = new GtfsProvider(file).getUpdatedStations();
             if (!mp.values().stream().allMatch(db::putStations)) {
@@ -239,5 +252,80 @@ public class ScratchRunner {
         }
     }
 
+    private static void generateBestRoutes(String[] args) {
+        String fileName = null;
+        StartPoint startPt = null;
+        List<DestinationLocation> endPts = null;
+        int hour = -1;
+        int min = -1;
+        int sec = -1;
+        TimeDelta dt = TimeDelta.NULL;
+
+        for (int i = 0; i < args.length; i++) {
+            if ("-o".equals(args[i]) && args.length > i + 1) {
+                fileName = args[i + 1];
+            }
+            if ("-s".equals(args[i]) && args.length > i + 1) {
+                String[] latlngStr = args[i + 1].split(",");
+                startPt = new StartPoint(new double[] {
+                        Double.parseDouble(latlngStr[0]),
+                        Double.parseDouble(latlngStr[1])
+                });
+            }
+            if ("-d".equals(args[i]) && args.length > i + 1) {
+                String[] dests = args[i + 1].split(";");
+                endPts = Arrays.stream(dests)
+                        .map(dest -> dest.split(","))
+                        .map(coordsStr -> new double[] { Double.parseDouble(coordsStr[0]), Double.parseDouble(coordsStr[1]) })
+                        .map(coords -> new DestinationLocation(
+                                String.format("D at %f, %f", coords[0], coords[1]),
+                                new LocationType("Dest", "Dest"),
+                                coords
+                        ))
+                        .collect(Collectors.toList());
+            }
+            if ("-t".equals(args[i]) && args.length > i + 1) {
+                String[] timeParts = args[i + 1].split(":");
+                hour = Integer.parseInt(timeParts[0]);
+                min = Integer.parseInt(timeParts[1]);
+                sec = Integer.parseInt(timeParts[2]);
+            }
+            if ("-dt".equals(args[i]) && args.length > i + 1) {
+                long maxDelta = 1000L * Long.parseLong(args[i + 1]);
+                dt = new TimeDelta(maxDelta);
+            }
+        }
+
+        TimePoint startTime = TimePoint.now(TimezoneMapper.tzNameAt(startPt.getCoordinates()[0], startPt.getCoordinates()[1]))
+                .withHour(hour)
+                .withMinute(min)
+                .withSecond(sec);
+
+        ApplicationRequest request = new ApplicationRequest.Builder("DONUTAB_BEST")
+                .withStartTime(startTime)
+                .withEndPoints(endPts)
+                .withStartPoint(startPt)
+                .withMaxDelta(dt)
+                .build();
+
+        LoggingUtils.logMessage("Scratch-Routing", "Request: %s", request.toString());
+
+        ApplicationResult res = ApplicationRunner.runApplication(request);
+        if (res.hasErrors()) {
+            res.getErrors().forEach(LoggingUtils::logError);
+        }
+        String json = new TravelRouteJsonConverter().toJson(res.getResult());
+
+        if (fileName == null) {
+            LoggingUtils.logMessage("ScratchRunner", "Got routes:\n\n%s\n\n", json);
+        } else {
+            try {
+                Files.write(Paths.get(fileName), json.getBytes());
+            } catch (IOException e) {
+                LoggingUtils.logError(e);
+            }
+        }
+
+    }
 }
 

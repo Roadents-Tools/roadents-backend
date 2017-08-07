@@ -36,43 +36,8 @@ public class PathmakerCore implements LogicCore {
     public static final String MULTI_TAG = "DONUTAB_MULTI";
 
 
-    @Override
-    public ApplicationResult performLogic(ApplicationRequest args) {
-
-        //Get the args
-        TimePoint startTime = args.getStartTime();
-        boolean bestonly = BEST_TAG.equals(args.getTag());
-        List<DestinationLocation> ends = args.getEnds();
-        StartPoint st = args.getStarts().get(0);
-
-        //Run the core
-        if (bestonly) {
-            List<TravelRoute> destsToRoutes = runDonutRouting(st, startTime, ends);
-            return ApplicationResult.ret(destsToRoutes).withErrors(LoggingUtils.getErrors());
-
-        } else {
-            List<TravelRoute> flattened = buildAllRoutesFrom(st, ends, startTime).values().stream()
-                    .flatMap(Collection::stream)
-                    .collect(Collectors.toList());
-            return ApplicationResult.ret(flattened).withErrors(LoggingUtils.getErrors());
-        }
-    }
-
-    @Override
-    public Set<String> getTags() {
-        return Sets.newHashSet(BEST_TAG, MULTI_TAG);
-    }
-
-    @Override
-    public boolean isValid(ApplicationRequest request) {
-        return request.getStarts() != null && !request.getStarts().isEmpty() && request.getStarts().size() == 1
-                && request.getEnds() != null && !request.getEnds().isEmpty()
-                && request.getStartTime() != null && !TimePoint.NULL.equals(request.getStartTime())
-                && request.getQuery() != null;
-    }
-
-    public static List<TravelRoute> runDonutRouting(StartPoint start, TimePoint startTime, List<DestinationLocation> ends) {
-        Map<DestinationLocation, List<TravelRoute>> endsToRoutes = buildAllRoutesFrom(start, ends, startTime);
+    public static List<TravelRoute> runDonutRouting(StartPoint start, TimePoint startTime, List<DestinationLocation> ends, TimeDelta maxDelta) {
+        Map<DestinationLocation, List<TravelRoute>> endsToRoutes = buildAllRoutesFrom(start, ends, startTime, maxDelta);
         return ends.stream()
                 .map(end -> endsToRoutes.get(end)
                         .stream()
@@ -82,9 +47,14 @@ public class PathmakerCore implements LogicCore {
                 .collect(Collectors.toList());
     }
 
-    public static Map<DestinationLocation, List<TravelRoute>> buildAllRoutesFrom(StartPoint start, List<DestinationLocation> ends, TimePoint startTime) {
+    @Override
+    public Set<String> getTags() {
+        return Sets.newHashSet(BEST_TAG, MULTI_TAG);
+    }
 
-        TimeDelta maxTimeDelta = ends.stream()
+    public static Map<DestinationLocation, List<TravelRoute>> buildAllRoutesFrom(StartPoint start, List<DestinationLocation> ends, TimePoint startTime, TimeDelta maxDelta) {
+
+        TimeDelta maxTimeDelta = maxDelta != null && !TimeDelta.NULL.equals(maxDelta) ? maxDelta : ends.stream()
                 .map(end -> LocationUtils.timeBetween(start, end))
                 .max(Comparator.comparing(TimeDelta::getDeltaLong))
                 .orElse(TimeDelta.NULL);
@@ -105,18 +75,55 @@ public class PathmakerCore implements LogicCore {
         Map<DestinationLocation, List<TravelRoute>> endsToRoutes = new HashMap<>();
         for (DestinationLocation end : ends) {
             List<TravelRoute> allRoutes = stationRoutes.stream()
-                    .filter(route -> LocationUtils.timeBetween(route.getCurrentEnd(), end)
-                            .getDeltaLong() <= LocationUtils.timeBetween(start, end).getDeltaLong())
+                    .filter(
+                            route -> LocationUtils.timeBetween(route.getCurrentEnd(), end).getDeltaLong()
+                                    <= LocationUtils.timeBetween(start, end).getDeltaLong()
+                    )
                     .map(base -> base.clone().setDestinationNode(new TravelRouteNode.Builder()
                             .setPoint(end)
-                            .setWalkTime(LocationUtils.timeBetween(base.getCurrentEnd(), end)
-                                    .getDeltaLong())
+                            .setWalkTime(LocationUtils.timeBetween(base.getCurrentEnd(), end).getDeltaLong())
                             .build()
                     ))
                     .collect(Collectors.toList());
             endsToRoutes.put(end, allRoutes);
         }
         return endsToRoutes;
+    }
+
+    @Override
+    public ApplicationResult performLogic(ApplicationRequest args) {
+
+        //Get the args
+
+        //Run the core
+        if (BEST_TAG.equals(args.getTag())) {
+            List<TravelRoute> destsToRoutes = runDonutRouting(
+                    args.getStarts().get(0),
+                    args.getStartTime(),
+                    args.getEnds(),
+                    args.getMaxDelta()
+            );
+            return ApplicationResult.ret(destsToRoutes).withErrors(LoggingUtils.getErrors());
+
+        } else {
+            List<TravelRoute> flattened = buildAllRoutesFrom(
+                    args.getStarts().get(0),
+                    args.getEnds(),
+                    args.getStartTime(),
+                    args.getMaxDelta()
+            ).values()
+                    .stream()
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.toList());
+            return ApplicationResult.ret(flattened).withErrors(LoggingUtils.getErrors());
+        }
+    }
+
+    @Override
+    public boolean isValid(ApplicationRequest request) {
+        return request.getStarts() != null && !request.getStarts().isEmpty() && request.getStarts().size() == 1
+                && request.getEnds() != null && !request.getEnds().isEmpty()
+                && request.getStartTime() != null && !TimePoint.NULL.equals(request.getStartTime());
     }
 
     private static Predicate<TravelRoute> isRouteInRange(LocationPoint end, TimeDelta maxDelta) {

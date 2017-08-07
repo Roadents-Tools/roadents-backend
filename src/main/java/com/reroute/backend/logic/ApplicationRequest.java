@@ -14,7 +14,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 
-public abstract class ApplicationRequest {
+public class ApplicationRequest {
 
     private List<StartPoint> starts;
     private List<DestinationLocation> ends;
@@ -59,10 +59,25 @@ public abstract class ApplicationRequest {
         return isTest;
     }
 
+    @Override
+    public String toString() {
+        return "ApplicationRequest{" +
+                "starts=" + starts +
+                ", ends=" + ends +
+                ", startTime=" + startTime +
+                ", maxDelta=" + maxDelta +
+                ", query=" + query +
+                ", resultsFilter=" + resultsFilter +
+                ", tag='" + tag + '\'' +
+                ", isTest=" + isTest +
+                '}';
+    }
+
     public static class Builder {
         private ApplicationRequest rval;
 
         public Builder(String tag) {
+            rval = new ApplicationRequest();
             rval.tag = tag;
         }
 
