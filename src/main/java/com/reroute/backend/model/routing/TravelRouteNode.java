@@ -110,17 +110,17 @@ public class TravelRouteNode {
         }
 
         public Builder setWalkTime(long walkTime) {
-            output.walkTimeFromPrev = new TimeDelta(walkTime);
+            output.walkTimeFromPrev = (walkTime > 0) ? new TimeDelta(walkTime) : TimeDelta.NULL;
             return this;
         }
 
         public Builder setWaitTime(long waitTime) {
-            output.waitTimeFromPrev = new TimeDelta(waitTime);
+            output.waitTimeFromPrev = (waitTime > 0) ? new TimeDelta(waitTime) : TimeDelta.NULL;
             return this;
         }
 
         public Builder setTravelTime(long travelTime) {
-            output.travelTimeFromPrev = new TimeDelta(travelTime);
+            output.travelTimeFromPrev = (travelTime > 0) ? new TimeDelta(travelTime) : TimeDelta.NULL;
             return this;
         }
 
