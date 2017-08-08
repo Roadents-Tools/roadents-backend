@@ -5,8 +5,9 @@ import com.reroute.backend.costs.CostCalculator;
 import com.reroute.backend.costs.arguments.BulkCostArgs;
 import com.reroute.backend.logic.ApplicationRequest;
 import com.reroute.backend.logic.ApplicationResult;
-import com.reroute.backend.logic.helpers.LogicCoreHelper;
+import com.reroute.backend.logic.ApplicationRunner;
 import com.reroute.backend.logic.interfaces.LogicCore;
+import com.reroute.backend.logic.utils.LogicUtils;
 import com.reroute.backend.model.location.DestinationLocation;
 import com.reroute.backend.model.location.StartPoint;
 import com.reroute.backend.model.routing.TravelRoute;
@@ -18,6 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -37,14 +39,22 @@ public class FinderCore implements LogicCore {
 
         List<StartPoint> locs = args.getStarts();
 
+        TimeDelta maxDelta = args.getMaxDelta();
+
+        Predicate<TravelRoute> isInAllRanges = locs.stream()
+                .map(loc -> LogicUtils.isRouteInRange(loc, maxDelta))
+                .reduce(Predicate::or)
+                .orElse(rt -> false);
+
         ApplicationRequest donutArgs = new ApplicationRequest.Builder("DONUT")
                 .withStartPoint(args.getStarts().get(0))
                 .withStartTime(args.getStartTime())
-                .withMaxDelta(args.getMaxDelta())
+                .withMaxDelta(maxDelta)
                 .withQuery(args.getQuery())
+                .withFilter(isInAllRanges)
                 .build();
 
-        ApplicationResult donutResults = LogicCoreHelper.getHelper().runCore(donutArgs);
+        ApplicationResult donutResults = ApplicationRunner.runApplication(donutArgs);
 
         Map<DestinationLocation, TravelRoute> routeMap = donutResults.getResult().stream()
                 .collect(StreamUtils.collectWithKeys(TravelRoute::getDestination));
@@ -53,7 +63,7 @@ public class FinderCore implements LogicCore {
                 .map(pt -> new BulkCostArgs()
                         .setCostTag(TIME_COST_TAG)
                         .setArg(TIME_COST_START_TIME_TAG, args.getStartTime())
-                        .setArg(TIME_COST_COMPARE_VALUE_TAG, args.getMaxDelta())
+                        .setArg(TIME_COST_COMPARE_VALUE_TAG, maxDelta)
                         .setArg(TIME_COST_COMPARISON_TAG, "<=")
                         .setArg(TIME_COST_POINT_ONE_TAG, pt))
                 .peek(bkarg -> routeMap.keySet().forEach(bkarg::addSubject))
