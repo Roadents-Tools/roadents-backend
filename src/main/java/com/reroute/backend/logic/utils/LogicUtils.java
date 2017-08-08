@@ -33,7 +33,6 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class LogicUtils {
@@ -248,47 +247,6 @@ public class LogicUtils {
      */
     private static String getLocationTag(LocationPoint pt) {
         return pt.getCoordinates()[0] + ", " + pt.getCoordinates()[1];
-    }
-
-    /**
-     * Checks to see if a travelroute suffered from the middleman issue.
-     * This is defined as a route telling the user to walk to 2 different places in a row;
-     * a situation that, since our algorithm walks as the crow flies, should never happen
-     * in an optimized route.
-     *
-     * @param route the route to check
-     * @return whether or not this is a middleman error
-     */
-    public static boolean isMiddleMan(TravelRoute route) {
-        int rtSize = route.getRoute().size();
-        return IntStream.range(1, rtSize)
-                .boxed()
-                .parallel()
-                .anyMatch(i -> route.getRoute().get(i - 1).arrivesByFoot() && route.getRoute().get(i).arrivesByFoot());
-    }
-
-    /**
-     * Checks to see if a travelroute suffered from the Flash issue.
-     * This is defined as a route involving going faster than what we currently consider the maximum speed of public
-     * transit, which is currently 65 miles per hour.
-     *
-     * @param route the route to check
-     * @return whether or not this is a flash error
-     */
-    public static boolean isFlash(TravelRoute route) {
-        int rtSize = route.getRoute().size();
-        return IntStream.range(1, rtSize)
-                .boxed()
-                .parallel()
-                .anyMatch(i -> {
-                    TravelRouteNode curnode = route.getRoute().get(i);
-                    LocationPoint prevpt = route.getRoute().get(i - 1).getPt();
-                    Distance dx = LocationUtils.distanceBetween(curnode.getPt(), prevpt);
-                    TimeDelta dt = curnode.arrivesByFoot()
-                            ? curnode.getWalkTimeFromPrev()
-                            : curnode.getTravelTimeFromPrev();
-                    return LocationUtils.timeToMaxTransit(dt).inMeters() <= dx.inMeters();
-                });
     }
 
     public static Predicate<TravelRoute> isRouteInRange(LocationPoint end, TimeDelta maxDelta) {

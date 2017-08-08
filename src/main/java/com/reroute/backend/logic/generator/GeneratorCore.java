@@ -66,8 +66,6 @@ public class GeneratorCore implements LogicCore {
         //Optimize the routes, and do some just-in-case filtering against some historic errors that may or may no longer
         //be valid.
         Map<DestinationLocation, TravelRoute> destToShortest = destRoutes.stream()
-                .filter(rt -> !LogicUtils.isMiddleMan(rt))
-                .filter(rt -> !LogicUtils.isFlash(rt))
                 .collect(LogicUtils.OPTIMAL_ROUTES_FOR_DESTINATIONS);
 
         LoggingUtils.logMessage(getClass().getName(),
