@@ -7,13 +7,20 @@ import java.util.Arrays;
  */
 public class StartPoint implements LocationPoint {
 
-    private static final String name = "Start Point";
+    private static final String DEFAULT_NAME = "Start Point";
+    private static final LocationType DEFAULT_TYPE = new LocationType("Start Point", "startpt");
 
-    private static final LocationType type = new LocationType("Start Point", "startpt");
-
+    private final String name;
+    private final LocationType type;
     private final double[] coords;
 
     public StartPoint(double[] coords) {
+        this(DEFAULT_NAME, DEFAULT_TYPE, coords);
+    }
+
+    public StartPoint(String name, LocationType type, double[] coords) {
+        this.name = name;
+        this.type = type;
         this.coords = coords;
     }
 

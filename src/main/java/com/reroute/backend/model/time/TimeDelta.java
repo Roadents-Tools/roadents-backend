@@ -29,6 +29,18 @@ public class TimeDelta implements Comparable<TimeDelta> {
         return new TimeDelta(delta - other.getDeltaLong());
     }
 
+    public TimeDelta mul(double multiplier) {
+        long newDelta = (long) (multiplier * delta);
+        if (newDelta == 0) return TimeDelta.NULL;
+        return new TimeDelta(newDelta);
+    }
+
+    public TimeDelta div(double multiplier) {
+        long newDelta = (long) (multiplier / delta);
+        if (newDelta == 0) return TimeDelta.NULL;
+        return new TimeDelta(newDelta);
+    }
+
     public long getDeltaLong() {
         return delta;
     }

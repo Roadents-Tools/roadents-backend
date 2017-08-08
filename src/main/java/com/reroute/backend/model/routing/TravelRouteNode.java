@@ -16,11 +16,11 @@ public class TravelRouteNode {
     private TimeDelta waitTimeFromPrev;
     private TimeDelta travelTimeFromPrev;
 
-    private TravelRouteNode() {
-        pt = null;
-        waitTimeFromPrev = TimeDelta.NULL;
-        walkTimeFromPrev = TimeDelta.NULL;
-        travelTimeFromPrev = TimeDelta.NULL;
+    private TravelRouteNode(LocationPoint pt, TimeDelta walkTime, TimeDelta waitTime, TimeDelta travelTime) {
+        this.pt = pt;
+        this.waitTimeFromPrev = waitTime;
+        this.walkTimeFromPrev = walkTime;
+        this.travelTimeFromPrev = travelTime;
     }
 
     public boolean arrivesByTransportation() {
@@ -97,39 +97,66 @@ public class TravelRouteNode {
         return travelTimeFromPrev;
     }
 
+    public TravelRouteNode reverse(LocationPoint prev) {
+        if (prev == null) {
+            if (isDest()) {
+                return new Builder()
+                        .setPoint(new StartPoint(pt.getCoordinates()))
+                        .build();
+            }
+            throw new NullPointerException("Prev is null.");
+        }
+
+        Builder builder = new Builder()
+                .setWalkTime(walkTimeFromPrev.mul(-1).getDeltaLong())
+                .setWaitTime(waitTimeFromPrev.mul(-1).getDeltaLong())
+                .setTravelTime(travelTimeFromPrev.mul(-1).getDeltaLong());
+
+        if (prev instanceof StartPoint) {
+            return builder
+                    .setPoint(new DestinationLocation(prev.getName(), prev.getType(), prev.getCoordinates()))
+                    .build();
+        }
+        return builder
+                .setPoint(prev)
+                .build();
+    }
+
     public static class Builder {
-        private final TravelRouteNode output;
+        private TimeDelta walkTime = TimeDelta.NULL;
+        private TimeDelta waitTime = TimeDelta.NULL;
+        private TimeDelta travelTime = TimeDelta.NULL;
+        private LocationPoint pt = null;
 
         public Builder() {
-            output = new TravelRouteNode();
         }
 
         public Builder setPoint(LocationPoint pt) {
-            output.pt = pt;
+            this.pt = pt;
             return this;
         }
 
         public Builder setWalkTime(long walkTime) {
-            output.walkTimeFromPrev = (walkTime > 0) ? new TimeDelta(walkTime) : TimeDelta.NULL;
+            this.walkTime = (walkTime != 0) ? new TimeDelta(walkTime) : TimeDelta.NULL;
             return this;
         }
 
         public Builder setWaitTime(long waitTime) {
-            output.waitTimeFromPrev = (waitTime > 0) ? new TimeDelta(waitTime) : TimeDelta.NULL;
+            this.waitTime = (waitTime != 0) ? new TimeDelta(waitTime) : TimeDelta.NULL;
             return this;
         }
 
         public Builder setTravelTime(long travelTime) {
-            output.travelTimeFromPrev = (travelTime > 0) ? new TimeDelta(travelTime) : TimeDelta.NULL;
+            this.travelTime = (travelTime != 0) ? new TimeDelta(travelTime) : TimeDelta.NULL;
             return this;
         }
 
         public TravelRouteNode build() {
-            if (output.pt == null) {
+            if (this.pt == null) {
                 LoggingUtils.logError("TravelRouteNode.Builder", "Point not set.");
                 throw new IllegalStateException("Method Builder::setPoint must be called before Builder::build.");
             }
-            return output;
+            return new TravelRouteNode(pt, walkTime, waitTime, travelTime);
         }
     }
 }
