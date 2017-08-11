@@ -1,10 +1,15 @@
 package com.reroute;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.moodysalem.TimezoneMapper;
 import com.reroute.backend.jsonconvertion.routing.TravelRouteJsonConverter;
 import com.reroute.backend.logic.ApplicationRequest;
 import com.reroute.backend.logic.ApplicationResult;
 import com.reroute.backend.logic.ApplicationRunner;
+import com.reroute.backend.logic.calculator.CalculatorCore;
+import com.reroute.backend.logic.generator.GeneratorCore;
+import com.reroute.backend.logic.utils.LogicUtils;
 import com.reroute.backend.model.distance.Distance;
 import com.reroute.backend.model.distance.DistanceUnits;
 import com.reroute.backend.model.location.DestinationLocation;
@@ -12,6 +17,7 @@ import com.reroute.backend.model.location.LocationType;
 import com.reroute.backend.model.location.StartPoint;
 import com.reroute.backend.model.location.TransChain;
 import com.reroute.backend.model.location.TransStation;
+import com.reroute.backend.model.routing.TravelRoute;
 import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.stations.gtfs.GtfsProvider;
@@ -19,8 +25,9 @@ import com.reroute.backend.stations.postgresql.PostgresqlDonutDb;
 import com.reroute.backend.stations.transitland.TransitlandApiDb;
 import com.reroute.backend.utils.LocationUtils;
 import com.reroute.backend.utils.LoggingUtils;
-import com.reroute.backend.utils.TimeUtils;
+import com.reroute.backend.utils.StreamUtils;
 import com.reroute.displayers.lambdacontroller.LambdaHandler;
+import com.reroute.displayers.testdisplay.maproutedrawer.RouteMapsPageGenerator;
 import com.reroute.displayers.testdisplay.mapsareadrawer.MapsPageGenerator;
 
 import java.io.ByteArrayInputStream;
@@ -31,6 +38,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
@@ -39,6 +47,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
@@ -52,27 +62,47 @@ public class ScratchRunner {
 
         LoggingUtils.setPrintImmediate(true);
 
-        for (String arg : args) {
-            if ("--map".equals(arg)) {
-                mapLocations(args);
-                return;
-            }
-            if ("--urls".equals(arg)) {
-                listUrls(args);
-                return;
-            }
-            if ("--load".equals(arg)) {
-                loadtransitzips(args);
-                return;
+        try {
+            for (String arg : args) {
+                if ("--map".equals(arg)) {
+                    mapLocations(args);
+                    return;
+                }
+                if ("--urls".equals(arg)) {
+                    listUrls(args);
+                    return;
+                }
+                if ("--load".equals(arg)) {
+                    loadtransitzips(args);
+                    return;
+                }
+
+                if ("--route".equals(arg)) {
+                    generateBestRoutes(args);
+                    return;
+                }
+
+                if ("--dr".equals(arg)) {
+                    mapRoutes(args);
+                    return;
+                }
+
+                if ("--finder".equals(arg)) {
+                    finderMaxDist(args);
+                    return;
+                }
+
+                if ("--calc".equals(arg)) {
+                    calculatorMap(args);
+                    return;
+                }
             }
 
-            if ("--route".equals(arg)) {
-                generateBestRoutes(args);
-                return;
-            }
+            runFinder(args);
+        } catch (Exception e) {
+            LoggingUtils.logError(e);
         }
 
-        runFinder(args);
 
     }
 
@@ -112,7 +142,7 @@ public class ScratchRunner {
 
     private static void mapLocations(String[] args) {
         TimePoint startTime = new TimePoint(1500829200 * 1000L, "America/New_York");
-        TimeDelta maxDelta = new TimeDelta(3600 * 1000);
+        TimeDelta maxDelta = new TimeDelta(900 * 1000);
         String outputDir = "~";
         String filePath = null;
 
@@ -121,6 +151,8 @@ public class ScratchRunner {
                 filePath = args[i + 1];
             } else if ("-o".equals(args[i]) && args.length > i + 1) {
                 outputDir = args[i + 1];
+            } else if ("-dt".equals(args[i]) && args.length > i + 1) {
+                maxDelta = new TimeDelta(1000 * Long.parseLong(args[i + 1]));
             }
         }
 
@@ -135,6 +167,41 @@ public class ScratchRunner {
                     Files.write(Paths.get(path), pg.getBytes());
                 });
 
+    }
+
+    private static void mapRoutes(String[] args) throws IOException {
+        String outputDir = "/home/ilan";
+        String filePath = null;
+        boolean composite = false;
+
+        for (int i = 0; i < args.length; i++) {
+            if ("-f".equals(args[i]) && args.length > i + 1) {
+                filePath = args[i + 1];
+            } else if ("-o".equals(args[i]) && args.length > i + 1) {
+                outputDir = args[i + 1];
+            } else if ("-c".equals(args[i])) {
+                composite = true;
+            }
+        }
+
+        if (filePath == null) LoggingUtils.logError("ScratchRunner", "Need an input to run.");
+        AtomicLong count = new AtomicLong(0);
+        String finalOutputDir = outputDir;
+        if (composite) {
+            String page = RouteMapsPageGenerator.generateCompositePageFromFile(filePath);
+            String fileName = outputDir + "/composite.html";
+            Path path = Paths.get(fileName);
+            Files.createFile(path);
+            Files.write(path, page.getBytes());
+        } else {
+            RouteMapsPageGenerator.generateIndividualPagesFromFile(filePath)
+                    .forEach((LoggingUtils.WrappedConsumer<String>) pg -> {
+                        String filename = "mapnum" + count.getAndIncrement() + ".html";
+                        String path = finalOutputDir + "/" + filename;
+                        Files.createFile(Paths.get(path));
+                        Files.write(Paths.get(path), pg.getBytes());
+                    });
+        }
     }
 
     private static void listUrls(String[] args) {
@@ -164,40 +231,27 @@ public class ScratchRunner {
         skipBad.put("license_use_without_attribution", "no");
         apidb.getFeedsInArea(center, range, null, skipBad).stream()
                 .peek(System.out::println)
-                .forEach(ScratchRunner::dlZips);
-    }
+                .forEach(url -> {
+                    String result;
 
-    private static boolean checkZip(String file, TransChain toFind) {
-        if (file == null || toFind == null) return false;
+                    String rval = "/home/main/Downloads/tzip/" + url.getFile().replaceAll("/", "__");
 
-        GtfsProvider prov = new GtfsProvider(file);
-
-        Map<TransChain, List<TransStation>> inProv = prov.getUpdatedStations();
-        Map.Entry<TransChain, List<TransStation>> foundEntry = inProv.entrySet().stream()
-                .filter(entry -> entry.getKey().getName().equals(toFind.getName()))
-                .findAny()
-                .orElse(null);
-
-        if (foundEntry == null) return false;
-        System.out.printf(" Found %s in %s.\n", toFind.getName(), file);
-        System.out.printf(" Stations: \n");
-        int bound = foundEntry.getValue().size();
-        foundEntry.getValue().sort(Comparator.comparingLong(o -> TimeUtils.packSchedulePoint(o.getSchedule().get(0))));
-        for (int i = 0; i < bound; i++) {
-            if (i > 0) {
-                TransStation cur = foundEntry.getValue().get(i);
-                long curPackedSched = TimeUtils.packSchedulePoint(cur.getSchedule().get(0));
-                TransStation prev = foundEntry.getValue().get(i - 1);
-                long prevPackedSched = TimeUtils.packSchedulePoint(prev.getSchedule().get(0));
-                System.out.printf("      Dist: %f meters, %d seconds, %f mph\n\n",
-                        LocationUtils.distanceBetween(cur, prev).inMeters(),
-                        curPackedSched - prevPackedSched,
-                        LocationUtils.distanceBetween(cur, prev)
-                                .inMiles() * 60 * 60 / (curPackedSched - prevPackedSched));
-            }
-            System.out.printf("  S%d: %s\n\n", i, foundEntry.getValue().get(i).toString());
-        }
-        return true;
+                    File zipFile = new File(rval);
+                    try {
+                        zipFile.delete();
+                        zipFile.createNewFile();
+                        zipFile.setWritable(true);
+                        URLConnection con = url.openConnection();
+                        URL trurl = con.getHeaderField("Location") == null
+                                ? url
+                                : new URL(con.getHeaderField("Location"));
+                        Files.copy(trurl.openStream(), zipFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        result = rval;
+                    } catch (Exception e) {
+                        LoggingUtils.logError(e);
+                        result = null;
+                    }
+                });
     }
 
     private static void loadtransitzips(String[] args) {
@@ -229,27 +283,6 @@ public class ScratchRunner {
             LoggingUtils.logMessage("DB Loader", "Finished URL %s.", file.getName());
             return true;
         });
-    }
-
-    private static String dlZips(URL url) {
-
-        String rval = "/home/main/Downloads/tzip/" + url.getFile().replaceAll("/", "__");
-
-        File zipFile = new File(rval);
-        try {
-            zipFile.delete();
-            zipFile.createNewFile();
-            zipFile.setWritable(true);
-            URLConnection con = url.openConnection();
-            URL trurl = con.getHeaderField("Location") == null
-                    ? url
-                    : new URL(con.getHeaderField("Location"));
-            Files.copy(trurl.openStream(), zipFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            return rval;
-        } catch (Exception e) {
-            LoggingUtils.logError(e);
-            return null;
-        }
     }
 
     private static void generateBestRoutes(String[] args) {
@@ -314,6 +347,175 @@ public class ScratchRunner {
         if (res.hasErrors()) {
             res.getErrors().forEach(LoggingUtils::logError);
         }
+        String json = new TravelRouteJsonConverter().toJson(res.getResult());
+
+        if (fileName == null) {
+            LoggingUtils.logMessage("ScratchRunner", "Got routes:\n\n%s\n\n", json);
+        } else {
+            try {
+                Files.write(Paths.get(fileName), json.getBytes());
+            } catch (IOException e) {
+                LoggingUtils.logError(e);
+            }
+        }
+
+    }
+
+    private static void finderMaxDist(String[] args) {
+        StartPoint starta = null;
+        StartPoint startb = null;
+        LocationType query = null;
+        TimePoint startTime = TimePoint.NULL;
+        TimeDelta maxDelta = TimeDelta.NULL;
+        String fileName = null;
+
+        for (int i = 0; i < args.length; i++) {
+            if ("-o".equals(args[i]) && args.length > i + 1) {
+                fileName = args[i + 1];
+            }
+            if ("-s".equals(args[i]) && args.length > i + 1) {
+                String[] ab = args[i + 1].split(";");
+                String[] alatlngStr = ab[0].split(",");
+                starta = new StartPoint(new double[] {
+                        Double.parseDouble(alatlngStr[0]),
+                        Double.parseDouble(alatlngStr[1])
+                });
+                String[] blatlngStr = ab[1].split(",");
+                startb = new StartPoint(new double[] {
+                        Double.parseDouble(blatlngStr[0]),
+                        Double.parseDouble(blatlngStr[1])
+                });
+            }
+            if ("-d".equals(args[i]) && args.length > i + 1) {
+                query = new LocationType(args[i + 1], args[i + 1]);
+            }
+            if ("-t".equals(args[i]) && args.length > i + 1) {
+                String[] timeParts = args[i + 1].split(":");
+                int hour = Integer.parseInt(timeParts[0]);
+                int min = Integer.parseInt(timeParts[1]);
+                int sec = Integer.parseInt(timeParts[2]);
+                startTime = TimePoint.now(starta != null ? TimezoneMapper.tzNameAt(starta.getCoordinates()[0], starta.getCoordinates()[1]) : "GMT")
+                        .withHour(hour)
+                        .withMinute(min)
+                        .withSecond(sec);
+            }
+            if ("-dt".equals(args[i]) && args.length > i + 1) {
+                long dt = 1000L * Long.parseLong(args[i + 1]);
+                maxDelta = new TimeDelta(dt);
+            }
+        }
+
+        ApplicationRequest.Builder genDonut = new ApplicationRequest.Builder(GeneratorCore.TAG)
+                .withStartTime(startTime)
+                .withQuery(query)
+                .withMaxDelta(maxDelta)
+                .withFilter(LogicUtils.isRouteInRange(starta, maxDelta)
+                        .and(LogicUtils.isRouteInRange(startb, maxDelta)));
+
+        ApplicationRequest aDonut = genDonut.withStartPoint(starta).build();
+        Map<DestinationLocation, TravelRoute> aRoutes = ApplicationRunner.runApplication(aDonut)
+                .getResult().stream()
+                .collect(StreamUtils.collectWithKeys(TravelRoute::getDestination));
+
+        ApplicationRequest bDonut = genDonut.withStartPoint(startb).build();
+        Map<DestinationLocation, TravelRoute> bRoutes = ApplicationRunner.runApplication(bDonut)
+                .getResult().stream()
+                .collect(StreamUtils.collectWithKeys(TravelRoute::getDestination));
+
+        Set<DestinationLocation> bothDests = Sets.intersection(aRoutes.keySet(), bRoutes.keySet());
+
+        StartPoint finalStartb1 = startb;
+        StartPoint finalStarta1 = starta;
+        Optional<DestinationLocation> biggestDistDiffOpt = bothDests.stream()
+                .filter(dest -> aRoutes.get(dest).getRoute().size() > 2 && bRoutes.get(dest).getRoute().size() > 2)
+                .max(Comparator.comparing(dest -> {
+                    TravelRoute aRoute = aRoutes.get(dest);
+                    TravelRoute bRoute = bRoutes.get(dest);
+
+                    double distDiff = LocationUtils.distanceBetween(dest, finalStarta1)
+                            .inMeters() - LocationUtils.distanceBetween(dest, finalStartb1).inMeters();
+                    TimeDelta timeDiff = aRoute.getTotalTime().minus(bRoute.getTotalTime());
+
+                    return distDiff - 100 * timeDiff.getDeltaLong();
+                }));
+
+        if (!biggestDistDiffOpt.isPresent()) {
+            LoggingUtils.logError("ScratchRunner", "Got no Finder routes.");
+            throw new RuntimeException();
+        }
+
+        DestinationLocation dest = biggestDistDiffOpt.get();
+        String json = new TravelRouteJsonConverter().toJson(Lists.newArrayList(aRoutes.get(dest), bRoutes.get(dest)));
+
+        if (fileName == null) {
+            LoggingUtils.logMessage("ScratchRunner", "Got routes:\n\n%s\n\n", json);
+        } else {
+            try {
+                Files.write(Paths.get(fileName), json.getBytes());
+            } catch (IOException e) {
+                LoggingUtils.logError(e);
+            }
+        }
+
+
+    }
+
+    private static void calculatorMap(String[] args) {
+        StartPoint starta = null;
+        DestinationLocation startb = null;
+        LocationType query = null;
+        TimePoint startTime = TimePoint.NULL;
+        TimeDelta maxDelta = TimeDelta.NULL;
+        String fileName = null;
+
+        for (int i = 0; i < args.length; i++) {
+            if ("-o".equals(args[i]) && args.length > i + 1) {
+                fileName = args[i + 1];
+            }
+            if ("-s".equals(args[i]) && args.length > i + 1) {
+                String[] ab = args[i + 1].split(";");
+                String[] alatlngStr = ab[0].split(",");
+                starta = new StartPoint(new double[] {
+                        Double.parseDouble(alatlngStr[0]),
+                        Double.parseDouble(alatlngStr[1])
+                });
+                String[] blatlngStr = ab[1].split(",");
+                startb = new DestinationLocation("B", new LocationType("B Loc", "B Loc"),
+                        new double[] {
+                                Double.parseDouble(blatlngStr[0]),
+                                Double.parseDouble(blatlngStr[1])
+                        });
+            }
+            if ("-d".equals(args[i]) && args.length > i + 1) {
+                query = new LocationType(args[i + 1], args[i + 1]);
+            }
+            if ("-t".equals(args[i]) && args.length > i + 1) {
+                String[] timeParts = args[i + 1].split(":");
+                int hour = Integer.parseInt(timeParts[0]);
+                int min = Integer.parseInt(timeParts[1]);
+                int sec = Integer.parseInt(timeParts[2]);
+                startTime = TimePoint.now(starta != null ? TimezoneMapper.tzNameAt(starta.getCoordinates()[0], starta.getCoordinates()[1]) : "GMT")
+                        .withHour(hour)
+                        .withMinute(min)
+                        .withSecond(sec);
+            }
+            if ("-dt".equals(args[i]) && args.length > i + 1) {
+                long dt = 1000L * Long.parseLong(args[i + 1]);
+                maxDelta = new TimeDelta(dt);
+            }
+        }
+
+        ApplicationRequest finderRequest = new ApplicationRequest.Builder(CalculatorCore.TAG)
+                .withStartPoint(starta)
+                .withEndPoint(startb)
+                .withStartTime(startTime)
+                .withMaxDelta(maxDelta)
+                .withQuery(query)
+                .build();
+
+        ApplicationResult res = ApplicationRunner.runApplication(finderRequest);
+
+
         String json = new TravelRouteJsonConverter().toJson(res.getResult());
 
         if (fileName == null) {
