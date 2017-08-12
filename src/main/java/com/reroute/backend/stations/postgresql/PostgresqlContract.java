@@ -1,6 +1,7 @@
 package com.reroute.backend.stations.postgresql;
 
 /**
+ * Contains constants for the Postgresql Database schema.
  * Created by ilan on 3/7/17.
  */
 public final class PostgresqlContract {
@@ -35,7 +36,6 @@ public final class PostgresqlContract {
         public static final String TABLE_NAME = "schedule";
         public static final String ID_KEY = "id";
         public static final String FUZZ_KEY = "fuzz";
-        public static final String TIME_KEY = "schedpoint";
         public static final String CHAIN_ID_KEY = "chainid";
         public static final String STATION_ID_KEY = "stationid";
         public static final String PACKED_VALID_KEY = "validdays";
