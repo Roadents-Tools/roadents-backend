@@ -2,6 +2,10 @@ package com.reroute.backend.model.distance;
 
 public final class Distance {
 
+    public static final Distance NULL = new Distance(0, DistanceUnits.METERS);
+
+    public static final Distance ERROR_MARGIN = new Distance(.1, DistanceUnits.METERS);
+
     private final double meters;
 
     public Distance(double range, DistanceUnits unit) {
@@ -9,20 +13,16 @@ public final class Distance {
     }
 
     public double inMiles() {
-        return meters / DistanceUnits.MILES.toMeters;
+        return inMeters() / DistanceUnits.MILES.toMeters;
     }
 
     public double inFeet() {
-        return meters / DistanceUnits.FEET.toMeters;
+        return inMeters() / DistanceUnits.FEET.toMeters;
     }
 
     public double inKilometers() {
-        return meters / DistanceUnits.KILOMETERS.toMeters;
+        return inMeters() / DistanceUnits.KILOMETERS.toMeters;
     }
-
-    /**
-     * Math methods
-     **/
 
     public Distance plus(Distance other) {
         return new Distance(this.meters + other.meters, DistanceUnits.METERS);
@@ -46,9 +46,9 @@ public final class Distance {
         return Math.abs(diffMeters) <= deltaMeters;
     }
 
-    /**
-     * Conversion methods
-     **/
+    public boolean isZero() {
+        return this.deltaEqual(NULL, ERROR_MARGIN);
+    }
 
     public double inMeters() {
         return meters;

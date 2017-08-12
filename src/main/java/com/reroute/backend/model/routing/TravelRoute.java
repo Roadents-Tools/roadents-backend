@@ -195,32 +195,6 @@ public class TravelRoute {
         return route;
     }
 
-    public TravelRoute reverse() {
-        TimePoint endTime = getEndTime();
-        LocationPoint currentEnd = getCurrentEnd();
-        StartPoint revStart = new StartPoint(currentEnd.getName(), currentEnd.getType(), currentEnd.getCoordinates());
-
-        TravelRoute revRoute = new TravelRoute(revStart, endTime);
-
-        List<TravelRouteNode> route = getRoute();
-
-        for (int i = route.size() - 2; i >= 0; i--) {
-            LocationPoint pt = route.get(i).getPt();
-            TravelRouteNode timeInfo = route.get(i + 1);
-
-            if (pt instanceof StartPoint) {
-                DestinationLocation endpt = new DestinationLocation(pt.getName(), pt.getType(), pt.getCoordinates());
-                TravelRouteNode reved = timeInfo.reverse(endpt);
-                revRoute.setDestinationNode(reved);
-            } else {
-                TravelRouteNode reved = timeInfo.reverse(pt);
-                revRoute.addNode(reved);
-            }
-        }
-
-        return revRoute;
-    }
-
     public boolean isInRoute(LocationPoint location) {
         return location != null && (
                 Arrays.equals(location.getCoordinates(), getStart().getCoordinates())
@@ -234,11 +208,6 @@ public class TravelRoute {
     public TravelRoute addNode(TravelRouteNode node) {
         if (node.isStart()) {
             throw new IllegalArgumentException("Cannot add another start node. Node:" + node.toString());
-        }
-        if (routeNodes.size() > 1 && routeNodes.get(1)
-                .getTotalTimeToArrive()
-                .getDeltaLong() > 0 != node.getTotalTimeToArrive().getDeltaLong() > 0) {
-            throw new IllegalArgumentException("Node direction does not match route direction.");
         }
         if (!isInRoute(node.getPt())) routeNodes.add(node);
         return this;

@@ -1,14 +1,13 @@
 package com.reroute.backend.model.routing;
 
 import com.reroute.backend.model.location.DestinationLocation;
-import com.reroute.backend.model.location.LocationPoint;
 import com.reroute.backend.model.location.LocationType;
 import com.reroute.backend.model.location.StartPoint;
+import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.List;
 import java.util.Random;
 import java.util.stream.IntStream;
 
@@ -16,86 +15,37 @@ public class TravelRouteTest {
 
     private static final Random rng = new Random();
 
-    @Test
-    public void testAddNode() {
-        TravelRoute route = new TravelRoute(new StartPoint(new double[] { 0, 0 }), TimePoint.now());
-
-        TravelRouteNode.Builder nodeBuilder = new TravelRouteNode.Builder()
-                .setWalkTime(10000);
-
-        TravelRouteNode nextNode = nodeBuilder
-                .setPoint(new DestinationLocation("Dest1", new LocationType("Dest", "Dest"), new double[] { 1, 1 }))
-                .build();
-
-        route.addNode(nextNode);
-
-        try {
-            TravelRouteNode extraStart = nodeBuilder
-                    .setPoint(new StartPoint(new double[] { 2, 2 }))
-                    .build();
-
-            route.addNode(extraStart);
-
-            Assert.fail("Added extra start.");
-        } catch (IllegalArgumentException e) {
-        }
-
-
-        try {
-            TravelRouteNode reverseNode = new TravelRouteNode.Builder()
-                    .setWalkTime(-1000)
-                    .setPoint(new DestinationLocation("Dest2", new LocationType("Dest", "Dest"), new double[] { 2, 2 }))
-                    .build();
-
-            route.addNode(reverseNode);
-
-            Assert.fail("Added reverse node.");
-        } catch (IllegalArgumentException e) {
-        }
-    }
 
     @Test
-    public void testReverse() {
+    public void testRoute() {
 
         TravelRoute base = buildRandomRoute(10, 1000 * 60 * 60, false);
-        TravelRoute reved = base.reverse();
 
-        //Test timing info
-        Assert.assertEquals(base.getTotalTime(), reved.getTotalTime().mul(-1));
-        Assert.assertEquals(base.getTotalWalkTime(), reved.getTotalWalkTime().mul(-1));
-        Assert.assertEquals(base.getTotalWaitTime(), reved.getTotalWaitTime().mul(-1));
-        Assert.assertEquals(base.getTotalTravelTime(), reved.getTotalTravelTime().mul(-1));
+        TimeDelta totalWalk = base.getRoute().stream()
+                .map(TravelRouteNode::getWalkTimeFromPrev)
+                .reduce(TimeDelta.NULL, TimeDelta::plus);
 
-        //Test that its the same interval
-        Assert.assertEquals(base.getEndTime(), reved.getStartTime());
-        Assert.assertEquals(base.getStartTime(), reved.getEndTime());
+        TimeDelta totalWait = base.getRoute().stream()
+                .map(TravelRouteNode::getWaitTimeFromPrev)
+                .reduce(TimeDelta.NULL, TimeDelta::plus);
 
-        //Test they start and end at the same places
-        LocationPoint bEnd = base.getCurrentEnd();
-        StartPoint rStart = reved.getStart();
-        Assert.assertEquals(rStart.getName(), bEnd.getName());
-        Assert.assertEquals(rStart.getType(), bEnd.getType());
-        Assert.assertEquals(rStart.getCoordinates(), bEnd.getCoordinates());
+        TimeDelta totalTravel = base.getRoute().stream()
+                .map(TravelRouteNode::getTravelTimeFromPrev)
+                .reduce(TimeDelta.NULL, TimeDelta::plus);
 
-        LocationPoint rEnd = reved.getCurrentEnd();
-        StartPoint bStart = base.getStart();
-        Assert.assertEquals(rEnd.getName(), bStart.getName());
-        Assert.assertEquals(rEnd.getType(), bStart.getType());
-        Assert.assertEquals(rEnd.getCoordinates(), bStart.getCoordinates());
+        TimeDelta totalTime = base.getRoute().stream()
+                .map(TravelRouteNode::getTotalTimeToArrive)
+                .reduce(TimeDelta.NULL, TimeDelta::plus);
 
-        //Test they visit the same places
-        List<TravelRouteNode> bRoute = base.getRoute();
-        List<TravelRouteNode> rRoute = reved.getRoute();
-        Assert.assertEquals(bRoute.size(), rRoute.size());
-
-        int rtSize = bRoute.size();
-
-        for (int i = 1; i < rtSize - 1; i++) {
-            Assert.assertEquals(bRoute.get(i).getPt(), rRoute.get(rtSize - i - 1).getPt());
-        }
+        Assert.assertEquals(totalWalk, base.getTotalWalkTime());
+        Assert.assertEquals(totalWait, base.getTotalWaitTime());
+        Assert.assertEquals(totalTravel, base.getTotalTravelTime());
+        Assert.assertEquals(totalTime, base.getTotalTime());
+        Assert.assertEquals(base.getStartTime().plus(totalTime), base.getEndTime());
+        Assert.assertEquals(10, base.getRoute().size());
     }
 
-    public TravelRoute buildRandomRoute(int size, long maxTimes, boolean rev) {
+    private TravelRoute buildRandomRoute(int size, long maxTimes, boolean rev) {
 
         double[] startcoords = new double[] {
                 rng.nextDouble() * 180 - 90,
@@ -114,7 +64,7 @@ public class TravelRouteTest {
         return rt;
     }
 
-    public TravelRouteNode buildRandomNode(long maxTimes, boolean rev) {
+    private TravelRouteNode buildRandomNode(long maxTimes, boolean rev) {
 
         double[] randomcoords = new double[] {
                 rng.nextDouble() * 180 - 90,

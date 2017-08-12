@@ -40,7 +40,6 @@ public class TravelRouteNode {
     }
 
     public TimeDelta getTotalTimeToArrive() {
-        if (isStart()) return TimeDelta.NULL;
         return TimeDelta.NULL
                 .plus(waitTimeFromPrev)
                 .plus(walkTimeFromPrev)
@@ -95,31 +94,6 @@ public class TravelRouteNode {
 
     public TimeDelta getTravelTimeFromPrev() {
         return travelTimeFromPrev;
-    }
-
-    public TravelRouteNode reverse(LocationPoint prev) {
-        if (prev == null) {
-            if (isDest()) {
-                return new Builder()
-                        .setPoint(new StartPoint(pt.getCoordinates()))
-                        .build();
-            }
-            throw new NullPointerException("Prev is null.");
-        }
-
-        Builder builder = new Builder()
-                .setWalkTime(walkTimeFromPrev.mul(-1).getDeltaLong())
-                .setWaitTime(waitTimeFromPrev.mul(-1).getDeltaLong())
-                .setTravelTime(travelTimeFromPrev.mul(-1).getDeltaLong());
-
-        if (prev instanceof StartPoint) {
-            return builder
-                    .setPoint(new DestinationLocation(prev.getName(), prev.getType(), prev.getCoordinates()))
-                    .build();
-        }
-        return builder
-                .setPoint(prev)
-                .build();
     }
 
     public static class Builder {
