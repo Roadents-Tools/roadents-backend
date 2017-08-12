@@ -56,7 +56,6 @@ public class LoggingUtils {
         else msg.append(e.getClass().getName());
         msg.append("\n\n");
         for (StackTraceElement elm : e.getStackTrace()) {
-            if (!elm.getClassName().contains("tymit")) continue; //Only our classes
             msg.append("     ");
             msg.append(elm.getClassName()).append(":");
             msg.append(elm.getLineNumber());

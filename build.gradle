@@ -65,3 +65,4 @@ task buildZip(type: Zip) {
 }
 
 build.dependsOn buildZip
+build.dependsOn shadowJar

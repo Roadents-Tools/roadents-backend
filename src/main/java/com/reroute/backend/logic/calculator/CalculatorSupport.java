@@ -1,26 +1,27 @@
 package com.reroute.backend.logic.calculator;
 
-import com.reroute.backend.costs.CostCalculator;
-import com.reroute.backend.costs.arguments.CostArgs;
 import com.reroute.backend.logic.ApplicationRequest;
 import com.reroute.backend.logic.ApplicationResult;
 import com.reroute.backend.logic.ApplicationRunner;
 import com.reroute.backend.logic.generator.GeneratorCore;
-import com.reroute.backend.model.location.LocationPoint;
+import com.reroute.backend.logic.utils.LogicUtils;
+import com.reroute.backend.model.location.DestinationLocation;
 import com.reroute.backend.model.location.LocationType;
 import com.reroute.backend.model.location.StartPoint;
 import com.reroute.backend.model.location.TransChain;
 import com.reroute.backend.model.location.TransStation;
 import com.reroute.backend.model.routing.TravelRoute;
 import com.reroute.backend.model.routing.TravelRouteNode;
+import com.reroute.backend.model.time.SchedulePoint;
 import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.stations.StationRetriever;
+import com.reroute.backend.utils.LocationUtils;
 import com.reroute.backend.utils.LoggingUtils;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -70,7 +71,7 @@ public class CalculatorSupport {
                 // and optimal route that maximizes wait time from i+1 to i+2, but for the sake of compute time this is
                 // good enough.
                 long maxWait = Math.max(
-                        optimalCache[i + 1].getWaitTimeFromPrev().getDeltaLong(),
+                        optimalCache[i + 1] != null ? optimalCache[i + 1].getWaitTimeFromPrev().getDeltaLong() : 0,
                         route.getRoute().get(i + 1).getWaitTimeFromPrev().getDeltaLong()
                 );
                 rval[i] = new TimeDelta(maxWait);
@@ -96,21 +97,18 @@ public class CalculatorSupport {
         TimeDelta maxDelta = base.timeUntil(maxTime);
 
         //Create an easily searchable set of all chains containing st2
-        Set<TransChain> st2Chains = StationRetriever.getChainsForStation(st2, null)
-                .keySet()
-                .stream()
-                .distinct()
-                .collect(Collectors.toSet());
+        Map<TransChain, List<SchedulePoint>> st2Chains = StationRetriever.getChainsForStation(st2, null);
 
         return StationRetriever.getChainsForStation(st1, null)
-                .keySet()
+                .entrySet()
                 .stream()
                 .distinct()
-                .filter(st2Chains::contains) //First get all chains containing both st1 and st2
+                .filter(entry -> st2Chains.containsKey(entry.getKey())) //First get all chains containing both st1 and st2
 
-                .map(chain1 -> {
-                    TimePoint st1arrive = chain1.getSchedule(st1).getNextArrival(base);
-                    TimePoint st2arrive = chain1.getSchedule(st2).getNextArrival(st1arrive);
+                .map(entry -> {
+                    TimePoint st1arrive = st1.withSchedule(entry.getKey(), entry.getValue()).getNextArrival(base);
+                    TimePoint st2arrive = st2.withSchedule(entry.getKey(), st2Chains.get(entry.getKey()))
+                            .getNextArrival(st1arrive);
                     return new TravelRouteNode.Builder()
                             .setPoint(st2)
                             .setWaitTime(base.timeUntil(st1arrive).getDeltaLong())
@@ -165,12 +163,20 @@ public class CalculatorSupport {
      * @param startTime the time to start at
      * @return the list of routes from a to b starting at time startTime
      */
-    public static List<TravelRoute> buildRoute(LocationPoint a, LocationPoint b, TimePoint startTime) {
-        return (List<TravelRoute>) CostCalculator.getCostValue(new CostArgs()
-                .setCostTag("routes")
-                .setSubject(b)
-                .setArg("p1", a)
-                .setArg("starttime", startTime));
+    public static List<TravelRoute> buildRoute(StartPoint a, DestinationLocation b, TimePoint startTime) {
+        TimeDelta walkTime = LocationUtils.timeBetween(a, b);
+
+        ApplicationRequest pathmakerRequest = new ApplicationRequest.Builder("DONUTAB_BEST")
+                .withStartPoint(a)
+                .withEndPoint(b)
+                .withStartTime(startTime)
+                .withFilter(LogicUtils.isRouteInRange(b, walkTime))
+                .withMaxDelta(new TimeDelta(20 * 60 * 1000))
+                .build();
+
+        ApplicationResult pathResult = ApplicationRunner.runApplication(pathmakerRequest);
+
+        return pathResult.getResult();
     }
 
 
