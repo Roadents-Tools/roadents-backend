@@ -15,6 +15,7 @@ import com.reroute.backend.model.routing.TravelRouteNode;
 import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.stations.StationRetriever;
+import com.reroute.backend.stations.WorldInfo;
 import com.reroute.backend.utils.LocationUtils;
 import com.reroute.backend.utils.LoggingUtils;
 
@@ -38,8 +39,12 @@ public class GeneratorCore implements LogicCore {
         TimePoint startTime = args.getStartTime();
         TimeDelta maxTimeDelta = args.getMaxDelta();
 
-
-        StationRetriever.prepareWorld(pt, startTime, maxTimeDelta);
+        WorldInfo request = new WorldInfo.Builder()
+                .setCenter(pt)
+                .setStartTime(startTime)
+                .setMaxDelta(maxTimeDelta)
+                .build();
+        StationRetriever.prepareWorld(request);
 
         //Get the station routes
         Set<TravelRoute> stationRoutes = LogicUtils.buildStationRouteList(pt, startTime, maxTimeDelta, args.getResultsFilter());
