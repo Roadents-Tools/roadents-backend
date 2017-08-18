@@ -12,6 +12,7 @@ import com.reroute.backend.model.location.TransStation;
 import com.reroute.backend.model.time.SchedulePoint;
 import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
+import com.reroute.backend.stations.WorldInfo;
 import com.reroute.backend.stations.interfaces.StationCacheInstance;
 import com.reroute.backend.utils.LocationUtils;
 import com.reroute.backend.utils.LoggingUtils;
@@ -20,27 +21,35 @@ import com.reroute.backend.utils.StreamUtils;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 public class DonutPutOnceCache implements StationCacheInstance.DonutCache {
 
-    private static final int HASH_BITS = 50;
-
-
     private Map<TransChain, Map<TransStation, List<SchedulePoint>>> worldInfo = new HashMap<>();
     private Map<Point, TransStation> areaMap = new HashMap<>();
+    private List<WorldInfo> requests = new LinkedList<>();
 
     private static Distance latLengthAt(double lat) {
         double latmidrads = Math.toRadians(lat);
-        return new Distance(111132.92 - 559.82 * Math.cos(2 * latmidrads) + 1.175 * Math.cos(4 * latmidrads - .0023 * Math
-                .cos(6 * latmidrads)), DistanceUnits.METERS);
+        return new Distance(
+                111132.92 -
+                        559.82 * Math.cos(2 * latmidrads) +
+                        1.175 * Math.cos(4 * latmidrads - .0023 * Math.cos(6 * latmidrads)),
+                DistanceUnits.METERS
+        );
     }
 
     private static Distance lngLengthAt(double lat) {
         double latmidrads = Math.toRadians(lat);
-        return new Distance((111412.85 * Math.cos(latmidrads) - 93.5 * Math.cos(3 * latmidrads) + .118 * Math.cos(5 * latmidrads)), DistanceUnits.METERS);
+        return new Distance(
+                111412.85 * Math.cos(latmidrads) -
+                        93.5 * Math.cos(3 * latmidrads) +
+                        .118 * Math.cos(5 * latmidrads),
+                DistanceUnits.METERS
+        );
     }
 
     @Override
@@ -55,7 +64,7 @@ public class DonutPutOnceCache implements StationCacheInstance.DonutCache {
         return getStationsInAreaBad(center, range);
     }
 
-    public List<TransStation> getStationsInAreaBad(LocationPoint center, Distance range) {
+    private List<TransStation> getStationsInAreaBad(LocationPoint center, Distance range) {
         if (areaMap == null || areaMap.isEmpty()) return Collections.emptyList();
         return areaMap.values().stream()
                 .filter(stat -> LocationUtils.distanceBetween(center, stat).inMeters() <= range.inMeters())
@@ -99,8 +108,9 @@ public class DonutPutOnceCache implements StationCacheInstance.DonutCache {
     }
 
     @Override
-    public boolean putWorld(Map<TransChain, Map<TransStation, List<SchedulePoint>>> world) {
+    public boolean putWorld(WorldInfo info, Map<TransChain, Map<TransStation, List<SchedulePoint>>> world) {
         if (!worldInfo.isEmpty() || !areaMap.isEmpty()) return false;
+        if (hasWorld(info)) return true;
         LoggingUtils.logMessage("DonutPutCache", "Putting world with %d chains.", world.size());
         worldInfo = world;
         for (Map<TransStation, List<SchedulePoint>> stmap : world.values()) {
@@ -109,7 +119,14 @@ public class DonutPutOnceCache implements StationCacheInstance.DonutCache {
                 areaMap.put(pt, station);
             }
         }
+        requests.add(info);
         return true;
+    }
+
+    @Override
+    public boolean hasWorld(WorldInfo toCheck) {
+        return requests.stream()
+                .anyMatch(cached -> cached.containsInfo(toCheck));
     }
 
     private static class Rect2D implements HyperRect {

@@ -7,6 +7,7 @@ import com.reroute.backend.model.location.TransStation;
 import com.reroute.backend.model.time.SchedulePoint;
 import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
+import com.reroute.backend.stations.WorldInfo;
 import com.reroute.backend.stations.interfaces.StationCacheInstance;
 import com.reroute.backend.stations.memory.DonutPutOnceCache;
 
@@ -23,7 +24,6 @@ public class StationChainCacheHelper {
 
     private static StationChainCacheHelper instance = new StationChainCacheHelper();
 
-    private StationCacheInstance.GeneralCache[] allStationInstances;
     private StationCacheInstance.DonutCache[] donutCaches;
     private boolean isTest = false;
 
@@ -33,11 +33,9 @@ public class StationChainCacheHelper {
 
     private void initializeStationInstanceList() {
         if (isTest) {
-            allStationInstances = new StationCacheInstance.GeneralCache[0];
             donutCaches = new StationCacheInstance.DonutCache[0];
             return;
         }
-        allStationInstances = new StationCacheInstance.GeneralCache[] {};
         donutCaches = new StationCacheInstance.DonutCache[] {
                 new DonutPutOnceCache()
         };
@@ -103,15 +101,17 @@ public class StationChainCacheHelper {
                 .anyMatch(cache -> cache.putChainsForStations(station, chains));
     }
 
-    public boolean putWorld(Map<TransChain, Map<TransStation, List<SchedulePoint>>> world) {
+    public boolean putWorld(WorldInfo request, Map<TransChain, Map<TransStation, List<SchedulePoint>>> world) {
         return Arrays.stream(donutCaches)
-                .anyMatch(cache -> cache.putWorld(world));
+                .anyMatch(cache -> cache.putWorld(request, world));
+    }
+
+    public boolean hasWorld(WorldInfo request) {
+        return Arrays.stream(donutCaches)
+                .anyMatch(cache -> cache.hasWorld(request));
     }
 
     public void closeAllCaches() {
-        if (allStationInstances == null) return;
-        for (StationCacheInstance instance : allStationInstances) {
-            instance.close();
-        }
+        Arrays.stream(donutCaches).forEach(StationCacheInstance::close);
     }
 }

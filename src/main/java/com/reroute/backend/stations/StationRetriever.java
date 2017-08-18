@@ -177,9 +177,11 @@ public final class StationRetriever {
         return rval;
     }
 
-    public static boolean prepareWorld(LocationPoint center, TimePoint startTime, TimeDelta maxDelta) {
-        Map<TransChain, Map<TransStation, List<SchedulePoint>>> world = StationDbHelper.getHelper()
-                .getWorld(center, startTime, maxDelta);
-        return StationChainCacheHelper.getHelper().putWorld(world);
+    public static boolean prepareWorld(WorldInfo request) {
+        if (StationChainCacheHelper.getHelper().hasWorld(request)) {
+            return true;
+        }
+        Map<TransChain, Map<TransStation, List<SchedulePoint>>> world = StationDbHelper.getHelper().getWorld(request);
+        return StationChainCacheHelper.getHelper().putWorld(request, world);
     }
 }

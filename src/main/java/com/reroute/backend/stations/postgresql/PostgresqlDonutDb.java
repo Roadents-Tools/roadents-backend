@@ -51,10 +51,6 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
 
     /* Math constants */
     private static final long BATCH_SIZE = 300;
-    private static final double DRIVING_METERS_PER_HOUR = LocationUtils.timeToMaxTransit(new TimeDelta(3600000))
-            .inMeters();
-    private static final long MILLIS_IN_HOUR = 3600000;
-    private static final double METERS_PER_MILLI = DRIVING_METERS_PER_HOUR * 1. / MILLIS_IN_HOUR;
 
     private final Connection con;
     private final String url;
@@ -532,7 +528,7 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
     }
 
     @Override
-    public Map<TransChain, Map<TransStation, List<SchedulePoint>>> getWorld(LocationPoint center, TimePoint startTime, TimeDelta maxDelta) {
+    public Map<TransChain, Map<TransStation, List<SchedulePoint>>> getWorld(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta) {
 
         LoggingUtils.logMessage(TAG, "Building world around (%f,%f), %d-%d-%d %d:%d:%d + %d seconds.",
                 center.getCoordinates()[0], center.getCoordinates()[1],
@@ -571,8 +567,8 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
 
                 PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.StationTable.TABLE_NAME,
 
-                PostgresqlContract.StationTable.LATLNG_KEY, center.getCoordinates()[0], center.getCoordinates()[1], maxDelta
-                        .getDeltaLong() * METERS_PER_MILLI,
+                PostgresqlContract.StationTable.LATLNG_KEY, center.getCoordinates()[0], center.getCoordinates()[1], range
+                        .inMeters(),
                 buildTimeQuery(startTime, maxDelta),
                 PostgresqlContract.ScheduleTable.STATION_ID_KEY, PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.ID_KEY,
                 PostgresqlContract.ScheduleTable.CHAIN_ID_KEY, PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.ChainTable.ID_KEY

@@ -9,6 +9,7 @@ import com.reroute.backend.model.routing.TravelRoute;
 import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.stations.StationRetriever;
+import com.reroute.backend.stations.WorldInfo;
 import com.reroute.backend.utils.LocationUtils;
 import com.reroute.backend.utils.LoggingUtils;
 import com.reroute.backend.utils.StreamUtils;
@@ -96,7 +97,12 @@ public class MapsPageGenerator {
 
         TimeDelta worldDelta = maxDelta.plus(maxDistTime);
 
-        StationRetriever.prepareWorld(centroid, startTime, worldDelta);
+        WorldInfo request = new WorldInfo.Builder()
+                .setCenter(centroid)
+                .setStartTime(startTime)
+                .setMaxDelta(worldDelta)
+                .build();
+        StationRetriever.prepareWorld(request);
 
         TravelRouteJsonConverter conv = new TravelRouteJsonConverter();
         List<Map<LocationPoint, TimeDelta>> areas = starts.stream()

@@ -12,6 +12,7 @@ import com.reroute.backend.model.routing.TravelRoute;
 import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.stations.StationRetriever;
+import com.reroute.backend.stations.WorldInfo;
 import com.reroute.backend.utils.LoggingUtils;
 import com.reroute.backend.utils.StreamUtils;
 
@@ -59,7 +60,12 @@ public class CalculatorCore implements LogicCore {
                 .max(Comparator.comparing(TimeDelta::getDeltaLong))
                 .orElse(TimeDelta.NULL);
 
-        StationRetriever.prepareWorld(base.getStart(), base.getStartTime(), maxDelta.plus(maxRouteTime));
+        WorldInfo request = new WorldInfo.Builder()
+                .setCenter(base.getStart())
+                .setStartTime(base.getStartTime())
+                .setMaxDelta(maxDelta.plus(maxRouteTime))
+                .build();
+        StationRetriever.prepareWorld(request);
 
         return baseRoutes.stream()
                 .limit(3)

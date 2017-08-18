@@ -12,6 +12,7 @@ import com.reroute.backend.model.routing.TravelRouteNode;
 import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.stations.StationRetriever;
+import com.reroute.backend.stations.WorldInfo;
 import com.reroute.backend.utils.LocationUtils;
 import com.reroute.backend.utils.LoggingUtils;
 
@@ -57,7 +58,12 @@ public class PathmakerCore implements LogicCore {
                 .max(Comparator.comparing(TimeDelta::getDeltaLong))
                 .orElse(TimeDelta.NULL);
 
-        StationRetriever.prepareWorld(start, startTime, maxTimeDelta);
+        WorldInfo worldRequest = new WorldInfo.Builder()
+                .setCenter(start)
+                .setStartTime(startTime)
+                .setMaxDelta(maxDelta)
+                .build();
+        StationRetriever.prepareWorld(worldRequest);
 
         Predicate<TravelRoute> isInAnyRange = ends.stream()
                 .map(end -> LogicUtils.isRouteInRange(end, maxTimeDelta))

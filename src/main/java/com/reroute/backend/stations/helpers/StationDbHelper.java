@@ -7,6 +7,7 @@ import com.reroute.backend.model.location.TransStation;
 import com.reroute.backend.model.time.SchedulePoint;
 import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
+import com.reroute.backend.stations.WorldInfo;
 import com.reroute.backend.stations.interfaces.StationDbInstance;
 import com.reroute.backend.stations.postgresql.PostgresqlDonutDb;
 import com.reroute.backend.stations.test.TestStationDb;
@@ -150,7 +151,7 @@ public class StationDbHelper {
         return doDonutQuery(db -> db.getArrivableStations(chainsAndExtras, generalStart, maxDelta), Collections::emptyMap);
     }
 
-    public Map<TransChain, Map<TransStation, List<SchedulePoint>>> getWorld(LocationPoint center, TimePoint startTIme, TimeDelta maxDelta) {
-        return doDonutQuery(db -> db.getWorld(center, startTIme, maxDelta), Collections::emptyMap);
+    public Map<TransChain, Map<TransStation, List<SchedulePoint>>> getWorld(WorldInfo info) {
+        return doDonutQuery(db -> db.getWorld(info.getCenter(), info.getRange(), info.getStartTime(), info.getMaxDelta()), Collections::emptyMap);
     }
 }

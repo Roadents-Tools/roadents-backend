@@ -7,6 +7,7 @@ import com.reroute.backend.model.location.TransStation;
 import com.reroute.backend.model.time.SchedulePoint;
 import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
+import com.reroute.backend.stations.WorldInfo;
 import com.reroute.backend.stations.interfaces.StationCacheInstance;
 import com.reroute.backend.utils.LocationUtils;
 import com.reroute.backend.utils.StreamUtils;
@@ -198,10 +199,9 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
     }
 
     @Override
-    public boolean putWorld(Map<TransChain, Map<TransStation, List<SchedulePoint>>> world) {
+    public boolean putWorld(WorldInfo request, Map<TransChain, Map<TransStation, List<SchedulePoint>>> world) {
         if (!isUp) return false;
-
-        //TODO: Check and record existing world info
+        if (hasWorld(request)) return true;
 
         Set<String[]> chainData = new HashSet<>();
         Set<String[]> stationData = new HashSet<>();
@@ -275,7 +275,17 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
         jedis.geoadd(RedisUtils.LATLNG_INDEX, stLatlngIndexData);
         schedStatIndexData.forEach(jedis::hmset);
         schedChainIndexData.forEach(jedis::hmset);
+
+        //Finally the world request itself
+        jedis.lpush(RedisUtils.WORLD_LIST_NAME, request.packInfo());
         return true;
+    }
+
+    @Override
+    public boolean hasWorld(WorldInfo toCheck) {
+        return jedis.lrange(RedisUtils.WORLD_LIST_NAME, 0, -1).stream()
+                .map(WorldInfo::unpackInfo)
+                .anyMatch(cached -> cached.containsInfo(toCheck));
     }
 
     @Override

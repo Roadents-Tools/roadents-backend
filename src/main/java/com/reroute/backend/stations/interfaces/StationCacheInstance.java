@@ -7,6 +7,7 @@ import com.reroute.backend.model.location.TransStation;
 import com.reroute.backend.model.time.SchedulePoint;
 import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
+import com.reroute.backend.stations.WorldInfo;
 import com.reroute.backend.utils.StreamUtils;
 
 import java.util.ArrayList;
@@ -20,13 +21,7 @@ import java.util.stream.Collectors;
  */
 public interface StationCacheInstance {
 
-    interface GeneralCache extends StationCacheInstance {
-
-        List<TransStation> getCachedStations(LocationPoint center, Distance range, TimePoint start, TimeDelta maxDelta, TransChain chain);
-
-        boolean cacheStations(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta, List<TransStation> stations);
-    }
-
+    void close();
 
     interface DonutCache extends StationCacheInstance {
 
@@ -96,11 +91,8 @@ public interface StationCacheInstance {
             return !getStationsInArea(center, range).isEmpty();
         }
 
-        boolean putWorld(Map<TransChain, Map<TransStation, List<SchedulePoint>>> world);
+        boolean putWorld(WorldInfo request, Map<TransChain, Map<TransStation, List<SchedulePoint>>> world);
+
+        boolean hasWorld(WorldInfo toCheck);
     }
-
-
-
-
-    void close();
 }

@@ -8,12 +8,17 @@ import com.reroute.backend.utils.TimeUtils;
 
 public final class RedisUtils {
 
+    public static final String WORLD_LIST_NAME = "cachedworlds";
+
     public static final String STATION_PREFIX_NAME = "station";
     public static final String LATLNG_INDEX = "station_latlng_idx";
+
     public static final String CHAIN_PREFIX_NAME = "chain";
+
     public static final String SCHEDULE_PREFIX_NAME = "schedule";
     public static final String SCHEDULE_CHAIN_INDEX_PREFIX = "schedule_chain_idx";
     public static final String SCHEDULE_STATION_INDEX_PREFIX = "schedule_station_idx";
+
     public static final String DATA_SPLITER = ";:;";
     public static final String KEY_SPLITER = ":;:";
 
