@@ -1,5 +1,7 @@
 package com.reroute.backend.utils;
 
+import com.reroute.backend.model.time.TimePoint;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -25,7 +27,14 @@ public class LoggingUtils {
     }
 
     public static void logMessage(String tag, String message) {
-        log.add(new String[] { "" + System.currentTimeMillis(), "Message", tag, message });
+        TimePoint now = TimePoint.now();
+        log.add(new String[] {
+                String.format(
+                        "%d-%d-%d %d:%d:%d:%d",
+                        now.getYear(), now.getMonth(), now.getDayOfMonth(),
+                        now.getHour(), now.getMinute(), now.getSecond(), now.getMilliseconds()
+                ),
+                "Message", tag, message });
         if (printImmediate) printLog();
     }
 
@@ -51,6 +60,7 @@ public class LoggingUtils {
     }
 
     private static String[] errorToMessage(Exception e) {
+        TimePoint now = TimePoint.now();
         StringBuilder msg = new StringBuilder();
         if (e.getMessage() != null) msg.append(e.getMessage().replaceAll("\n\n", "\n"));
         else msg.append(e.getClass().getName());
@@ -61,7 +71,12 @@ public class LoggingUtils {
             msg.append(elm.getLineNumber());
             msg.append("\n");
         }
-        return new String[] { "" + System.currentTimeMillis(), "ERROR", e.getClass().getName(), msg.toString() };
+        return new String[] {
+                String.format(
+                        "%d-%d-%d %d:%d:%d:%d",
+                        now.getYear(), now.getMonth(), now.getDayOfMonth(),
+                        now.getHour(), now.getMinute(), now.getSecond(), now.getMilliseconds()
+                ), "ERROR", e.getClass().getName(), msg.toString() };
     }
 
     public static boolean isEmpty() {
