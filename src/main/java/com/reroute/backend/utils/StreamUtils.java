@@ -21,7 +21,7 @@ public final class StreamUtils {
     }
 
     public static <T, R> Collector<T, ?, Map<R, T>> collectWithKeys(Function<T, R> applicationFunction) {
-        return collectWithMapping(applicationFunction, a -> a);
+        return collectWithMapping(applicationFunction, Function.identity());
     }
 
     public static <I, K, V> Collector<I, ?, Map<K, V>> collectWithMapping(Function<I, K> keyMapping, Function<I, V> valueMapping) {
@@ -49,7 +49,7 @@ public final class StreamUtils {
 
             @Override
             public Function<Map<K, V>, Map<K, V>> finisher() {
-                return a -> a;
+                return Function.identity();
             }
 
             @Override
@@ -64,7 +64,7 @@ public final class StreamUtils {
     }
 
     public static <T, R> Collector<T, ?, Map<T, R>> collectWithValues(Function<T, R> applicationFunction) {
-        return collectWithMapping(a -> a, applicationFunction);
+        return collectWithMapping(Function.identity(), applicationFunction);
     }
 
     public static Collector<Object, ?, String> joinToString(String seperator) {

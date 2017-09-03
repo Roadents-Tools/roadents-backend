@@ -12,7 +12,6 @@ import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.stations.interfaces.StationDbInstance;
 import com.reroute.backend.utils.LocationUtils;
 import com.reroute.backend.utils.LoggingUtils;
-import com.reroute.backend.utils.StreamUtils;
 import com.reroute.backend.utils.TimeUtils;
 
 import java.sql.Connection;
@@ -27,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
-import java.util.StringJoiner;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
@@ -303,163 +301,6 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
             stm.close();
             return rval;
 
-        } catch (SQLException e) {
-            LoggingUtils.logError(e);
-            isUp = false;
-            return Collections.emptyMap();
-        }
-    }
-
-    @Override
-    public Map<TransStation, Map<TransChain, List<SchedulePoint>>> getChainsForStations(List<TransStation> stations) {
-        if (stations == null || stations.isEmpty() || !isUp || con == null || stations.stream()
-                .map(station -> station.getID().getDatabaseName())
-                .anyMatch(dbname -> !url.equals(dbname))) {
-            return Collections.emptyMap();
-        }
-
-        Map<Integer, TransStation> idToStation = stations.stream()
-                .collect(StreamUtils.collectWithKeys(station -> Integer.parseInt(station.getID().getId())));
-
-        String stationGroup = idToStation.keySet().stream()
-                .map(id -> "" + id)
-                .collect(() -> new StringJoiner(", "), StringJoiner::add, StringJoiner::merge)
-                .toString();
-
-        String query = String.format(
-                "SELECT %s.%s, %s, %s, %s, %s, %s" +
-                        "FROM %s, %s " +
-                        "WHERE %s IN (%s) AND %s = %s.%s",
-                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.ID_KEY,
-                PostgresqlContract.ScheduleTable.CHAIN_ID_KEY, PostgresqlContract.ChainTable.NAME_KEY,
-                PostgresqlContract.ScheduleTable.STATION_ID_KEY,
-                PostgresqlContract.ScheduleTable.PACKED_TIME_KEY,
-                PostgresqlContract.ScheduleTable.PACKED_VALID_KEY,
-                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ChainTable.TABLE_NAME,
-                PostgresqlContract.ScheduleTable.STATION_ID_KEY, stationGroup,
-                PostgresqlContract.ScheduleTable.CHAIN_ID_KEY, PostgresqlContract.ChainTable.TABLE_NAME,
-                PostgresqlContract.ChainTable.ID_KEY
-        );
-
-        Map<TransStation, Map<TransChain, List<SchedulePoint>>> rval = new HashMap<>();
-
-        try {
-            Statement stm = con.createStatement();
-            ResultSet rs = stm.executeQuery(query);
-            while (rs.isBeforeFirst()) rs.next();
-
-            Map<Integer, TransChain> chainstore = new HashMap<>();
-            do {
-                SchedulePoint pt = TimeUtils.unpackPoint(
-                        rs.getInt(PostgresqlContract.ScheduleTable.PACKED_TIME_KEY),
-                        TimeUtils.bitStrToBools(rs.getString(PostgresqlContract.ScheduleTable.PACKED_VALID_KEY)),
-                        60,
-                        new DatabaseID(url, "" + rs.getInt(PostgresqlContract.ScheduleTable.ID_KEY))
-                );
-                int chainid = rs.getInt(PostgresqlContract.ScheduleTable.CHAIN_ID_KEY);
-
-                TransChain chain = chainstore.get(chainid);
-                if (chain == null) {
-                    chain = new TransChain(
-                            rs.getString(PostgresqlContract.ChainTable.NAME_KEY),
-                            new DatabaseID(url, "" + chainid)
-                    );
-                    chainstore.put(chainid, chain);
-                }
-
-                int stationid = rs.getInt(PostgresqlContract.ScheduleTable.STATION_ID_KEY);
-                TransStation stat = idToStation.get(stationid);
-
-                rval.computeIfAbsent(stat, s -> new HashMap<>())
-                        .computeIfAbsent(chain, c -> new ArrayList<>())
-                        .add(pt);
-
-            } while (rs.next());
-
-            rs.close();
-            stm.close();
-            return rval;
-
-        } catch (SQLException e) {
-            LoggingUtils.logError(e);
-            isUp = false;
-            return Collections.emptyMap();
-        }
-    }
-
-    @Override
-    public Map<TransChain, Map<TransStation, TimeDelta>> getArrivableStations(List<TransChain> chains, TimePoint startTime, TimeDelta maxDelta) {
-
-        if (!isUp || con == null || chains == null || chains.isEmpty() || chains.stream()
-                .map(chain -> chain.getID().getDatabaseName())
-                .anyMatch(db -> !url.equals(db))) {
-            return Collections.emptyMap();
-        }
-
-        Map<Integer, TransChain> idToChain = chains.stream()
-                .collect(StreamUtils.collectWithKeys(chain -> Integer.parseInt(chain.getID().getId())));
-
-        String idgroup = idToChain.keySet().stream()
-                .map(id -> "" + id)
-                .collect(() -> new StringJoiner(", "), StringJoiner::add, StringJoiner::merge)
-                .toString();
-
-        String query = String.format(
-                "SELECT %s, %s, %s, " +
-                        "ST_X(%s::geometry) AS %s, " +
-                        "ST_Y(%s::geometry) AS %s, " +
-                        "(%s - %d) AS %s " +
-                        "FROM %s, %s " +
-                        "WHERE %s=%s.%s AND %s IN (%s) AND %s",
-                PostgresqlContract.ScheduleTable.STATION_ID_KEY, PostgresqlContract.StationTable.NAME_KEY,
-                PostgresqlContract.ScheduleTable.CHAIN_ID_KEY,
-                PostgresqlContract.StationTable.LATLNG_KEY, LAT_KEY,
-                PostgresqlContract.StationTable.LATLNG_KEY, LNG_KEY,
-
-                PostgresqlContract.ScheduleTable.PACKED_TIME_KEY, TimeUtils.packTimePoint(startTime), DELTA_KEY,
-
-                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.StationTable.TABLE_NAME,
-                PostgresqlContract.ScheduleTable.STATION_ID_KEY,
-                PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.ID_KEY,
-                PostgresqlContract.ScheduleTable.CHAIN_ID_KEY, idgroup, buildTimeQuery(startTime, maxDelta)
-        );
-
-
-        Map<TransChain, Map<TransStation, TimeDelta>> rval = new HashMap<>();
-        try {
-            Statement stm = con.createStatement();
-            ResultSet rs = stm.executeQuery(query);
-
-            Map<Integer, TransStation> stationstore = new HashMap<>();
-            while (rs.isBeforeFirst()) rs.next();
-            do {
-                int chainid = rs.getInt(PostgresqlContract.ScheduleTable.CHAIN_ID_KEY);
-                TransChain key = idToChain.get(chainid);
-
-                int stationid = rs.getInt(PostgresqlContract.ScheduleTable.STATION_ID_KEY);
-                TransStation station = stationstore.get(stationid);
-                if (station == null) {
-                    station = new TransStation(
-                            rs.getString(PostgresqlContract.StationTable.NAME_KEY),
-                            new double[] { rs.getDouble(LAT_KEY), rs.getDouble(LNG_KEY) },
-                            new DatabaseID(url, "" + stationid)
-                    );
-                    stationstore.put(stationid, station);
-                }
-
-                int rawDelta = rs.getInt(DELTA_KEY);
-                int delta = 1000 * (rawDelta >= 0 ? rawDelta : 24 * 60 * 60 + rawDelta);
-                TimeDelta deltaObj = new TimeDelta(delta);
-
-                rval.computeIfAbsent(key, c -> new HashMap<>())
-                        .compute(station, (station1, existing) -> (existing == null || existing.getDeltaLong() > deltaObj
-                                .getDeltaLong())
-                                ? deltaObj
-                                : existing
-                        );
-            } while (rs.next());
-
-            return rval;
         } catch (SQLException e) {
             LoggingUtils.logError(e);
             isUp = false;

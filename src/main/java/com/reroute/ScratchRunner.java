@@ -96,9 +96,13 @@ public class ScratchRunner {
                     calculatorMap(args);
                     return;
                 }
+
+                if ("--default".equals(arg)) {
+                    runFinder(args);
+                    return;
+                }
             }
 
-            runFinder(args);
         } catch (Exception e) {
             LoggingUtils.logError(e);
         }

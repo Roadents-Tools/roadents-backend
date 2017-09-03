@@ -96,11 +96,6 @@ public class StationChainCacheHelper {
                 .anyMatch(cache -> cache.putArea(center, range, stations));
     }
 
-    public boolean putChainsForStation(TransStation station, Map<TransChain, List<SchedulePoint>> chains) {
-        return Arrays.stream(donutCaches)
-                .anyMatch(cache -> cache.putChainsForStations(station, chains));
-    }
-
     public boolean putWorld(WorldInfo request, Map<TransChain, Map<TransStation, List<SchedulePoint>>> world) {
         return Arrays.stream(donutCaches)
                 .anyMatch(cache -> cache.putWorld(request, world));

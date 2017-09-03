@@ -98,11 +98,6 @@ public class GtfsProvider implements StationProvider {
     }
 
     @Override
-    public boolean updatesData() {
-        return false;
-    }
-
-    @Override
     public Map<TransChain, List<TransStation>> getUpdatedStations() {
         if (cache == null) cacheData();
         if (cache == null) {

@@ -61,7 +61,7 @@ public class SchedulePoint implements DatabaseObject {
         this.id = id;
     }
 
-    public TimeDelta minutesBefore(SchedulePoint other) {
+    public TimeDelta timeBefore(SchedulePoint other) {
         TimePoint thisBase = nextValidTime(TimePoint.NULL.addDay());
         TimePoint otherBase = other.nextValidTime(thisBase);
         return thisBase.timeUntil(otherBase);

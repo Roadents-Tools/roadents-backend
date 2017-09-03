@@ -13,8 +13,6 @@ public interface StationProvider {
 
     boolean isUp();
 
-    boolean updatesData();
-
     Map<TransChain, List<TransStation>> getUpdatedStations();
 
     void close();
