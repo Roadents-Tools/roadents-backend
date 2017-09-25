@@ -67,7 +67,7 @@ public final class Distance {
 
         Distance distance = (Distance) o;
 
-        return Double.compare(distance.meters, meters) == 0;
+        return this.deltaEqual(distance, ERROR_MARGIN);
     }
 
     @Override

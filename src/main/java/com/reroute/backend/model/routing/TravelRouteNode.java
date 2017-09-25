@@ -28,7 +28,7 @@ public class TravelRouteNode {
     }
 
     public boolean isStart() {
-        return pt instanceof StartPoint;
+        return pt instanceof StartPoint && getTotalTimeToArrive() == TimeDelta.NULL;
     }
 
     public boolean arrivesByFoot() {
@@ -63,11 +63,9 @@ public class TravelRouteNode {
         TravelRouteNode that = (TravelRouteNode) o;
 
         if (!getPt().equals(that.getPt())) return false;
-        if (!getWalkTimeFromPrev().equals(that.getWalkTimeFromPrev()))
-            return false;
-        if (!getWaitTimeFromPrev().equals(that.getWaitTimeFromPrev()))
-            return false;
-        return getTravelTimeFromPrev().equals(that.getTravelTimeFromPrev());
+        return getWalkTimeFromPrev().equals(that.getWalkTimeFromPrev()) &&
+                getWaitTimeFromPrev().equals(that.getWaitTimeFromPrev()) &&
+                getTravelTimeFromPrev().equals(that.getTravelTimeFromPrev());
     }
 
     @Override
