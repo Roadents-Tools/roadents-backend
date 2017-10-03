@@ -42,15 +42,14 @@ public class StationDbHelper {
             return;
         }
 
-        allDatabases = new StationDbInstance[] {
-                new PostgresqlDonutDb(PostgresqlDonutDb.DB_URLS[1])
-        };
+        allDatabases = Arrays.stream(PostgresqlDonutDb.DB_URLS)
+                .map(PostgresqlDonutDb::new)
+                .toArray(StationDbInstance[]::new);
 
-        for (StationDbInstance instance : allDatabases) {
-            if (!(instance instanceof StationDbInstance.DonutDb)) continue;
-            StationDbInstance.DonutDb ddb = (StationDbInstance.DonutDb) instance;
-            nameToDbs.computeIfAbsent(ddb.getSourceName(), (k) -> new ArrayList<>()).add(ddb);
-        }
+        Arrays.stream(allDatabases)
+                .filter(instance -> instance instanceof StationDbInstance.DonutDb)
+                .map(instance -> (StationDbInstance.DonutDb) instance)
+                .forEach(ddb -> nameToDbs.computeIfAbsent(ddb.getSourceName(), (k) -> new ArrayList<>()).add(ddb));
     }
 
     public static StationDbHelper getHelper() {
