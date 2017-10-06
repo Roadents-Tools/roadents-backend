@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -92,6 +91,25 @@ public class LogicUtils {
      */
     @SafeVarargs
     public static Set<TravelRoute> buildStationRouteList(StartPoint initialPoint, TimePoint startTime, TimeDelta maxDelta, Predicate<TravelRoute>... layerFilters) {
+        if (layerFilters == null) {
+            return buildStationRouteList(new StationRoutesBuildRequest(initialPoint, startTime, maxDelta));
+        } else if (layerFilters.length == 1) {
+            return buildStationRouteList(new StationRoutesBuildRequest(initialPoint, startTime, maxDelta).setLayerFilter(layerFilters[0]));
+        } else {
+            Predicate<TravelRoute> allFilters = Arrays.stream(layerFilters).reduce(a -> true, Predicate::and);
+            return buildStationRouteList(new StationRoutesBuildRequest(initialPoint, startTime, maxDelta).setLayerFilter(allFilters));
+        }
+    }
+
+    public static Set<TravelRoute> buildStationRouteList(StationRoutesBuildRequest request) {
+        StartPoint initialPoint = request.getInitialPoint();
+        TimePoint startTime = request.getStartTime();
+        TimeDelta maxDelta = request.getMaxDelta();
+        Predicate<TravelRoute> layerFilters = request.getLayerFilter();
+        Predicate<TravelRoute> endFilter = request.getEndFilter();
+        int layerLimit = request.getLayerLimit();
+        int finalLimit = request.getFinalLimit();
+
         Map<String, TravelRoute> rval = new ConcurrentHashMap<>();
         TravelRoute startRoute = new TravelRoute(initialPoint, startTime);
         rval.put(getLocationTag(initialPoint), startRoute);
@@ -103,13 +121,18 @@ public class LogicUtils {
             List<TravelRoute> nextLayer = currentLayer.stream()
                     .flatMap(unfilteredLayerBuilder)
                     .filter(layerFilter)
+                    .limit(layerLimit)
                     .peek(newRoute -> rval.put(getLocationTag(newRoute.getCurrentEnd()), newRoute))
                     .collect(Collectors.toList());
 
             LoggingUtils.logMessage(TAG, "Next recursive layer size: %d", nextLayer.size());
             currentLayer = nextLayer;
         }
-        return new HashSet<>(rval.values());
+
+        return rval.values().stream()
+                .filter(endFilter)
+                .limit(finalLimit)
+                .collect(Collectors.toSet());
     }
 
     private static Function<TravelRoute, Stream<TravelRoute>> buildNextLayerFunction(TimePoint startTime, TimeDelta maxDelta) {
