@@ -10,6 +10,7 @@ import com.reroute.backend.logic.ApplicationRunner;
 import com.reroute.backend.logic.calculator.CalculatorCore;
 import com.reroute.backend.logic.generator.GeneratorCore;
 import com.reroute.backend.logic.utils.LogicUtils;
+import com.reroute.backend.logic.utils.StationRoutesBuildRequest;
 import com.reroute.backend.model.distance.Distance;
 import com.reroute.backend.model.distance.DistanceUnits;
 import com.reroute.backend.model.location.DestinationLocation;
@@ -18,6 +19,7 @@ import com.reroute.backend.model.location.StartPoint;
 import com.reroute.backend.model.location.TransChain;
 import com.reroute.backend.model.location.TransStation;
 import com.reroute.backend.model.routing.TravelRoute;
+import com.reroute.backend.model.routing.TravelRouteNode;
 import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.stations.gtfs.GtfsProvider;
@@ -51,6 +53,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Created by ilan on 1/5/17.
@@ -61,7 +64,6 @@ public class ScratchRunner {
     public static void main(String[] args) throws Exception {
 
         LoggingUtils.setPrintImmediate(true);
-
         try {
             for (String arg : args) {
                 if ("--map".equals(arg)) {
@@ -531,6 +533,107 @@ public class ScratchRunner {
                 LoggingUtils.logError(e);
             }
         }
+
+    }
+
+    private static void testDonutLimits(String[] args) {
+
+        //TODO: Extract args
+        StartPoint startPoint = new StartPoint(40.7570, -73.9718);
+        TimePoint startTime = new TimePoint(1500829200 * 1000L, "America/New_York");
+        TimeDelta maxDelta = new TimeDelta(30 * 60 * 1000);
+
+        Map<String, StationRoutesBuildRequest> reqToTags = new HashMap<>();
+        StationRoutesBuildRequest simple = new StationRoutesBuildRequest(startPoint, startTime, maxDelta);
+        /*reqToTags.put(
+                "simple", simple
+        );
+        reqToTags.put(
+                "layerFilter: traveldistTotal <= 5 * maxWalkDist", simple.withLayerFilter(rt -> {
+                    Distance maxDist = LocationUtils.timeToWalkDistance(maxDelta);
+                    List<TravelRouteNode> route = rt.getRoute();
+
+                    Distance totalTravelled = Distance.NULL;
+                    for (int i = 1; i < route.size(); i++) {
+                        Distance d = LocationUtils.distanceBetween(route.get(i).getPt(), route.get(i-1).getPt());
+                        totalTravelled = totalTravelled.plus(d);
+                    }
+                    return totalTravelled.inMeters() <= maxDist.inMeters();
+                })
+        );
+        reqToTags.put(
+                "layerFilter: currentEndDist <= 5 * maxWalkDist", simple.withLayerFilter(rt -> {
+                    Distance maxDist = LocationUtils.timeToWalkDistance(maxDelta);
+                    return LocationUtils.distanceBetween(rt.getStart(), rt.getCurrentEnd()).inMeters() <= maxDist.inMeters();
+                })
+        );
+        reqToTags.put(
+                "layerFilter: walktimeTotal <= .5*maxTime", simple.withLayerFilter(rt -> rt.getTotalWalkTime().getDeltaLong() <= .5 * maxDelta.getDeltaLong())
+        ); */
+        //TODO: Run this version of this filter test
+        reqToTags.put(
+                "layerFilter: walktimeTotal <= sum(i = 0 -> layercount, 1/2^i) ", simple.withLayerFilter(rt -> {
+                    int totalWalks = (int) rt.getRoute().stream()
+                            .filter(TravelRouteNode::arrivesByFoot)
+                            .count();
+                    double maxPercent = IntStream.range(1, totalWalks)
+                            .mapToDouble(a -> 1. / Math.pow(2, a))
+                            .sum();
+                    return rt.getTotalWalkTime().getDeltaLong() <= maxPercent * maxDelta.getDeltaLong();
+                })
+        );
+        /*
+        reqToTags.put(
+                "layerFilter: routetimeTotal = sum(i = 0 -> layercount, 1/2^i", simple.withLayerFilter(rt -> {
+                    int totalLayers = rt.getRoute().size() -1;
+                    double maxPercent = IntStream.range(1, totalLayers)
+                            .mapToDouble(a -> 1./Math.pow(2, a))
+                            .sum();
+                    return  rt.getTotalTime().getDeltaLong() <= maxPercent * maxDelta.getDeltaLong();
+                })
+        );*/
+
+        LoggingUtils.logMessage("DONUT_FILTER_TESTER", "Starting donut tests.");
+        LoggingUtils.logMessage("DONUT_FILTER_TESTER", "Starting donut test executions.");
+        reqToTags.forEach((tag, request) -> {
+            LoggingUtils.logMessage("DONUT_FILTER_TESTER", "Starting execution of %s.", tag);
+            Set<TravelRoute> routes = LogicUtils.buildStationRouteList(request);
+            LoggingUtils.logMessage("DONUT_FILTER_TESTER", "%s got %d routes.", tag, routes.size());
+
+            double maxDist = -1;
+            Optional<TravelRoute> maxRoute = Optional.empty();
+            double minDist = -1;
+            Optional<TravelRoute> minRoute = Optional.empty();
+            int maxNode = 1;
+            Optional<TravelRoute> nodeRoute = Optional.empty();
+            for (TravelRoute rt : routes) {
+                if (rt.getRoute().size() <= 1) continue;
+
+                double distance = LocationUtils.distanceBetween(rt.getStart(), rt.getCurrentEnd()).inMeters();
+                if (distance > maxDist) {
+                    maxDist = distance;
+                    maxRoute = Optional.of(rt);
+                } else if (distance < minDist || minDist == -1) {
+                    minDist = distance;
+                    minRoute = Optional.of(rt);
+                }
+
+                int nodeCount = rt.getRoute().size();
+                if (nodeCount > maxNode) {
+                    maxNode = nodeCount;
+                    nodeRoute = Optional.of(rt);
+                }
+
+            }
+
+            LoggingUtils.logMessage("DONUT_FILTER_TESTER", "Max distance is %f, from route\n%s\n", maxDist, maxRoute.map(TravelRoute::toString)
+                    .orElse("NULL"));
+            LoggingUtils.logMessage("DONUT_FILTER_TESTER", "Min distance is %f, from route\n%s\n", minDist, minRoute.map(TravelRoute::toString)
+                    .orElse("NULL"));
+            LoggingUtils.logMessage("DONUT_FILTER_TESTER", "Max node len is %d, from route\n%s\n", maxNode, nodeRoute.map(TravelRoute::toString)
+                    .orElse("NULL"));
+        });
+
 
     }
 }

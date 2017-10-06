@@ -14,7 +14,7 @@ public class LocationUtils {
      * Constants For Math
      **/
     private static final double EARTH_RADIUS_KM = 6367.449; //kilometers
-    private static final double AVG_WALKING_SPEED_KPH = 5.0;
+    private static final Distance AVG_WALKING_PER_HOUR = new Distance(5.0, DistanceUnits.KILOMETERS);
     private static final Distance MAX_TRANSIT_PER_HOUR = new Distance(65, DistanceUnits.MILES);
     private static final double SAFETY_FACTOR = 1;
 
@@ -41,7 +41,7 @@ public class LocationUtils {
     }
 
     public static TimeDelta distanceToWalkTime(Distance distance) {
-        double hours = distance.inKilometers() / AVG_WALKING_SPEED_KPH;
+        double hours = distance.inMeters() / AVG_WALKING_PER_HOUR.inMeters();
         double millis = hours * 1000.0 * 60.0 * 60.0 * SAFETY_FACTOR;
         return new TimeDelta((long) millis);
     }
@@ -51,8 +51,7 @@ public class LocationUtils {
     }
 
     public static Distance timeToWalkDistance(TimeDelta time) {
-        double km = (AVG_WALKING_SPEED_KPH * time.inHours()) / SAFETY_FACTOR;
-        return new Distance(km, DistanceUnits.KILOMETERS);
+        return AVG_WALKING_PER_HOUR.mul(time.inHours()).div(SAFETY_FACTOR);
     }
 
 }

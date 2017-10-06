@@ -14,6 +14,10 @@ public class StartPoint implements LocationPoint {
     private final LocationType type;
     private final double[] coords;
 
+    public StartPoint(double latitude, double longitude) {
+        this(new double[] { latitude, longitude });
+    }
+
     public StartPoint(double[] coords) {
         this(DEFAULT_NAME, DEFAULT_TYPE, coords);
     }
