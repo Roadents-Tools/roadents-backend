@@ -30,7 +30,7 @@ import java.util.stream.IntStream;
  */
 public class FoursquareLocationsProvider implements LocationProvider {
 
-    public static final String[][] API_ID_KEYS = new String[][]{
+    private static final String[][] API_ID_KEYS = new String[][] {
         new String[]{"NTJ2WDYNSATDGFBVF45QEHXSJWM5SXEHTGABU05LYHMRJXQD",  "PJ22A4QHXL5IT4FPY3E22SZWFXRCQXRPAVRGKFTB32RZZKZE"}
     };
     private static final String BASE_URL = "https://api.foursquare.com/";
@@ -48,8 +48,13 @@ public class FoursquareLocationsProvider implements LocationProvider {
     }
 
     private static DestinationLocation mapJsonToDest(JSONObject jsonObject, LocationType type) {
+        String name = jsonObject.getString("name");
+
         JSONObject locationObj = jsonObject.getJSONObject("location");
-        return new DestinationLocation(jsonObject.getString("name"), type, new double[] { locationObj.getDouble("lat"), locationObj.getDouble("lng") });
+        double[] coords = { locationObj.getDouble("lat"), locationObj.getDouble("lng") };
+        String address = locationObj.has("address") ? locationObj.getString("address") : null;
+
+        return new DestinationLocation(name, type, coords, address);
     }
 
     @Override

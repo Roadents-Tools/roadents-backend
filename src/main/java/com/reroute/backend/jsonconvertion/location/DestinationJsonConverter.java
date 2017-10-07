@@ -12,6 +12,7 @@ public class DestinationJsonConverter implements JsonConverter<DestinationLocati
 
     private static final String NAME_TAG = "name";
     private static final String TYPE_TAG = "type";
+    private static final String ADDRESS_TAG = "address";
     private static final String LATITTUDE_TAG = "latitude";
     private static final String LONGITUDE_TAG = "longitude";
 
@@ -23,6 +24,7 @@ public class DestinationJsonConverter implements JsonConverter<DestinationLocati
         obj.put(TYPE_TAG, typeObj);
         obj.put(LATITTUDE_TAG, input.getCoordinates()[0]);
         obj.put(LONGITUDE_TAG, input.getCoordinates()[1]);
+        input.getAddress().ifPresent(addr -> obj.put(ADDRESS_TAG, addr));
         return obj.toString();
     }
 
@@ -34,6 +36,13 @@ public class DestinationJsonConverter implements JsonConverter<DestinationLocati
         double longitude = obj.getDouble(LONGITUDE_TAG);
         JSONObject typeObj = obj.getJSONObject(TYPE_TAG);
         LocationType type = new LocationTypeJsonConverter().fromJson(typeObj.toString());
-        return new DestinationLocation(name, type, new double[] { latitude, longitude });
+        String address = null;
+        if (obj.has(ADDRESS_TAG)) {
+            address = obj.getString(ADDRESS_TAG);
+            if (address.toLowerCase().equals("null") || address.length() < 2) {
+                address = null;
+            }
+        }
+        return new DestinationLocation(name, type, new double[] { latitude, longitude }, address);
     }
 }

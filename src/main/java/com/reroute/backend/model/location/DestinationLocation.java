@@ -1,6 +1,7 @@
 package com.reroute.backend.model.location;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 /**
  * Created by ilan on 7/7/16.
@@ -12,11 +13,17 @@ public class DestinationLocation implements LocationPoint {
     private final String name;
     private final LocationType type;
     private final double[] latLong;
+    private final Optional<String> address;
 
     public DestinationLocation(String name, LocationType type, double[] latLong) {
+        this(name, type, latLong, null);
+    }
+
+    public DestinationLocation(String name, LocationType type, double[] latLong, String address) {
         this.name = name;
         this.type = type;
         this.latLong = latLong;
+        this.address = Optional.ofNullable(address);
     }
 
     @Override
@@ -32,6 +39,14 @@ public class DestinationLocation implements LocationPoint {
     @Override
     public double[] getCoordinates() {
         return latLong;
+    }
+
+    public Optional<String> getAddress() {
+        return address;
+    }
+
+    public String getNonnullAddress() {
+        return address.get();
     }
 
     @Override
