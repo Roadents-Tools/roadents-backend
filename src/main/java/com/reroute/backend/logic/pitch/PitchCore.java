@@ -116,7 +116,7 @@ public class PitchCore implements LogicCore {
 
     public static Stream<TravelRoute> getDestRoutes(TravelRoute base, TimeDelta rawDelta, LocationType type) {
         LocationPoint center = base.getCurrentEnd();
-        Distance range = LocationUtils.timeToWalkDistance(rawDelta.minus(base.getTotalTime()));
+        Distance range = LocationUtils.timeToWalkDistance(rawDelta.minus(base.getTime()));
 
         return LocationRetriever.getLocations(center, range, type, null)
                 .stream()
@@ -125,7 +125,7 @@ public class PitchCore implements LogicCore {
                         .setPoint(point)
                         .build()
                 )
-                .map(node -> base.clone().setDestinationNode(node));
+                .map(node -> base.copy().setDestinationNode(node));
     }
 
 }

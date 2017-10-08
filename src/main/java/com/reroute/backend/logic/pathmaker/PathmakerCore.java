@@ -40,7 +40,7 @@ public class PathmakerCore implements LogicCore {
         return ends.stream()
                 .map(end -> endsToRoutes.get(end)
                         .stream()
-                        .min(Comparator.comparing(rt -> rt.getTotalTime().getDeltaLong()))
+                        .min(Comparator.comparing(rt -> rt.getTime().getDeltaLong()))
                         .get()
                 )
                 .collect(Collectors.toList());
@@ -83,7 +83,7 @@ public class PathmakerCore implements LogicCore {
                             route -> LocationUtils.timeBetween(route.getCurrentEnd(), end).getDeltaLong()
                                     <= LocationUtils.timeBetween(start, end).getDeltaLong()
                     )
-                    .map(base -> base.clone().setDestinationNode(new TravelRouteNode.Builder()
+                    .map(base -> base.copy().setDestinationNode(new TravelRouteNode.Builder()
                             .setPoint(end)
                             .setWalkTime(LocationUtils.timeBetween(base.getCurrentEnd(), end).getDeltaLong())
                             .build()

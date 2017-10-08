@@ -45,7 +45,7 @@ public class CalculatorSupport {
         TimeDelta[] rval = new TimeDelta[routeLen];
         rval[routeLen - 1] = maxDelta; //We allow maxDelta time from the destination
 
-        TimePoint maxTime = route.getTimeAtNode(routeLen - 1).plus(maxDelta);
+        TimePoint maxTime = route.getTimePointAt(routeLen - 1).plus(maxDelta);
         TravelRouteNode[] optimalCache = new TravelRouteNode[routeLen];
 
         for (int i = routeLen - 2; i >= 0; i--) {
@@ -53,7 +53,7 @@ public class CalculatorSupport {
             if (curNode.arrivesByTransportation()) {
                 TransStation curStation = (TransStation) curNode.getPt();
                 TransStation prevStation = (TransStation) route.getRoute().get(i - 1).getPt();
-                TravelRouteNode optimalNode = getLatestNodeConnecting(prevStation, curStation, route.getTimeAtNode(i - 1), maxTime);
+                TravelRouteNode optimalNode = getLatestNodeConnecting(prevStation, curStation, route.getTimePointAt(i - 1), maxTime);
                 optimalCache[i] = optimalNode;
 
                 //The usable time = the added time from choosing the optimalNode over the curNode plus the amount of time
@@ -63,7 +63,7 @@ public class CalculatorSupport {
                         .plus(optimalNode.getWaitTimeFromPrev());
 
                 //We are going into the past of an alternate timeline!
-                maxTime = route.getTimeAtNode(i - 1).plus(optimalNode.getTotalTimeToArrive());
+                maxTime = route.getTimePointAt(i - 1).plus(optimalNode.getTotalTimeToArrive());
             } else {
 
                 // We need to be able to arrive in time to catch the bus, so we only can leave until then.
@@ -137,7 +137,7 @@ public class CalculatorSupport {
         ApplicationRequest request = new ApplicationRequest.Builder(GeneratorCore.TAG)
                 .withQuery(type)
                 .withStartPoint(new StartPoint(node.getPt().getCoordinates()))
-                .withStartTime(route.getTimeAtNode(index))
+                .withStartTime(route.getTimePointAt(index))
                 .withMaxDelta(delta)
                 .build();
 
@@ -148,7 +148,7 @@ public class CalculatorSupport {
 
         return rval.getResult().stream()
                 .map(destRoute -> {
-                    TravelRoute base = route.cloneAtNode(index);
+                    TravelRoute base = route.copyAt(index);
                     destRoute.getRoute().stream().skip(1).forEach(base::addNode);
                     return base;
                 })

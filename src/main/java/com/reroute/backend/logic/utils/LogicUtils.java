@@ -48,7 +48,7 @@ public class LogicUtils {
             return (curmap, route) -> {
                 DestinationLocation dest = route.getDestination();
                 TravelRoute current = curmap.get(dest);
-                if (current == null || current.getTotalTime().getDeltaLong() > route.getTotalTime().getDeltaLong())
+                if (current == null || current.getTime().getDeltaLong() > route.getTime().getDeltaLong())
                     curmap.put(dest, route);
             };
         }
@@ -59,7 +59,7 @@ public class LogicUtils {
                 for (DestinationLocation key : curmap2.keySet()) {
                     TravelRoute current = curmap.get(key);
                     TravelRoute current2 = curmap2.get(key);
-                    if (current == null || current.getTotalTime().getDeltaLong() > current2.getTotalTime()
+                    if (current == null || current.getTime().getDeltaLong() > current2.getTime()
                             .getDeltaLong())
                         curmap.put(key, current2);
                 }
@@ -137,8 +137,8 @@ public class LogicUtils {
 
     private static Function<TravelRoute, Stream<TravelRoute>> buildNextLayerFunction(TimePoint startTime, TimeDelta maxDelta) {
         return route -> {
-            TimePoint effectiveTime = startTime.plus(route.getTotalTime());
-            TimeDelta effectiveDelta = maxDelta.minus(route.getTotalTime());
+            TimePoint effectiveTime = startTime.plus(route.getTime());
+            TimeDelta effectiveDelta = maxDelta.minus(route.getTime());
 
             //Version 2 iterator
             //Steps:
@@ -152,7 +152,7 @@ public class LogicUtils {
                     .flatMap(base -> getArrivalNodesForBase(base, effectiveTime, effectiveDelta)
                             .map(aNode -> new TravelRouteNode[] { base, aNode })
                     )
-                    .map(nodePair -> route.clone().addNode(nodePair[0]).addNode(nodePair[1]));
+                    .map(nodePair -> route.copy().addNode(nodePair[0]).addNode(nodePair[1]));
         };
     }
 
@@ -250,10 +250,10 @@ public class LogicUtils {
 
     @SafeVarargs
     private static Predicate<TravelRoute> nextLayerFilter(TimeDelta maxDelta, Map<String, TravelRoute> currentRoutes, Predicate<TravelRoute>... others) {
-        Predicate<TravelRoute> rval = route -> route.getTotalTime().getDeltaLong() <= maxDelta.getDeltaLong();
+        Predicate<TravelRoute> rval = route -> route.getTime().getDeltaLong() <= maxDelta.getDeltaLong();
         rval = rval.and(
                 route -> Optional.ofNullable(currentRoutes.get(getLocationTag(route.getCurrentEnd())))
-                        .map(rt -> rt.getTotalTime().getDeltaLong() > route.getTotalTime().getDeltaLong())
+                        .map(rt -> rt.getTime().getDeltaLong() > route.getTime().getDeltaLong())
                         .orElse(true)
         );
         for (Predicate<TravelRoute> passed : others) {
@@ -274,6 +274,6 @@ public class LogicUtils {
 
     public static Predicate<TravelRoute> isRouteInRange(LocationPoint end, TimeDelta maxDelta) {
         return route -> LocationUtils.distanceBetween(end, route.getCurrentEnd()).inMeters()
-                <= LocationUtils.timeToMaxTransit(maxDelta.minus(route.getTotalTime())).inMeters();
+                <= LocationUtils.timeToMaxTransit(maxDelta.minus(route.getTime())).inMeters();
     }
 }

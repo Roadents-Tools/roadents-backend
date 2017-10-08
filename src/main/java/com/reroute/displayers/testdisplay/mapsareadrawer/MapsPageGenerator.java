@@ -115,7 +115,7 @@ public class MapsPageGenerator {
                 })
                 .map(routes -> routes.stream()
                         .collect(StreamUtils.collectWithMapping(TravelRoute::getCurrentEnd, route -> maxDelta.minus(route
-                                .getTotalTime()))))
+                                .getTime()))))
                 .collect(Collectors.toList());
 
         return generatePage(areas);
