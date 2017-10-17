@@ -6,6 +6,9 @@ import com.reroute.backend.model.location.TransStation;
 import com.reroute.backend.model.time.SchedulePoint;
 import com.reroute.backend.utils.TimeUtils;
 
+import java.util.List;
+import java.util.function.Predicate;
+
 public final class RedisUtils {
 
     public static final String WORLD_LIST_NAME = "cachedworlds";
@@ -23,6 +26,10 @@ public final class RedisUtils {
     public static final String KEY_SPLITER = ":;:";
 
     private RedisUtils() {
+    }
+
+    public static <T, Q> Predicate<Integer> indexNonNull(T[] keys, List<Q> toVerify) {
+        return index -> toVerify.get(index) != null;
     }
 
     public static String[] packStation(TransStation station) {

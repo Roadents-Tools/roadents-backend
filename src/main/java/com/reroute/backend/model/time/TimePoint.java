@@ -32,7 +32,7 @@ public class TimePoint implements Comparable<TimePoint> {
     }
 
     private TimePoint(long unixTime, String timeZone, boolean allowUnderflow) {
-        if (unixTime < MIN_TIME && !allowUnderflow)
+        if (unixTime < MIN_TIME && unixTime > 0 && !allowUnderflow)
             throw new IllegalArgumentException("Unixtime too low. Did you pass seconds instead of milliseconds?");
         this.unixTime = unixTime;
         this.timeZone = timeZone;

@@ -35,7 +35,8 @@ public final class StreamUtils {
             public BiConsumer<Map<K, V>, I> accumulator() {
                 return (map, ival) -> {
                     V value = valueMapping.apply(ival);
-                    if (value != null) map.put(keyMapping.apply(ival), value);
+                    K key = keyMapping.apply(ival);
+                    if (key != null && value != null) map.put(key, value);
                 };
             }
 
