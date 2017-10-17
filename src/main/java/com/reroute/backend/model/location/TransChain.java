@@ -89,6 +89,7 @@ public class TransChain implements DatabaseObject {
     public String toString() {
         return "TransChain{" +
                 "name='" + name + '\'' +
+                ", id=" + id +
                 '}';
     }
 

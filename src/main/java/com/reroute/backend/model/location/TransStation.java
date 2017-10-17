@@ -120,6 +120,7 @@ public class TransStation implements LocationPoint, DatabaseObject {
                 ", name='" + name + '\'' +
                 ", schedule=" + schedule +
                 ", chain=" + chain +
+                ", id=" + id +
                 '}';
     }
 

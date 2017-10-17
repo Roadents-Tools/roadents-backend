@@ -12,6 +12,14 @@ public class DatabaseID {
     }
 
     @Override
+    public String toString() {
+        return "DatabaseID{" +
+                "databaseName='" + databaseName + '\'' +
+                ", id='" + id + '\'' +
+                '}';
+    }
+
+    @Override
     public int hashCode() {
         int result = getDatabaseName().hashCode();
         result = 31 * result + getId().hashCode();
