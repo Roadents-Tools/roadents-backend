@@ -1,5 +1,9 @@
 package com.reroute.backend.model.location;
 
+import com.reroute.backend.model.distance.Distance;
+import com.reroute.backend.model.distance.DistanceUnits;
+import com.reroute.backend.utils.LocationUtils;
+
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -8,7 +12,7 @@ import java.util.Optional;
  */
 public class DestinationLocation implements LocationPoint {
 
-    private static final double ERROR_MARGIN = 0.001;
+    private static final Distance ERROR_MARGIN = new Distance(1, DistanceUnits.METERS);
 
     private final String name;
     private final LocationType type;
@@ -45,10 +49,6 @@ public class DestinationLocation implements LocationPoint {
         return address;
     }
 
-    public String getNonnullAddress() {
-        return address.get();
-    }
-
     @Override
     public int hashCode() {
         int result = getType().hashCode();
@@ -64,9 +64,8 @@ public class DestinationLocation implements LocationPoint {
         DestinationLocation location = (DestinationLocation) o;
 
         if (!type.equals(location.type)) return false;
-        if (Math.abs(location.getCoordinates()[0] - getCoordinates()[0]) > ERROR_MARGIN) return false;
-        return Math.abs(location.getCoordinates()[1] - getCoordinates()[1]) <= ERROR_MARGIN;
-
+        Distance margin = LocationUtils.distanceBetween(this, location);
+        return !(margin.inMeters() > ERROR_MARGIN.inMeters());
     }
 
     @Override
