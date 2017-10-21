@@ -94,10 +94,10 @@ public class LogicUtils {
         if (layerFilters == null) {
             return buildStationRouteList(new StationRoutesBuildRequest(initialPoint, startTime, maxDelta));
         } else if (layerFilters.length == 1) {
-            return buildStationRouteList(new StationRoutesBuildRequest(initialPoint, startTime, maxDelta).setLayerFilter(layerFilters[0]));
+            return buildStationRouteList(new StationRoutesBuildRequest(initialPoint, startTime, maxDelta).withLayerFilter(layerFilters[0]));
         } else {
             Predicate<TravelRoute> allFilters = Arrays.stream(layerFilters).reduce(a -> true, Predicate::and);
-            return buildStationRouteList(new StationRoutesBuildRequest(initialPoint, startTime, maxDelta).setLayerFilter(allFilters));
+            return buildStationRouteList(new StationRoutesBuildRequest(initialPoint, startTime, maxDelta).withLayerFilter(allFilters));
         }
     }
 

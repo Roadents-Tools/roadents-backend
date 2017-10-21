@@ -25,11 +25,11 @@ public class StationRoutesBuildRequest {
 
     public StationRoutesBuildRequest withInitialPoint(StartPoint initialPoint) {
         StationRoutesBuildRequest rval = copy();
-        rval.setInitialPoint(initialPoint);
+        rval.initialPoint = initialPoint;
         return rval;
     }
 
-    public StationRoutesBuildRequest copy() {
+    private StationRoutesBuildRequest copy() {
         StationRoutesBuildRequest rval = new StationRoutesBuildRequest(initialPoint, startTime, maxDelta);
         rval.layerFilter = layerFilter;
         rval.endFilter = endFilter;
@@ -40,7 +40,13 @@ public class StationRoutesBuildRequest {
 
     public StationRoutesBuildRequest withStartTime(TimePoint startTime) {
         StationRoutesBuildRequest rval = copy();
-        rval.setStartTime(startTime);
+        rval.startTime = startTime;
+        return rval;
+    }
+
+    public StationRoutesBuildRequest withMaxDelta(TimeDelta maxDelta) {
+        StationRoutesBuildRequest rval = copy();
+        rval.maxDelta = maxDelta;
         return rval;
     }
 
@@ -50,9 +56,45 @@ public class StationRoutesBuildRequest {
         return rval;
     }
 
+    public StationRoutesBuildRequest andLayerFilter(Predicate<TravelRoute> layerFilter) {
+        StationRoutesBuildRequest rval = copy();
+        rval.layerFilter = rval.layerFilter.and(layerFilter);
+        return rval;
+    }
+
+    public StationRoutesBuildRequest orLayerFilter(Predicate<TravelRoute> layerFilter) {
+        StationRoutesBuildRequest rval = copy();
+        rval.layerFilter = rval.layerFilter.or(layerFilter);
+        return rval;
+    }
+
+    public StationRoutesBuildRequest withEndFilter(Predicate<TravelRoute> endFilter) {
+        StationRoutesBuildRequest rval = copy();
+        rval.endFilter = endFilter;
+        return rval;
+    }
+
+    public StationRoutesBuildRequest andEndFilter(Predicate<TravelRoute> endFilter) {
+        StationRoutesBuildRequest rval = copy();
+        rval.endFilter = rval.endFilter.and(endFilter);
+        return rval;
+    }
+
+    public StationRoutesBuildRequest orEndFilter(Predicate<TravelRoute> endFilter) {
+        StationRoutesBuildRequest rval = copy();
+        rval.endFilter = rval.endFilter.or(endFilter);
+        return rval;
+    }
+
     public StationRoutesBuildRequest withLayerLimit(int layerLimit) {
         StationRoutesBuildRequest rval = copy();
         rval.layerLimit = layerLimit;
+        return rval;
+    }
+
+    public StationRoutesBuildRequest withFinalLimit(int finalLimit) {
+        StationRoutesBuildRequest rval = copy();
+        rval.finalLimit = finalLimit;
         return rval;
     }
 
@@ -60,63 +102,28 @@ public class StationRoutesBuildRequest {
         return initialPoint;
     }
 
-    public StationRoutesBuildRequest setInitialPoint(StartPoint initialPoint) {
-        this.initialPoint = initialPoint;
-        return this;
-    }
-
     public TimePoint getStartTime() {
         return startTime;
-    }
-
-    public StationRoutesBuildRequest setStartTime(TimePoint startTime) {
-        this.startTime = startTime;
-        return this;
     }
 
     public TimeDelta getMaxDelta() {
         return maxDelta;
     }
 
-    public StationRoutesBuildRequest setMaxDelta(TimeDelta maxDelta) {
-        this.maxDelta = maxDelta;
-        return this;
-    }
-
     public Predicate<TravelRoute> getLayerFilter() {
         return layerFilter;
-    }
-
-    public StationRoutesBuildRequest setLayerFilter(Predicate<TravelRoute> layerFilter) {
-        this.layerFilter = layerFilter;
-        return this;
     }
 
     public Predicate<TravelRoute> getEndFilter() {
         return endFilter;
     }
 
-    public StationRoutesBuildRequest setEndFilter(Predicate<TravelRoute> endFilter) {
-        this.endFilter = endFilter;
-        return this;
-    }
-
     public int getLayerLimit() {
         return layerLimit;
     }
 
-    public StationRoutesBuildRequest setLayerLimit(int layerLimit) {
-        this.layerLimit = layerLimit;
-        return this;
-    }
-
     public int getFinalLimit() {
         return finalLimit;
-    }
-
-    public StationRoutesBuildRequest setFinalLimit(int finalLimit) {
-        this.finalLimit = finalLimit;
-        return this;
     }
 }
 
