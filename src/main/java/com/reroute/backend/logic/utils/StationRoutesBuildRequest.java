@@ -125,6 +125,19 @@ public class StationRoutesBuildRequest {
     public int getFinalLimit() {
         return finalLimit;
     }
+
+    @Override
+    public String toString() {
+        return "StationRoutesBuildRequest{" +
+                "initialPoint=" + initialPoint +
+                ", startTime=" + startTime +
+                ", maxDelta=" + maxDelta +
+                ", layerFilter=" + layerFilter +
+                ", endFilter=" + endFilter +
+                ", layerLimit=" + layerLimit +
+                ", finalLimit=" + finalLimit +
+                '}';
+    }
 }
 
 
