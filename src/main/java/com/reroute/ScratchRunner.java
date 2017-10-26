@@ -9,6 +9,8 @@ import com.reroute.backend.logic.ApplicationResult;
 import com.reroute.backend.logic.ApplicationRunner;
 import com.reroute.backend.logic.calculator.CalculatorCore;
 import com.reroute.backend.logic.generator.GeneratorCore;
+import com.reroute.backend.logic.pitch.PitchCore;
+import com.reroute.backend.logic.pitch.PitchSorter;
 import com.reroute.backend.logic.utils.LogicUtils;
 import com.reroute.backend.logic.utils.StationRoutesBuildRequest;
 import com.reroute.backend.model.distance.Distance;
@@ -29,6 +31,7 @@ import com.reroute.backend.utils.LocationUtils;
 import com.reroute.backend.utils.LoggingUtils;
 import com.reroute.backend.utils.StreamUtils;
 import com.reroute.displayers.lambdacontroller.LambdaHandler;
+import com.reroute.displayers.restcontroller.SparkHandler;
 import com.reroute.displayers.testdisplay.maproutedrawer.RouteMapsPageGenerator;
 import com.reroute.displayers.testdisplay.mapsareadrawer.MapsPageGenerator;
 
@@ -47,6 +50,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -66,6 +70,10 @@ public class ScratchRunner {
         LoggingUtils.setPrintImmediate(true);
         try {
             for (String arg : args) {
+                if ("--spark".equals(arg)) {
+                    runSpark(args);
+                    return;
+                }
                 if ("--map".equals(arg)) {
                     mapLocations(args);
                     return;
@@ -110,6 +118,10 @@ public class ScratchRunner {
         }
 
 
+    }
+
+    private static void runSpark(String[] args) {
+        SparkHandler.main(args);
     }
 
     private static void runFinder(String[] args) throws IOException {
@@ -440,7 +452,7 @@ public class ScratchRunner {
 
                     double distDiff = LocationUtils.distanceBetween(dest, finalStarta1)
                             .inMeters() - LocationUtils.distanceBetween(dest, finalStartb1).inMeters();
-                    TimeDelta timeDiff = aRoute.getTotalTime().minus(bRoute.getTotalTime());
+                    TimeDelta timeDiff = aRoute.getTime().minus(bRoute.getTime());
 
                     return distDiff - 100 * timeDiff.getDeltaLong();
                 }));
@@ -547,8 +559,8 @@ public class ScratchRunner {
         StationRoutesBuildRequest simple = new StationRoutesBuildRequest(startPoint, startTime, maxDelta);
         /*reqToTags.put(
                 "simple", simple
-        );
-        reqToTags.put(
+        );*/
+        /*reqToTags.put(
                 "layerFilter: traveldistTotal <= 5 * maxWalkDist", simple.withLayerFilter(rt -> {
                     Distance maxDist = LocationUtils.timeToWalkDistance(maxDelta);
                     List<TravelRouteNode> route = rt.getRoute();
@@ -568,19 +580,46 @@ public class ScratchRunner {
                 })
         );
         reqToTags.put(
-                "layerFilter: walktimeTotal <= .5*maxTime", simple.withLayerFilter(rt -> rt.getTotalWalkTime().getDeltaLong() <= .5 * maxDelta.getDeltaLong())
-        ); */
+                "layerFilter: walktimeTotal <= .5*maxTime", simple.withLayerFilter(rt -> rt.getWalkTime().getDeltaLong() <= .5 * maxDelta.getDeltaLong())
+        );
         //TODO: Run this version of this filter test
+        */
+        reqToTags.put("simple", simple);
         reqToTags.put(
-                "layerFilter: walktimeTotal <= sum(i = 0 -> layercount, 1/2^i) ", simple.withLayerFilter(rt -> {
-                    int totalWalks = (int) rt.getRoute().stream()
+                "layerFilter: walktimeBigger @ 100", simple.withLayerFilter(rt -> {
+                    int totalWalks = 1 + (int) rt.getRoute().stream()
                             .filter(TravelRouteNode::arrivesByFoot)
                             .count();
                     double maxPercent = IntStream.range(1, totalWalks)
                             .mapToDouble(a -> 1. / Math.pow(2, a))
                             .sum();
-                    return rt.getTotalWalkTime().getDeltaLong() <= maxPercent * maxDelta.getDeltaLong();
+                    return rt.getWalkTime().getDeltaLong() <= maxPercent * maxDelta.getDeltaLong();
                 })
+                        .withLayerLimit(100)
+        );
+        reqToTags.put(
+                "layerFilter: walktimeBigger @ 200", simple.withLayerFilter(rt -> {
+                    int totalWalks = 1 + (int) rt.getRoute().stream()
+                            .filter(TravelRouteNode::arrivesByFoot)
+                            .count();
+                    double maxPercent = IntStream.range(1, totalWalks)
+                            .mapToDouble(a -> 1. / Math.pow(2, a))
+                            .sum();
+                    return rt.getWalkTime().getDeltaLong() <= maxPercent * maxDelta.getDeltaLong();
+                })
+                        .withLayerLimit(200)
+        );
+        reqToTags.put(
+                "layerFilter: walktimeBigger @ 500", simple.withLayerFilter(rt -> {
+                    int totalWalks = 1 + (int) rt.getRoute().stream()
+                            .filter(TravelRouteNode::arrivesByFoot)
+                            .count();
+                    double maxPercent = IntStream.range(1, totalWalks)
+                            .mapToDouble(a -> 1. / Math.pow(2, a))
+                            .sum();
+                    return rt.getWalkTime().getDeltaLong() <= maxPercent * maxDelta.getDeltaLong();
+                })
+                        .withLayerLimit(500)
         );
         /*
         reqToTags.put(
@@ -589,7 +628,7 @@ public class ScratchRunner {
                     double maxPercent = IntStream.range(1, totalLayers)
                             .mapToDouble(a -> 1./Math.pow(2, a))
                             .sum();
-                    return  rt.getTotalTime().getDeltaLong() <= maxPercent * maxDelta.getDeltaLong();
+                    return  rt.getTime().getDeltaLong() <= maxPercent * maxDelta.getDeltaLong();
                 })
         );*/
 
@@ -634,6 +673,206 @@ public class ScratchRunner {
                     .orElse("NULL"));
         });
 
+
+    }
+
+    private static void testPitch(String[] args) {
+
+        StartPoint startPoint = new StartPoint(40.7570, -73.9718);
+        TimePoint startTime = new TimePoint(1500829200 * 1000L, "America/New_York");
+        TimeDelta maxDelta = new TimeDelta(30 * 60 * 1000);
+        LocationType query = new LocationType("Food", "Food");
+
+        ApplicationRequest req = new ApplicationRequest.Builder(PitchCore.TAG)
+                .withStartPoint(startPoint)
+                .withMaxDelta(maxDelta)
+                .withStartTime(startTime)
+                .withQuery(query)
+                .build();
+
+        LoggingUtils.logMessage("SCRATCH", "Starting pitch.");
+        ApplicationResult res = ApplicationRunner.runApplication(req);
+        if (res.hasErrors()) {
+            res.getErrors().forEach(LoggingUtils::logError);
+        }
+        String output = new TravelRouteJsonConverter().toJson(res.getResult());
+        LoggingUtils.logMessage("SCRATCH", "Finished pitch.");
+        System.out.println(new TravelRouteJsonConverter().toJson(res.getResult()));
+    }
+
+    private static void analyzeJson(String[] args) throws IOException {
+        String file = args[args.length - 1];
+        String json = Files.lines(Paths.get(file)).collect(StreamUtils.joinToString("\n"));
+        List<TravelRoute> routes = new ArrayList<>(120);
+        new TravelRouteJsonConverter().fromJson(json, routes);
+
+        int size = routes.size();
+        int sortSize = PitchSorter.values().length;
+        int perSort = size / sortSize;
+        LoggingUtils.logMessage("SCRATCH", "Size info: %d, %d, %d", size, sortSize, perSort);
+
+        Set<TravelRoute> deduped = new HashSet<>(routes);
+        LoggingUtils.logMessage("SCRATCH", "Dupes: %d", size - deduped.size());
+
+        double minDist = routes.stream()
+                .mapToDouble(rt -> LocationUtils.distanceBetween(rt.getStart(), rt.getCurrentEnd()).inMeters())
+                .min()
+                .orElse(-1);
+
+        double maxDist = routes.stream()
+                .mapToDouble(rt -> LocationUtils.distanceBetween(rt.getStart(), rt.getCurrentEnd()).inMeters())
+                .max()
+                .orElse(-1);
+        LoggingUtils.logMessage("SCRATCH", "Dist info: %f, %f", minDist, maxDist);
+
+        double minDisp = routes.stream()
+                .mapToDouble(rt -> rt.getDisp().inMeters())
+                .min()
+                .orElse(-1);
+
+        double maxDisp = routes.stream()
+                .mapToDouble(rt -> rt.getDisp().inMeters())
+                .max()
+                .orElse(-1);
+        LoggingUtils.logMessage("SCRATCH", "Disp info: %f, %f", minDisp, maxDisp);
+
+        double minWalkDisp = routes.stream()
+                .mapToDouble(rt -> rt.getWalkDisp().inMeters())
+                .min()
+                .orElse(-1);
+
+        double maxWalkDisp = routes.stream()
+                .mapToDouble(rt -> rt.getWalkDisp().inMeters())
+                .max()
+                .orElse(-1);
+        LoggingUtils.logMessage("SCRATCH", "WalkDisp info: %f, %f", minWalkDisp, maxWalkDisp);
+
+        long minTime = routes.stream()
+                .mapToLong(rt -> rt.getTime().getDeltaLong())
+                .min()
+                .orElse(-1);
+
+        long maxTime = routes.stream()
+                .mapToLong(rt -> rt.getTime().getDeltaLong())
+                .max()
+                .orElse(-1);
+        LoggingUtils.logMessage("SCRATCH", "Time info: %d, %d", minTime, maxTime);
+
+        int minLen = routes.stream()
+                .mapToInt(rt -> rt.getRoute().size())
+                .min()
+                .orElse(-1);
+
+        int maxLen = routes.stream()
+                .mapToInt(rt -> rt.getRoute().size())
+                .max()
+                .orElse(-1);
+        LoggingUtils.logMessage("SCRATCH", "Len info: %d, %d", minLen, maxLen);
+
+
+        double minEndSpeed = routes.stream()
+                .mapToDouble(rt -> LocationUtils.distanceBetween(rt.getStart(), rt.getCurrentEnd())
+                        .inKilometers() / rt.getTime().inHours())
+                .min()
+                .orElse(-1);
+
+        double maxEndSpeed = routes.stream()
+                .mapToDouble(rt -> LocationUtils.distanceBetween(rt.getStart(), rt.getCurrentEnd())
+                        .inKilometers() / rt.getTime().inHours())
+                .max()
+                .orElse(-1);
+        LoggingUtils.logMessage("SCRATCH", "EndSpeed info: %f, %f", minEndSpeed, maxEndSpeed);
+
+        double minAvgVel = routes.stream()
+                .mapToDouble(rt -> rt.getDisp().inKilometers() / rt.getTime().inHours())
+                .min()
+                .orElse(-1);
+
+        double maxAvgVel = routes.stream()
+                .mapToDouble(rt -> rt.getDisp().inKilometers() / rt.getTime().inHours())
+                .max()
+                .orElse(-1);
+        LoggingUtils.logMessage("SCRATCH", "AvgVel info: %f, %f", minAvgVel, maxAvgVel);
+
+        Set<TravelRoute> weirdEnd = routes.stream()
+                .filter(rt -> !rt.getCurrentEnd().equals(rt.getDestination()))
+                .collect(Collectors.toSet());
+        LoggingUtils.logMessage("SCRATCH", "WeirdEnd: %d", weirdEnd.size());
+
+        Set<TravelRoute> defDumbRoutes = routes.stream()
+                .filter(rt -> rt.getRoute().size() > 2)
+                .filter(rt -> rt.getTime()
+                        .getDeltaLong() > 1000 + LocationUtils.timeBetween(rt.getStart(), rt.getCurrentEnd())
+                        .getDeltaLong())
+                .collect(Collectors.toSet());
+        LoggingUtils.logMessage("SCRATCH", "Dumb: %d", defDumbRoutes.size());
+        long minDumb = defDumbRoutes.stream()
+                .mapToLong(rt -> rt.getTime()
+                        .getDeltaLong() - LocationUtils.timeBetween(rt.getStart(), rt.getCurrentEnd()).getDeltaLong())
+                .min()
+                .orElse(-1);
+        long maxDumb = defDumbRoutes.stream()
+                .mapToLong(rt -> rt.getTime()
+                        .getDeltaLong() - LocationUtils.timeBetween(rt.getStart(), rt.getCurrentEnd()).getDeltaLong())
+                .max()
+                .orElse(-1);
+        LoggingUtils.logMessage("SCRATCH", "Dumb info: %f, %f", minDumb * 1. / (1000 * 60), maxDumb * 1. / (60 * 1000));
+
+        Set<TravelRoute> veryDumbRoutes = defDumbRoutes.stream()
+                .filter(rt -> rt.getWalkDisp()
+                        .inMeters() > 10 + LocationUtils.distanceBetween(rt.getStart(), rt.getCurrentEnd()).inMeters())
+                .collect(Collectors.toSet());
+        LoggingUtils.logMessage("SCRATCH", "Very dumb routes: %d", veryDumbRoutes.size());
+
+        double minVeryDumb = veryDumbRoutes.stream()
+                .mapToDouble(rt -> rt.getWalkDisp()
+                        .inMeters() - LocationUtils.distanceBetween(rt.getStart(), rt.getCurrentEnd()).inMeters())
+                .min()
+                .orElse(-1);
+        double maxVeryDumb = veryDumbRoutes.stream()
+                .mapToDouble(rt -> rt.getWalkDisp()
+                        .inMeters() - LocationUtils.distanceBetween(rt.getStart(), rt.getCurrentEnd()).inMeters())
+                .max()
+                .orElse(-1);
+        LoggingUtils.logMessage("SCRATCH", "VeryDumb info: %f, %f", minVeryDumb, maxVeryDumb);
+
+        Set<TravelRoute> dumbByFilter = routes.stream()
+                .filter(PitchCore.isntDumbRoute.negate())
+                .collect(Collectors.toSet());
+        LoggingUtils.logMessage("SCRATCH", "Filtered dumb routes: %d", dumbByFilter.size());
+
+        Map<Integer, List<Integer>> dupes = new HashMap<>();
+        for (int i = 0; i < routes.size(); i++) {
+            for (int j = 0; j < routes.size(); j++) {
+                if (i == j) continue;
+                if (routes.get(i).equals(routes.get(j))) {
+                    dupes.computeIfAbsent(i, unused -> new ArrayList<>()).add(j);
+                }
+            }
+        }
+
+        for (int i = 0; i < PitchSorter.values().length; i++) {
+            PitchSorter cursort = PitchSorter.values()[i];
+            int listInd = i * perSort;
+            List<TravelRoute> curlist = routes.subList(listInd, listInd + perSort);
+            LoggingUtils.logMessage("SCRATCH", "Current sorter is %s.", cursort.getTag());
+            for (int i1 = 0; i1 < perSort; i1++) {
+                TravelRoute rt = curlist.get(i1);
+                LoggingUtils.logMessage("SCRATCH", "Route dest: %s (%s), Time: %f, Dist: %f, Disp: %f, Len: %d",
+                        rt.getDestination().getName(), rt.getDestination().getAddress().orElse("NULL"),
+                        rt.getTime().inMinutes(), LocationUtils.distanceBetween(rt.getStart(), rt.getCurrentEnd())
+                                .inMeters(), rt.getDisp().inMeters(),
+                        rt.getRoute().size());
+
+                List<Integer> dupeInds = dupes.get(listInd + i1);
+                if (dupeInds == null || dupeInds.isEmpty()) continue;
+                for (int ind : dupeInds) {
+                    PitchSorter dupeSort = PitchSorter.values()[ind / perSort];
+                    int offset = ind % PitchSorter.values().length;
+                    LoggingUtils.logMessage("SCRATCH", "Is duplicated at %s number %d", dupeSort.getTag(), offset);
+                }
+            }
+        }
 
     }
 }
