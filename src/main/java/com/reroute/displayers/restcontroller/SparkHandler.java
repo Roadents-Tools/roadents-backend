@@ -56,7 +56,9 @@ public class SparkHandler {
             return converter.toJson(appres.getResult());
         });
 
-
+        Spark.before((request, response) -> {
+            response.header("Access-Control-Allow-Origin", "*");
+        });
     }
 
     private static ApplicationRequest buildGeneralRequest(String tag, Map<String, String[]> rawArgs) {
@@ -74,7 +76,7 @@ public class SparkHandler {
         String timeZone = TimezoneMapper.tzNameAt(st.getCoordinates()[0], st.getCoordinates()[1]);
 
         TimePoint startTime = urlArgs.containsKey(START_TIME_TAG)
-                ? new TimePoint(1000L * Long.valueOf(START_TIME_TAG), timeZone)
+                ? new TimePoint(1000L * Long.valueOf(urlArgs.get(START_TIME_TAG)), timeZone)
                 : TimePoint.now(timeZone);
 
         TimeDelta maxDelta = new TimeDelta(1000L * Long.valueOf(urlArgs.get(TIME_DELTA_TAG)));
