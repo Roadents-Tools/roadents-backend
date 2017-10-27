@@ -19,6 +19,8 @@ public class TimePoint implements Comparable<TimePoint> {
     private static final long MIN_TIME = 31536000000L; //We don't allow for any time before 1971 for error checking
     private final String timeZone;
     private final long unixTime;
+    private final long offset;
+    private Calendar cal = null;
 
     /**
      * Creates a new TimePoint.
@@ -36,6 +38,7 @@ public class TimePoint implements Comparable<TimePoint> {
             throw new IllegalArgumentException("Unixtime too low. Did you pass seconds instead of milliseconds?");
         this.unixTime = unixTime;
         this.timeZone = timeZone;
+        offset = TimeZone.getTimeZone(timeZone).getOffset(unixTime);
     }
 
     public static TimePoint now() {
@@ -46,15 +49,11 @@ public class TimePoint implements Comparable<TimePoint> {
         return new TimePoint(System.currentTimeMillis(), timeZone);
     }
 
-    public TimePoint withYear(int year) {
-        Calendar cal = getCalendar();
-        cal.set(Calendar.YEAR, year);
-        return new TimePoint(cal.getTimeInMillis(), timeZone, true);
-    }
-
     private Calendar getCalendar() {
-        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone(timeZone));
-        cal.setTimeInMillis(unixTime);
+        if (cal == null) {
+            cal = Calendar.getInstance(TimeZone.getTimeZone(timeZone));
+            cal.setTimeInMillis(unixTime);
+        }
         return cal;
     }
 
@@ -84,7 +83,7 @@ public class TimePoint implements Comparable<TimePoint> {
 
     public int getDayOfWeek() {
         //We go 0-6 instead of Calendar's 1-7
-        return getCalendar().get(Calendar.DAY_OF_WEEK) - 1;
+        return (int) ((((unixTime + offset) / 86400000) + 3) % 7);
     }
 
     public TimePoint withHour(int hour) {
@@ -95,7 +94,7 @@ public class TimePoint implements Comparable<TimePoint> {
     }
 
     public int getHour() {
-        return getCalendar().get(Calendar.HOUR_OF_DAY);
+        return (int) (((unixTime + offset) / 3600000) % 24);
     }
 
     public TimePoint withMinute(int minute) {
@@ -105,7 +104,7 @@ public class TimePoint implements Comparable<TimePoint> {
     }
 
     public int getMinute() {
-        return getCalendar().get(Calendar.MINUTE);
+        return (int) ((unixTime / (60000.0)) % 60);
     }
 
     public TimePoint withSecond(int second) {
@@ -116,7 +115,7 @@ public class TimePoint implements Comparable<TimePoint> {
     }
 
     public int getSecond() {
-        return getCalendar().get(Calendar.SECOND);
+        return (int) ((unixTime / SECONDS_TO_MILLIS) % 60);
     }
 
     public TimePoint withMilliseconds(int milliseconds) {
@@ -125,7 +124,7 @@ public class TimePoint implements Comparable<TimePoint> {
     }
 
     public long getMilliseconds() {
-        return unixTime % 1000;
+        return unixTime % SECONDS_TO_MILLIS;
     }
 
     public TimePoint addWeek() {
@@ -158,6 +157,10 @@ public class TimePoint implements Comparable<TimePoint> {
 
     public TimePoint withTimeZone(String timeZone) {
         return new TimePoint(unixTime, timeZone);
+    }
+
+    public long getOffset() {
+        return this.offset;
     }
 
     public boolean isBefore(TimePoint other) {
