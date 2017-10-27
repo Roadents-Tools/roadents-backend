@@ -148,7 +148,7 @@ public class LogicUtils {
             //   If a walkable has no arrivable, then it isn't paired and discarded.
             //4. For each pair, construct the new routes.
             //   This means that each new route actually has 2 new nodes, not 1.
-            return getWalkableStations(route.getCurrentEnd(), effectiveTime, effectiveDelta).stream()
+            return getWalkableStations(route.getCurrentEnd(), effectiveTime, effectiveDelta).parallelStream()
                     .flatMap(base -> getArrivalNodesForBase(base, effectiveTime, effectiveDelta)
                             .map(aNode -> new TravelRouteNode[] { base, aNode })
                     )
@@ -167,34 +167,20 @@ public class LogicUtils {
     }
 
     /**
-     * Get all stations directly travelable to within a given time.
+     * Get all stations within a certain walking time.
      *
-     * @param station   the station to start at
-     * @param startTime the time to start at
-     * @param maxDelta  the maximum time to travel
-     * @return nodes representing directly travelling from station to all possible stations
+     * @param begin    the location to start at
+     * @param maxDelta the maximum walking time
+     * @return nodes representing walking to all possible stations
      */
-    public static Set<TravelRouteNode> getArrivableStations(TransStation station, TimePoint startTime, TimeDelta maxDelta) {
-        if (station.getChain() == null) return Collections.emptySet();
-
-        TimePoint trueStart = getStationWithSchedule(station).getNextArrival(startTime);
-        TimeDelta waitTime = startTime.timeUntil(trueStart);
-        TimeDelta trueDelta = maxDelta.minus(startTime.timeUntil(trueStart));
-
-
-        if (waitTime.getDeltaLong() >= maxDelta.getDeltaLong()) {
-            return Collections.emptySet();
-        }
-
-        return StationRetriever.getArrivableStations(station.getChain(), trueStart, trueDelta)
-                .entrySet().stream()
-                .filter(entry -> !Arrays.equals(entry.getKey().getCoordinates(), station.getCoordinates()))
-                .filter(entry -> entry.getValue().getDeltaLong() <= trueDelta.getDeltaLong())
-                .map(entry -> new TravelRouteNode.Builder()
-                        .setWaitTime(waitTime.getDeltaLong())
-                        .setPoint(entry.getKey())
-                        .setTravelTime(entry.getValue().getDeltaLong())
-                        .build())
+    private static Set<TravelRouteNode> getWalkableStations(LocationPoint begin, TimePoint startTime, TimeDelta maxDelta) {
+        Distance range = LocationUtils.timeToWalkDistance(maxDelta);
+        return StationRetriever.getStationsInArea(begin, range, null).parallelStream()
+                .map(point -> new TravelRouteNode.Builder()
+                        .setWalkTime(LocationUtils.timeBetween(begin, point).getDeltaLong())
+                        .setPoint(point)
+                        .build()
+                )
                 .collect(Collectors.toSet());
     }
 
@@ -219,8 +205,40 @@ public class LogicUtils {
         return station.withSchedule(station.getChain(), schedule);
     }
 
+    /**
+     * Get all stations directly travelable to within a given time.
+     *
+     * @param station   the station to start at
+     * @param startTime the time to start at
+     * @param maxDelta  the maximum time to travel
+     * @return nodes representing directly travelling from station to all possible stations
+     */
+    public static Set<TravelRouteNode> getArrivableStations(TransStation station, TimePoint startTime, TimeDelta maxDelta) {
+        if (station.getChain() == null) return Collections.emptySet();
+
+        TimePoint trueStart = getStationWithSchedule(station).getNextArrival(startTime);
+        TimeDelta waitTime = startTime.timeUntil(trueStart);
+        TimeDelta trueDelta = maxDelta.minus(startTime.timeUntil(trueStart));
+
+
+        if (waitTime.getDeltaLong() >= maxDelta.getDeltaLong()) {
+            return Collections.emptySet();
+        }
+
+        return StationRetriever.getArrivableStations(station.getChain(), trueStart, trueDelta)
+                .entrySet().parallelStream()
+                .filter(entry -> !Arrays.equals(entry.getKey().getCoordinates(), station.getCoordinates()))
+                .filter(entry -> entry.getValue().getDeltaLong() <= trueDelta.getDeltaLong())
+                .map(entry -> new TravelRouteNode.Builder()
+                        .setWaitTime(waitTime.getDeltaLong())
+                        .setPoint(entry.getKey())
+                        .setTravelTime(entry.getValue().getDeltaLong())
+                        .build())
+                .collect(Collectors.toSet());
+    }
+
     private static Set<TransStation> getAllChainsForStop(TransStation orig, TimePoint startTime, TimeDelta maxDelta) {
-        Set<TransStation> rval = StationRetriever.getChainsForStation(orig, null).entrySet().stream()
+        Set<TransStation> rval = StationRetriever.getChainsForStation(orig, null).entrySet().parallelStream()
                 .map(entry -> orig.withSchedule(entry.getKey(), entry.getValue()))
                 .filter(stat -> startTime.timeUntil(stat.getNextArrival(startTime))
                         .getDeltaLong() <= maxDelta.getDeltaLong())
@@ -228,24 +246,6 @@ public class LogicUtils {
                 .collect(Collectors.toSet());
         if (orig.getChain() != null) rval.add(orig);
         return rval;
-    }
-
-    /**
-     * Get all stations within a certain walking time.
-     *
-     * @param begin    the location to start at
-     * @param maxDelta the maximum walking time
-     * @return nodes representing walking to all possible stations
-     */
-    private static Set<TravelRouteNode> getWalkableStations(LocationPoint begin, TimePoint startTime, TimeDelta maxDelta) {
-        Distance range = LocationUtils.timeToWalkDistance(maxDelta);
-        return StationRetriever.getStationsInArea(begin, range, null).stream()
-                .map(point -> new TravelRouteNode.Builder()
-                        .setWalkTime(LocationUtils.timeBetween(begin, point).getDeltaLong())
-                        .setPoint(point)
-                        .build()
-                )
-                .collect(Collectors.toSet());
     }
 
     @SafeVarargs

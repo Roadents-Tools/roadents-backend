@@ -27,6 +27,9 @@ public class ApplicationRequest {
     private String tag;
     private boolean isTest = false;
 
+    private ApplicationRequest() {
+
+    }
 
     public String getTag() {
         return tag;
