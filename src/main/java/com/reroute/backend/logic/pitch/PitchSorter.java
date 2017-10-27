@@ -8,8 +8,8 @@ import java.util.Comparator;
 public enum PitchSorter {
     MIN_TIME("time MIN", Comparator.comparing(t -> t.getTime().getDeltaLong())),
     MAX_TIME("time MAX", Comparator.comparing((t -> t.getTime().getDeltaLong()), Comparator.reverseOrder())),
-    MIN_NODE("node MAX", Comparator.comparing(t -> t.getRoute().size(), Comparator.reverseOrder())),
-    MAX_NODE("node MIN", Comparator.comparing(t -> t.getRoute().size())),
+    MIN_NODE("node MIN", Comparator.comparing(t -> t.getRoute().size())),
+    MAX_NODE("node MAX", Comparator.comparing(t -> t.getRoute().size(), Comparator.reverseOrder())),
     MIN_DIST("dist MIN", Comparator.comparing(t -> LocationUtils.distanceBetween(t.getStart(), t.getCurrentEnd())
             .inMeters())),
     MAX_DIST("dist MAX", Comparator.comparing(t -> LocationUtils.distanceBetween(t.getStart(), t.getCurrentEnd())
