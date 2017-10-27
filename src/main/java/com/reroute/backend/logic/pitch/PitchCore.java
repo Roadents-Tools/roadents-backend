@@ -1,5 +1,10 @@
 package com.reroute.backend.logic.pitch;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.cache.Weigher;
 import com.google.common.collect.Sets;
 import com.reroute.backend.locations.LocationRetriever;
 import com.reroute.backend.logic.ApplicationRequest;
@@ -34,16 +39,24 @@ import java.util.stream.Stream;
 public class PitchCore implements LogicCore {
 
     public static final String TAG = "DEMO";
-    public static final Predicate<TravelRoute> isntDumbRoute = rt -> {
-        if (rt.getWalkDisp().inMeters() >= 5 + LocationUtils.distanceBetween(rt.getStart(), rt.getCurrentEnd())
-                .inMeters()) {
-            return false;
-        }
-
-        return rt.getTime().getDeltaLong() < 100 + LocationUtils.timeBetween(rt.getStart(), rt.getCurrentEnd())
-                .getDeltaLong();
-    };
-    private static final int DEFAULT_LIMIT = PitchSorter.values().length * 20;
+    public static final Predicate<TravelRoute> isntDumbRoute = rt ->
+            !(rt.getWalkDisp().inMeters() >= 5 + LocationUtils.distanceBetween(rt.getStart(), rt.getCurrentEnd())
+                    .inMeters())
+                    && rt.getTime().getDeltaLong() < 100 + LocationUtils.timeBetween(rt.getStart(), rt.getCurrentEnd())
+                    .getDeltaLong();
+    private static final int DEFAULT_LIMIT = PitchSorter.values().length * 15;
+    private static LoadingCache<LocationType, Cache<LocationPoint, List<DestinationLocation>>> destCache = CacheBuilder.newBuilder()
+            .maximumWeight(10000)
+            .weigher((Weigher<LocationType, Cache<?, ?>>) (key, value) -> value.asMap().size())
+            .build(new CacheLoader<LocationType, Cache<LocationPoint, List<DestinationLocation>>>() {
+                @Override
+                public Cache<LocationPoint, List<DestinationLocation>> load(LocationType key) {
+                    return CacheBuilder.newBuilder()
+                            .maximumWeight(1000)
+                            .weigher((Weigher<LocationPoint, List<DestinationLocation>>) (key1, value1) -> value1.size())
+                            .build();
+                }
+            });
 
     @Override
     public Set<String> getTags() {
@@ -59,6 +72,8 @@ public class PitchCore implements LogicCore {
 
     @Override
     public ApplicationResult performLogic(ApplicationRequest request) {
+        int numRoutesPer = (request.getLimit() > 0 ? request.getLimit() : DEFAULT_LIMIT) / PitchSorter.values().length;
+
         StationRoutesBuildRequest statreq = new StationRoutesBuildRequest(
                 request.getStarts().get(0),
                 request.getStartTime(),
@@ -74,17 +89,27 @@ public class PitchCore implements LogicCore {
                     return rt.getWalkTime().getDeltaLong() <= maxPercent * request.getMaxDelta().getDeltaLong();
                 })
                 .andLayerFilter(isntDumbRoute)
-                .withLayerLimit(200);
+                .withLayerLimit((int) (numRoutesPer * PitchSorter.values().length * 1.2));
+        LoggingUtils.logMessage("DEMO", "Req: %s", statreq);
         Set<TravelRoute> stationRoutes = LogicUtils.buildStationRouteList(statreq);
 
-        int numRoutesPer = (request.getLimit() > 0 ? request.getLimit() : DEFAULT_LIMIT) / PitchSorter.values().length;
         Map<String, List<TravelRoute>> bestStationRoutes = new ConcurrentHashMap<>();
-        for (PitchSorter compObj : PitchSorter.values()) {
-            String tag = compObj.getTag();
-            Comparator<TravelRoute> comp = compObj.getComparor();
-            List<TravelRoute> sortRoutes = new ArrayList<>(stationRoutes);
-            sortRoutes.sort(comp);
-            bestStationRoutes.put(tag, sortRoutes.subList(0, numRoutesPer));
+        if (stationRoutes.size() >= numRoutesPer * PitchSorter.values().length) {
+            for (PitchSorter compObj : PitchSorter.values()) {
+                String tag = compObj.getTag();
+                Comparator<TravelRoute> comp = compObj.getComparor();
+                List<TravelRoute> sortRoutes = new ArrayList<>(stationRoutes);
+                sortRoutes.sort(comp);
+                bestStationRoutes.put(tag, sortRoutes.subList(0, numRoutesPer));
+            }
+        } else {
+            for (PitchSorter compObj : PitchSorter.values()) {
+                String tag = compObj.getTag();
+                Comparator<TravelRoute> comp = compObj.getComparor();
+                List<TravelRoute> sortRoutes = new ArrayList<>(stationRoutes);
+                sortRoutes.sort(comp);
+                bestStationRoutes.put(tag, sortRoutes);
+            }
         }
 
         Collection<TravelRoute> destRoutes = bestStationRoutes.values().stream()
@@ -99,6 +124,9 @@ public class PitchCore implements LogicCore {
             Comparator<TravelRoute> comp = compObj.getComparor();
             List<TravelRoute> sortRoutes = new ArrayList<>(destRoutes);
             sortRoutes.sort(comp);
+            while (sortRoutes.size() < numRoutesPer) {
+                sortRoutes.add(new TravelRoute(sortRoutes.get(0).getStart(), sortRoutes.get(0).getStartTime()));
+            }
             bestDestRoutes.put(tag, sortRoutes.subList(0, numRoutesPer));
         }
 
@@ -109,13 +137,34 @@ public class PitchCore implements LogicCore {
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
 
+        List<TravelRoute> dafuq = rval.stream()
+                .filter(r -> r.getTime().getDeltaLong() > request.getMaxDelta().getDeltaLong() || r.getDisp()
+                        .inMeters() > LocationUtils.timeToMaxTransit(request.getMaxDelta()).inMeters())
+                .collect(Collectors.toList());
+
+        LoggingUtils.logMessage("PITCH", "Dafuq: %d", dafuq.size());
+
         return ApplicationResult.ret(rval);
     }
 
-    public static Stream<TravelRoute> getDestRoutes(TravelRoute base, TimeDelta rawDelta, LocationType type) {
+    private static Stream<TravelRoute> getDestRoutes(TravelRoute base, TimeDelta rawDelta, LocationType type) {
         LocationPoint center = base.getCurrentEnd();
         Distance range = LocationUtils.timeToWalkDistance(rawDelta.minus(base.getTime()));
-        List<DestinationLocation> dests = LocationRetriever.getLocations(center, range, type, null);
+        List<DestinationLocation> dests = destCache.getUnchecked(type).asMap().entrySet().stream()
+                .filter(e -> LocationUtils.distanceBetween(e.getKey(), center).inMeters() < 5)
+                .map(Map.Entry::getValue)
+                .filter(ls -> ls.size() >= 50 || ls.stream()
+                        .anyMatch(d -> LocationUtils.distanceBetween(d, center).inMeters() >= range.inMeters()))
+                .findAny()
+                .map(dests1 -> dests1.stream()
+                        .filter(d -> LocationUtils.distanceBetween(d, center).inMeters() <= range.inMeters())
+                        .collect(Collectors.toList())
+                )
+                .orElseGet(() -> {
+                    List<DestinationLocation> rval = LocationRetriever.getLocations(center, range, type, null);
+                    destCache.getUnchecked(type).put(center, rval);
+                    return rval;
+                });
 
 
         Stream<TravelRoute> baseRoutes = dests.stream()
