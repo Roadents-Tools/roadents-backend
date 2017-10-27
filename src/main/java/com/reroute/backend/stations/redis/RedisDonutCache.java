@@ -1,7 +1,5 @@
 package com.reroute.backend.stations.redis;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
 import com.reroute.backend.model.distance.Distance;
 import com.reroute.backend.model.location.LocationPoint;
@@ -40,14 +38,6 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
 
     private Jedis jedis;
     private boolean isUp;
-    private Cache<Long, TransChain> existingChains = CacheBuilder.newBuilder()
-            .maximumSize(30000)
-            .concurrencyLevel(3)
-            .build();
-    private Cache<String, SchedulePoint> existingSchedules = CacheBuilder.newBuilder()
-            .maximumSize(30000)
-            .concurrencyLevel(3)
-            .build();
 
     public RedisDonutCache(String url, int port) {
         jedis = new Jedis(url, port);
@@ -84,6 +74,8 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
             if (!isUp) return Collections.emptyMap();
 
             //TODO: Check if station is in cache
+            Map<Long, TransChain> existingChains = new ConcurrentHashMap<>();
+            Map<String, SchedulePoint> existingSchedules = new ConcurrentHashMap<>();
 
             //Get the IDs of the chain and schedule info to get
             String indexKey = RedisUtils.SCHEDULE_STATION_INDEX_PREFIX + RedisUtils.KEY_SPLITER +
@@ -101,7 +93,6 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
             //Get the schedule info
             String[] schedQuery = chainidToScheduleId.values().stream()
                     .flatMap(Collection::stream)
-                    .filter(a -> !existingSchedules.asMap().containsKey(a) || existingSchedules.getIfPresent(a) == null)
                     .toArray(String[]::new);
             if (schedQuery.length > 0) {
                 List<String> rawScheds = jedis.mget(schedQuery);
@@ -117,10 +108,8 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
 
             //Get the chain info
             Long[] toQueryId = chainidToScheduleId.keySet().parallelStream()
-                    .filter(a -> !existingChains.asMap().containsKey(a))
                     .toArray(Long[]::new);
             String[] toQuery = Arrays.stream(toQueryId).parallel()
-                    .filter(a -> !existingChains.asMap().containsKey(a))
                     .map(i -> RedisUtils.CHAIN_PREFIX_NAME + RedisUtils.KEY_SPLITER + station.getID()
                             .getDatabaseName() + RedisUtils.KEY_SPLITER + i)
                     .toArray(String[]::new);
@@ -144,9 +133,9 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
             chainidToScheduleId.entrySet().parallelStream().forEach(e -> {
                 Long key1 = e.getKey();
                 List<String> value1 = e.getValue();
-                TransChain key = existingChains.getIfPresent(key1);
+                TransChain key = existingChains.get(key1);
                 List<SchedulePoint> value = value1.parallelStream()
-                        .map(existingSchedules::getIfPresent)
+                        .map(existingSchedules::get)
                         .collect(Collectors.toList());
                 if (key != null && value != null && !value.contains(null)) {
                     rval.put(key, value);
