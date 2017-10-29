@@ -9,7 +9,6 @@ import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.stations.WorldInfo;
 import com.reroute.backend.stations.interfaces.StationCacheInstance;
-import com.reroute.backend.stations.memory.DonutPutOnceCache;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,7 +36,7 @@ public class StationChainCacheHelper {
             return;
         }
         donutCaches = new StationCacheInstance.DonutCache[] {
-                new DonutPutOnceCache()
+                //new RedisDonutCache("127.0.0.1", 6379)
         };
     }
 

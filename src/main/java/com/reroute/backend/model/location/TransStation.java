@@ -11,7 +11,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Created by ilan on 7/7/16.
+ * A location that a TransChain can stop at.
  */
 public class TransStation implements LocationPoint, DatabaseObject {
 
@@ -109,6 +109,11 @@ public class TransStation implements LocationPoint, DatabaseObject {
 
     }
 
+    /**
+     * Clones the station.
+     *
+     * @return a clone of this station
+     */
     public TransStation clone() {
         return new TransStation(name, location, schedule, chain);
     }
@@ -124,10 +129,20 @@ public class TransStation implements LocationPoint, DatabaseObject {
                 '}';
     }
 
+    /**
+     * Returns a version of this station with the passed schedule information.
+     * @param chain the chain of the schedule
+     * @param schedule the schedule itself
+     * @return a station representing this with the given schedule information
+     */
     public TransStation withSchedule(TransChain chain, List<SchedulePoint> schedule) {
         return new TransStation(name, location, schedule, chain, id);
     }
 
+    /**
+     * Returns a stripped schedule version of this station.
+     * @return a station representing this without schedule information
+     */
     public TransStation stripSchedule() {
         return new TransStation(name, location, id);
     }

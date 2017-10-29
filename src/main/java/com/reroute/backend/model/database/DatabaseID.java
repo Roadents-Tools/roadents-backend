@@ -1,12 +1,20 @@
 package com.reroute.backend.model.database;
 
+/**
+ * A unique ID for an object in a database.
+ */
 public class DatabaseID {
 
     private final String databaseName;
     private final String id;
 
+    /**
+     * Constructs a new DatabaseID object.
+     *
+     * @param databaseName the name of the database the object is in
+     * @param id           the ID that this object represents, unique within the database
+     */
     public DatabaseID(String databaseName, String id) {
-
         this.databaseName = databaseName;
         this.id = id;
     }
@@ -37,11 +45,19 @@ public class DatabaseID {
         return getId().equals(that.getId());
     }
 
+    /**
+     * Gets the name of the database that the ID belongs to.
+     * @return the name of the database the ID is in
+     */
     public String getDatabaseName() {
 
         return databaseName;
     }
 
+    /**
+     * Gets the ID of this object.
+     * @return the id of this object
+     */
     public String getId() {
         return id;
     }

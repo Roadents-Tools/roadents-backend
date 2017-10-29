@@ -3,7 +3,7 @@ package com.reroute.backend.model.location;
 import java.util.Arrays;
 
 /**
- * Created by ilan on 7/10/16.
+ * A location that a route can start at.
  */
 public class StartPoint implements LocationPoint {
 
@@ -14,14 +14,30 @@ public class StartPoint implements LocationPoint {
     private final LocationType type;
     private final double[] coords;
 
+    /**
+     * Constructs a new StartPoint at the location specified.
+     *
+     * @param latitude  the latitude of the point
+     * @param longitude the longitude of the point
+     */
     public StartPoint(double latitude, double longitude) {
         this(new double[] { latitude, longitude });
     }
 
+    /**
+     * Constructs a new StartPoint at the location specified.
+     * @param coords the coordinates of the point, in [latitude, longitude] form
+     */
     public StartPoint(double[] coords) {
         this(DEFAULT_NAME, DEFAULT_TYPE, coords);
     }
 
+    /**
+     * Constructs a new StartPoint.
+     * @param name the name of the point
+     * @param type the type of point this is
+     * @param coords the coordinates of the start location
+     */
     public StartPoint(String name, LocationType type, double[] coords) {
         this.name = name;
         this.type = type;
