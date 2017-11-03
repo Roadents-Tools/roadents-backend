@@ -169,7 +169,8 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
                 .flatMap(Collection::stream)
                 .distinct()
                 .toArray(String[]::new);
-        List<String> allScheduleRaw = jedis.mget(schedIds);
+        if (schedIds.length == 0) return Collections.emptyMap();
+        List<String> allScheduleRaw = schedIds.length > 1 ? jedis.mget(schedIds) : Lists.newArrayList(jedis.get(schedIds[0]));
         Map<String, SchedulePoint> idToSched = IntStream.range(0, schedIds.length).boxed().parallel()
                 .filter(RedisUtils.indexNonNull(schedIds, allScheduleRaw))
                 .collect(StreamUtils.collectWithMapping(
