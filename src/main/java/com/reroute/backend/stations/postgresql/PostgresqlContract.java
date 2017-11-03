@@ -44,4 +44,28 @@ public final class PostgresqlContract {
         private ScheduleTable() {
         }
     }
+
+    public static final class ChainsForStationsView {
+        public static final String TABLE_NAME = "chains_for_stations";
+        public static final String STATION_ID_KEY = "id";
+        public static final String SCHEDULE_ID_KEY = "scid";
+        public static final String PACKED_VALID_KEY = "validdays";
+        public static final String PACKED_TIME_KEY = "packedtime";
+        public static final String FUZZ_KEY = "fuzz";
+        public static final String CHAIN_ID_KEY = "cid";
+        public static final String CHAIN_NAME_KEY = "name";
+    }
+
+    public static final class StationsForChainsView {
+        public static final String TABLE_NAME = "stations_for_chains";
+        public static final String CHAIN_ID_KEY = "id";
+        public static final String SCHEDULE_ID_KEY = "scid";
+        public static final String PACKED_VALID_KEY = "validdays";
+        public static final String PACKED_TIME_KEY = "packedtime";
+        public static final String FUZZ_KEY = "fuzz";
+        public static final String STATION_ID_KEY = "sid";
+        public static final String STATION_NAME_KEY = "name";
+        public static final String STATION_LAT_KEY = "latitude";
+        public static final String STATION_LNG_KEY = "longitude";
+    }
 }

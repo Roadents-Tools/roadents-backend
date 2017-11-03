@@ -12,6 +12,7 @@ import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.stations.interfaces.StationDbInstance;
 import com.reroute.backend.utils.LocationUtils;
 import com.reroute.backend.utils.LoggingUtils;
+import com.reroute.backend.utils.ProfilingUtils;
 import com.reroute.backend.utils.TimeUtils;
 
 import java.sql.Connection;
@@ -214,27 +215,31 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
                 "SELECT %s, %s, ST_X(%s::geometry) AS %s, ST_Y(%s::geometry) AS %s FROM %s " +
                         "WHERE ST_DWITHIN(%s, ST_POINT(%f, %f)::geography, %f)",
                 PostgresqlContract.StationTable.ID_KEY, PostgresqlContract.StationTable.NAME_KEY,
-                PostgresqlContract.StationTable.LATLNG_KEY, LAT_KEY, PostgresqlContract.StationTable.LATLNG_KEY, LNG_KEY,
+                PostgresqlContract.StationTable.LATLNG_KEY, LNG_KEY, PostgresqlContract.StationTable.LATLNG_KEY, LAT_KEY,
                 PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.LATLNG_KEY,
-                center.getCoordinates()[0], center.getCoordinates()[1], range.inMeters()
+                center.getCoordinates()[1], center.getCoordinates()[0], range.inMeters()
         );
 
         List<TransStation> rval = new ArrayList<>();
 
         try {
             Statement stm = con.createStatement();
+            ProfilingUtils.MethodTimer tm = ProfilingUtils.startTimer("PSQL::AREA::Q");
             ResultSet rs = stm.executeQuery(query);
-            while (rs.isBeforeFirst()) rs.next();
+            tm.stop();
+            if (!rs.next()) return Collections.emptyList();
+            tm = ProfilingUtils.startTimer("PSQL::AREA::P");
             do {
                 int id = rs.getInt(PostgresqlContract.StationTable.ID_KEY);
                 String name = rs.getString(PostgresqlContract.StationTable.NAME_KEY);
                 double lat = rs.getDouble(LAT_KEY);
                 double lng = rs.getDouble(LNG_KEY);
                 if (LocationUtils.distanceBetween(new StartPoint(new double[] { lat, lng }), center).inMeters() <= range
-                        .inMeters()) {
+                        .inMeters() + Distance.ERROR_MARGIN.inMeters()) {
                     rval.add(new TransStation(name, new double[] { lat, lng }, new DatabaseID(url, "" + id)));
                 }
             } while (rs.next());
+            tm.stop();
 
             rs.close();
             stm.close();
@@ -311,41 +316,37 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
 
     @Override
     public Map<TransStation, TimeDelta> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta) {
+
         if (!isUp || con == null || chain == null || chain.getID() == null || !url.equals(chain.getID()
                 .getDatabaseName())) {
             return Collections.emptyMap();
         }
         String query = String.format(
-                "SELECT %s, %s, " +
-                        "ST_X(%s::geometry) AS %s, " +
-                        "ST_Y(%s::geometry) AS %s, " +
-                        "(%s - %d) AS %s " +
-                        "FROM %s, %s " +
-                        "WHERE %s=%s.%s AND %s=%s AND %s",
-                PostgresqlContract.ScheduleTable.STATION_ID_KEY, PostgresqlContract.StationTable.NAME_KEY,
-                PostgresqlContract.StationTable.LATLNG_KEY, LAT_KEY,
-                PostgresqlContract.StationTable.LATLNG_KEY, LNG_KEY,
-
-                PostgresqlContract.ScheduleTable.PACKED_TIME_KEY, TimeUtils.packTimePoint(startTime),
-                DELTA_KEY,
-
-                PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.StationTable.TABLE_NAME,
-                PostgresqlContract.ScheduleTable.STATION_ID_KEY,
-                PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.ID_KEY,
-                PostgresqlContract.ScheduleTable.CHAIN_ID_KEY, chain.getID().getId(),
+                "SELECT %s, %s, %s, %s, (%s - %d) AS %s FROM %s WHERE %s = %s AND %s",
+                PostgresqlContract.StationsForChainsView.STATION_LAT_KEY,
+                PostgresqlContract.StationsForChainsView.STATION_LNG_KEY,
+                PostgresqlContract.StationsForChainsView.STATION_NAME_KEY,
+                PostgresqlContract.StationsForChainsView.STATION_ID_KEY,
+                PostgresqlContract.StationsForChainsView.PACKED_TIME_KEY,
+                TimeUtils.packTimePoint(startTime), DELTA_KEY,
+                PostgresqlContract.StationsForChainsView.TABLE_NAME,
+                PostgresqlContract.StationsForChainsView.CHAIN_ID_KEY, chain.getID().getId(),
                 buildTimeQuery(startTime, maxDelta)
         );
 
         Map<TransStation, TimeDelta> rval = new HashMap<>();
         try {
             Statement stm = con.createStatement();
+            ProfilingUtils.MethodTimer tm = ProfilingUtils.startTimer("PSQL::s4cV::Q");
             ResultSet rs = stm.executeQuery(query);
+            tm.stop();
 
+            tm = ProfilingUtils.startTimer("PSQL::s4cV::P");
             while (rs.next()) {
-                int stid = rs.getInt(PostgresqlContract.ScheduleTable.STATION_ID_KEY);
-                String name = rs.getString(PostgresqlContract.StationTable.NAME_KEY);
-                double lat = rs.getDouble(LAT_KEY);
-                double lng = rs.getDouble(LNG_KEY);
+                int stid = rs.getInt(PostgresqlContract.StationsForChainsView.STATION_ID_KEY);
+                String name = rs.getString(PostgresqlContract.StationsForChainsView.STATION_NAME_KEY);
+                double lat = rs.getDouble(PostgresqlContract.StationsForChainsView.STATION_LAT_KEY);
+                double lng = rs.getDouble(PostgresqlContract.StationsForChainsView.STATION_LNG_KEY);
                 TransStation station = new TransStation(
                         name,
                         new double[] { lat, lng },
@@ -355,10 +356,9 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
                 long rawDelta = rs.getLong(DELTA_KEY);
                 long delta = 1000 * (rawDelta > 0 ? rawDelta : 86400 + rawDelta);
                 TimeDelta deltaObj = new TimeDelta(delta);
-
                 rval.put(station, deltaObj);
-
             }
+            tm.stop();
 
             return rval;
         } catch (SQLException e) {
@@ -366,7 +366,6 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
             isUp = false;
             return Collections.emptyMap();
         }
-
     }
 
     @Override
@@ -404,8 +403,8 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
                 PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ScheduleTable.ID_KEY,
                 PostgresqlContract.ScheduleTable.CHAIN_ID_KEY,
                 PostgresqlContract.ScheduleTable.STATION_ID_KEY,
-                PostgresqlContract.StationTable.LATLNG_KEY, LAT_KEY,
                 PostgresqlContract.StationTable.LATLNG_KEY, LNG_KEY,
+                PostgresqlContract.StationTable.LATLNG_KEY, LAT_KEY,
                 PostgresqlContract.ScheduleTable.PACKED_TIME_KEY,
                 PostgresqlContract.ScheduleTable.PACKED_VALID_KEY,
                 PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.NAME_KEY, STATION_NAME_KEY,
