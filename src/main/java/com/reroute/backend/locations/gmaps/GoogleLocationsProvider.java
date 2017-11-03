@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Created by ilan on 8/25/16.
+ * The Google Maps API as a Location Provider.
  */
 public class GoogleLocationsProvider implements LocationProvider {
 

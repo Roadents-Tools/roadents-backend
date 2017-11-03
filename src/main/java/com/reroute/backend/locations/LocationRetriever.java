@@ -14,12 +14,21 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Created by ilan on 7/7/16.
+ * A series of static methods representing the API to query for destination locations.
  */
 public class LocationRetriever {
 
     private static boolean isTest = false;
 
+    /**
+     * Gets all locations meeting within an area of a given type.
+     *
+     * @param center the center of the area
+     * @param range  the distance around the center to check
+     * @param type   the type of location to query for
+     * @param args   any extra filters
+     * @return the locations meeting this query
+     */
     public static List<DestinationLocation> getLocations(LocationPoint center, Distance range, LocationType type, List<CostArgs> args) {
         List<DestinationLocation> locations = null;
         if (!isTest) locations = LocationCacheHelper.getHelper()
@@ -43,6 +52,10 @@ public class LocationRetriever {
         return locations;
     }
 
+    /**
+     * Sets whether or not the Location Retrieval infrastructure should act in a test context or not.
+     * @param testMode whether or not the API is in a test
+     */
     public static void setTestMode(boolean testMode) {
         isTest = testMode;
         LocationProviderHelper.setTestMode(testMode);

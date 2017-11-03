@@ -1,18 +1,40 @@
 package com.reroute.backend.locations.postgresql;
 
 /**
- * Created by ilan on 7/9/17.
+ * String constants related to the Postgresql Location Database, organized by table.
  */
 public final class PostgresqlLocationContract {
     private PostgresqlLocationContract() {
     }
 
+    /**
+     * The table storing the location data itself.
+     */
     public final class LocationTable {
+
+        /**
+         * The name of the table.
+         */
         public static final String TABLE_NAME = "locations";
+
+        /**
+         * The unique ID field.
+         */
         public static final String ID_KEY = "id";
+
+        /**
+         * The name of the location
+         */
         public static final String NAME_KEY = "name";
+
+        /**
+         * The latitude-longitude point on the earth that this location is located at
+         */
         public static final String LOCATION_KEY = "location";
 
+        /**
+         * The script to create the table
+         */
         public static final String CREATE_TABLE =
                 "CREATE TABLE public.locations" +
                         "(" +
@@ -38,11 +60,29 @@ public final class PostgresqlLocationContract {
 
     }
 
+    /**
+     * The table that matches type tags to locations.
+     */
     public final class TagTable {
+
+        /**
+         * The table name
+         */
         public static final String TABLE_NAME = "locationtags";
+
+        /**
+         * The field that stores the tag
+         */
         public static final String TAG_KEY = "tag";
+
+        /**
+         * The foreign key to the location with this tag
+         */
         public static final String LOCATION_ID_KEY = "locationid";
 
+        /**
+         * The script to create the table
+         */
         public static final String CREATE_TABLE =
                 "CREATE TABLE public.locationtags" +
                         "(" +

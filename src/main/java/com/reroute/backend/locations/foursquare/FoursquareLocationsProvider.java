@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Created by ilan on 12/18/16.
+ * The FourSquare API as a source of destinations.
  */
 public class FoursquareLocationsProvider implements LocationProvider {
 

@@ -17,13 +17,23 @@ import java.util.StringJoiner;
 import java.util.function.Supplier;
 
 /**
- * Created by ilan on 7/9/17.
+ * Utility methods for the Postgresql Location Provider.
  */
 public class PostgresqlLocationSupport {
 
     private static final String LAT_KEY_FAKE = "latfakekey";
     private static final String LNG_KEY_FAKE = "lngfakekey";
 
+    /**
+     * Runs a location query and parses the result.
+     *
+     * @param supplier the method to call to generate connections
+     * @param center   the center of the area
+     * @param range    the range of the area
+     * @param type     the type of location to return
+     * @return the locations within the area meeting the query
+     * @throws SQLException if there is an SQL error
+     */
     public static List<DestinationLocation> getInformation(Supplier<Connection> supplier,
                                                            LocationPoint center, Distance range,
                                                            LocationType type
@@ -72,6 +82,13 @@ public class PostgresqlLocationSupport {
         );
     }
 
+    /**
+     * Inserts new locations into the database.
+     * @param congenerator the method to call to generate connections
+     * @param dests the destinations to insert
+     * @return if the operation was a success
+     * @throws SQLException if there was an SQL error
+     */
     public static boolean storeLocations(Supplier<Connection> congenerator,
                                          Collection<? extends DestinationLocation> dests
     ) throws SQLException {

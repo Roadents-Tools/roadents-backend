@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Created by ilan on 7/7/16.
+ * A location cache storing all locations in memory.
  */
 public class MemoryMapLocationCache implements LocationCacheInstance {
 
