@@ -25,7 +25,7 @@ public class TestDisplayer {
     }
 
     public static String routeToList(TravelRoute route) {
-        long totalMillis = route.getTotalTime().getDeltaLong();
+        long totalMillis = route.getTime().getDeltaLong();
         long hours = totalMillis / 3600000L;
         long mins = totalMillis / 60000L % 60;
         StringBuilder builder = new StringBuilder();
@@ -45,8 +45,8 @@ public class TestDisplayer {
                         node.getPt().getName(), node.getPt()
                                 .getCoordinates()[0], node.getPt()
                                 .getCoordinates()[1],
-                        route.getTimeAtNode(node)
-                                .getHour(), route.getTimeAtNode(node)
+                        route.getTimePointAt(node)
+                                .getHour(), route.getTimePointAt(node)
                                 .getMinute())
                 )
                 .forEach(builder::append);

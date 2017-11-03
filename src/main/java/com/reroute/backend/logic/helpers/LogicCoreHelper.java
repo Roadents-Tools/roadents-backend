@@ -8,6 +8,7 @@ import com.reroute.backend.logic.finder.FinderCore;
 import com.reroute.backend.logic.generator.GeneratorCore;
 import com.reroute.backend.logic.interfaces.LogicCore;
 import com.reroute.backend.logic.pathmaker.PathmakerCore;
+import com.reroute.backend.logic.pitch.PitchCore;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,7 +43,8 @@ public class LogicCoreHelper {
     private static LogicCore[] initializeCoresList() {
         return new LogicCore[] {
                 new GeneratorCore(), new PathmakerCore(),
-                new CalculatorCore(), new FinderCore()
+                new CalculatorCore(), new FinderCore(),
+                new PitchCore()
         };
     }
 

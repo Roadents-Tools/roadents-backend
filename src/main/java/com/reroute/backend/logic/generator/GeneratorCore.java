@@ -52,13 +52,13 @@ public class GeneratorCore implements LogicCore {
 
         //Get the raw dest routes
         Set<TravelRoute> destRoutes = stationRoutes.stream()
-                .filter(route -> maxTimeDelta.getDeltaLong() >= route.getTotalTime().getDeltaLong())
+                .filter(route -> maxTimeDelta.getDeltaLong() >= route.getTime().getDeltaLong())
                 .flatMap(route -> getWalkableDestinations(
                         route.getCurrentEnd(),
-                        maxTimeDelta.minus(route.getTotalTime()),
+                        maxTimeDelta.minus(route.getTime()),
                         args.getQuery()
                         ).stream()
-                        .map(node -> route.clone().setDestinationNode(node))
+                        .map(node -> route.copy().setDestinationNode(node))
                 )
                 .collect(Collectors.toSet());
 

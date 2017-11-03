@@ -18,23 +18,26 @@ import retrofit2.http.GET;
 import retrofit2.http.Query;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
- * Created by ilan on 12/18/16.
+ * The FourSquare API as a source of destinations.
  */
 public class FoursquareLocationsProvider implements LocationProvider {
 
-    public static final String[][] API_ID_KEYS = new String[][]{
-        new String[]{"NTJ2WDYNSATDGFBVF45QEHXSJWM5SXEHTGABU05LYHMRJXQD",  "PJ22A4QHXL5IT4FPY3E22SZWFXRCQXRPAVRGKFTB32RZZKZE"}
+    private static final String[][] API_ID_KEYS = new String[][] {
+            new String[] { "NTJ2WDYNSATDGFBVF45QEHXSJWM5SXEHTGABU05LYHMRJXQD", "PJ22A4QHXL5IT4FPY3E22SZWFXRCQXRPAVRGKFTB32RZZKZE" }
     };
     private static final String BASE_URL = "https://api.foursquare.com/";
-    private static final String VERSION_DATE = "20161219";
+    private static final String VERSION_DATE = "20171001";
+    private static final String CATEGORIES_PATH = "datafiles/FoursquareCategories.json";
 
     private static final Map<String, String> categories = new ConcurrentHashMap<>();
     private final RestInterface rest;
@@ -48,8 +51,13 @@ public class FoursquareLocationsProvider implements LocationProvider {
     }
 
     private static DestinationLocation mapJsonToDest(JSONObject jsonObject, LocationType type) {
+        String name = jsonObject.getString("name");
+
         JSONObject locationObj = jsonObject.getJSONObject("location");
-        return new DestinationLocation(jsonObject.getString("name"), type, new double[] { locationObj.getDouble("lat"), locationObj.getDouble("lng") });
+        double[] coords = { locationObj.getDouble("lat"), locationObj.getDouble("lng") };
+        String address = locationObj.optString("address");
+
+        return new DestinationLocation(name, type, coords, address);
     }
 
     @Override
@@ -80,7 +88,7 @@ public class FoursquareLocationsProvider implements LocationProvider {
         Response<ResponseBody> response;
         try {
             response = result.execute();
-        } catch (IOException e){
+        } catch (IOException e) {
             LoggingUtils.logError(e);
             apiInd++;
             return Collections.emptyList();
@@ -97,12 +105,15 @@ public class FoursquareLocationsProvider implements LocationProvider {
             JSONObject obj = new JSONObject(raw);
             JSONArray arr = obj.getJSONObject("response").getJSONArray("venues");
             int size = arr.length();
-            return IntStream.range(0, size)
-                    .boxed().parallel()
-                    .map(arr::getJSONObject)
-                    .map(jsonObject -> mapJsonToDest(jsonObject, type))
-                    .filter(dest -> LocationUtils.distanceBetween(dest, center).inMeters() < range.inMeters())
-                    .collect(Collectors.toList());
+            List<DestinationLocation> rval = new ArrayList<>();
+            for (int i = 0; i < size; i++) {
+                JSONObject jsonObject = arr.getJSONObject(i);
+                DestinationLocation dest = mapJsonToDest(jsonObject, type);
+                if (LocationUtils.distanceBetween(dest, center).inMeters() < range.inMeters()) {
+                    rval.add(dest);
+                }
+            }
+            return rval;
 
         } catch (JSONException | IOException e) {
             LoggingUtils.logError(e);
@@ -113,57 +124,34 @@ public class FoursquareLocationsProvider implements LocationProvider {
 
     @Override
     public void close() {
-
     }
 
     private void buildCategoryMap() {
-        Call<ResponseBody> result = rest.getCategories("20161218",API_ID_KEYS[apiInd][0], API_ID_KEYS[apiInd][1]);
-
-        Response<ResponseBody> response;
         try {
-            response = result.execute();
-        } catch (IOException e) {
-            LoggingUtils.logError(e);
-            apiInd++;
-            return;
-        }
-
-        if (!response.isSuccessful()) {
-            LoggingUtils.logError("FourSquareRetrofitProvider", "Response failed.\nResponse: " + response.raw().toString());
-            apiInd++;
-            return;
-        }
-
-        try {
-            String raw = new String(response.body().bytes());
+            String raw = Files.lines(Paths.get(CATEGORIES_PATH)).collect(Collectors.joining());
             JSONObject obj = new JSONObject(raw);
             JSONArray arr = obj.getJSONObject("response").getJSONArray("categories");
-            addCategoriesFromArray(arr);
+            addCategoriesFromArrayIter(arr);
 
         } catch (JSONException | IOException e) {
             LoggingUtils.logError(e);
-            LoggingUtils.logError("FourSquareRetrofitProvider", "JSON: " + response.toString());
         }
     }
 
-    private void addCategoriesFromArray(JSONArray arr){
+    private void addCategoriesFromArrayIter(JSONArray arr) {
         int size = arr.length();
-
-        IntStream.range(0, size)
-                .boxed().parallel()
-                .map(arr::getJSONObject)
-                .forEach(jsonObject -> {
-                    String id = jsonObject.getString("id");
-                    categories.put(jsonObject.getString("name"), id);
-                    categories.put(jsonObject.getString("shortName"), id);
-                    categories.put(jsonObject.getString("pluralName"), id);
-
-                    //Each supercategory can have subcategories, eg "Food" can have subcategories like "Chinese Food"
-                    //or "Russian Food"
-                    if (jsonObject.has("categories")){
-                        addCategoriesFromArray(jsonObject.getJSONArray("categories"));
-                    }
-                });
+        for (int i = 0; i < size; i++) {
+            JSONObject jsonObject = arr.getJSONObject(i);
+            String id = jsonObject.getString("id");
+            categories.put(jsonObject.getString("name"), id);
+            categories.put(jsonObject.getString("shortName"), id);
+            categories.put(jsonObject.getString("pluralName"), id);
+            //Each supercategory can have subcategories, eg "Food" can have subcategories like "Chinese Food"
+            //or "Russian Food"
+            if (jsonObject.has("categories")) {
+                addCategoriesFromArrayIter(jsonObject.getJSONArray("categories"));
+            }
+        }
     }
 
     private interface RestInterface {

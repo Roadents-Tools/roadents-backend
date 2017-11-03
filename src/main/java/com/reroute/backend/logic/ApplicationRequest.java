@@ -22,10 +22,14 @@ public class ApplicationRequest {
     private TimeDelta maxDelta;
     private LocationType query;
     private Predicate<TravelRoute> resultsFilter;
+    private int limit;
 
     private String tag;
     private boolean isTest = false;
 
+    private ApplicationRequest() {
+
+    }
 
     public String getTag() {
         return tag;
@@ -41,6 +45,10 @@ public class ApplicationRequest {
 
     public TimePoint getStartTime() {
         return startTime;
+    }
+
+    public int getLimit() {
+        return limit;
     }
 
     public TimeDelta getMaxDelta() {
@@ -133,6 +141,11 @@ public class ApplicationRequest {
 
         public Builder isTest(boolean test) {
             rval.isTest = test;
+            return this;
+        }
+
+        public Builder withLimit(int limit) {
+            rval.limit = limit;
             return this;
         }
 

@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Set;
 
 /**
+ * A path taken by a public transit service. Analogous to GTFS "trips".
  * Created by ilan on 7/7/16.
  */
 public class TransChain implements DatabaseObject {
@@ -16,22 +17,37 @@ public class TransChain implements DatabaseObject {
     private final Set<TransStation> stations;
     private final DatabaseID id;
 
+    /**
+     * Constructs a new TransChain.
+     *
+     * @param name the name of the chain
+     */
     public TransChain(String name) {
         this.name = name;
         this.stations = Sets.newConcurrentHashSet();
         this.id = null;
     }
 
+    /**
+     * Constructs a new TransChain.
+     * @param name the name of the chain
+     * @param id the database id of the chain
+     */
     public TransChain(String name, DatabaseID id) {
         this.name = name;
         this.stations = Sets.newConcurrentHashSet();
         this.id = id;
     }
 
+    /**
+     * Gets the name of the chain.
+     * @return the name of the chain
+     */
     public String getName() {
         return name;
     }
 
+    @Deprecated
     public TransStation getSchedule(TransStation base) {
         if (this.equals(base.getChain())
                 && base.getSchedule() != null
@@ -45,14 +61,17 @@ public class TransChain implements DatabaseObject {
                 .orElse(base);
     }
 
+    @Deprecated
     public boolean containsStation(TransStation station) {
         return containsLocation(station);
     }
 
+    @Deprecated
     public boolean containsLocation(LocationPoint point) {
         return containsLocation(point.getCoordinates());
     }
 
+    @Deprecated
     public boolean containsLocation(double[] coords) {
         return getStations().stream().anyMatch(st -> Arrays.equals(st.getCoordinates(), coords));
     }
@@ -62,6 +81,7 @@ public class TransChain implements DatabaseObject {
         return stations;
     }
 
+    @Deprecated
     public void addStation(TransStation station) {
         if (station != null && (!stations.contains(station) || (station.getSchedule() != null && station.getSchedule()
                 .size() != 0))) {
@@ -89,6 +109,7 @@ public class TransChain implements DatabaseObject {
     public String toString() {
         return "TransChain{" +
                 "name='" + name + '\'' +
+                ", id=" + id +
                 '}';
     }
 

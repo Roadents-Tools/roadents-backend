@@ -126,7 +126,7 @@ public class RouteMapsPageGenerator {
         }
 
         TransStation aStat = (TransStation) a.getPt();
-        TimePoint aTime = rt.getTimeAtNode(a);
+        TimePoint aTime = rt.getTimePointAt(a);
 
         Map<TransChain, List<SchedulePoint>> achains = StationRetriever.getChainsForStation(aStat, null);
         if (achains.isEmpty()) {

@@ -1,5 +1,6 @@
 package com.reroute.backend.stations.redis;
 
+import com.google.common.collect.Lists;
 import com.reroute.backend.model.distance.Distance;
 import com.reroute.backend.model.location.LocationPoint;
 import com.reroute.backend.model.location.TransChain;
@@ -10,6 +11,7 @@ import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.stations.WorldInfo;
 import com.reroute.backend.stations.interfaces.StationCacheInstance;
 import com.reroute.backend.utils.LocationUtils;
+import com.reroute.backend.utils.LoggingUtils;
 import com.reroute.backend.utils.StreamUtils;
 import redis.clients.jedis.GeoCoordinate;
 import redis.clients.jedis.GeoRadiusResponse;
@@ -20,11 +22,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -46,84 +48,161 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
     public List<TransStation> getStationsInArea(LocationPoint center, Distance range) {
         if (!isUp) return Collections.emptyList();
 
-        List<String> stationIds = jedis.georadius(
+        String[] stationIds = jedis.georadius(
                 RedisUtils.LATLNG_INDEX,
-                center.getCoordinates()[0],
                 center.getCoordinates()[1],
+                center.getCoordinates()[0],
                 range.inMeters(),
                 GeoUnit.M
         )
                 .stream()
                 .map(GeoRadiusResponse::getMemberByString)
-                .collect(Collectors.toList());
+                .toArray(String[]::new);
+        if (stationIds.length == 0) return Collections.emptyList();
 
-        List<String> stationInfo = jedis.mget(stationIds.toArray(new String[0]));
+        List<String> stationInfo = stationIds.length > 1 ? jedis.mget(stationIds) : Lists.newArrayList(jedis.get(stationIds[0]));
 
-        return IntStream.range(0, stationIds.size()).boxed().parallel()
-                .map(i -> RedisUtils.unpackStation(stationIds.get(i), stationInfo.get(i)))
+        return IntStream.range(0, stationIds.length).boxed().parallel()
+                .map(i -> RedisUtils.unpackStation(stationIds[i], stationInfo.get(i)))
                 .filter(st -> LocationUtils.distanceBetween(center, st).inMeters() <= range.inMeters())
                 .collect(Collectors.toList());
     }
 
     @Override
     public Map<TransChain, List<SchedulePoint>> getChainsForStation(TransStation station) {
-        if (!isUp) return Collections.emptyMap();
+        try {
+            if (!isUp) return Collections.emptyMap();
 
-        //TODO: Check if station is in cache
+            //TODO: Check if station is in cache
+            Map<Long, TransChain> existingChains = new ConcurrentHashMap<>();
+            Map<String, SchedulePoint> existingSchedules = new ConcurrentHashMap<>();
 
-        //Get the IDs of the chain and schedule info to get
-        String indexKey = RedisUtils.SCHEDULE_STATION_INDEX_PREFIX + RedisUtils.KEY_SPLITER +
-                station.getID().getDatabaseName() + RedisUtils.KEY_SPLITER +
-                station.getID().getId();
-        Map<Long, List<String>> chainidToScheduleId = jedis.hgetAll(indexKey).entrySet().stream()
+            //Get the IDs of the chain and schedule info to get
+            String indexKey = RedisUtils.SCHEDULE_STATION_INDEX_PREFIX + RedisUtils.KEY_SPLITER +
+                    station.getID().getDatabaseName() + RedisUtils.KEY_SPLITER +
+                    station.getID().getId();
+            Map<Long, List<String>> chainidToScheduleId = jedis.hgetAll(indexKey).entrySet().stream()
+                    .collect(
+                            ConcurrentHashMap::new,
+                            (map, entry) -> map.computeIfAbsent(Long.parseLong(entry.getValue()), aLong -> new ArrayList<>())
+                                    .add(entry.getKey()),
+                            ConcurrentHashMap::putAll
+                    );
+
+
+            //Get the schedule info
+            String[] schedQuery = chainidToScheduleId.values().stream()
+                    .flatMap(Collection::stream)
+                    .toArray(String[]::new);
+            if (schedQuery.length > 0) {
+                List<String> rawScheds = jedis.mget(schedQuery);
+                IntStream.range(0, schedQuery.length).boxed().parallel()
+                        .forEach(i -> {
+                            String raw = rawScheds.get(i);
+                            if (raw == null) return;
+                            String key = schedQuery[i];
+                            SchedulePoint point = RedisUtils.unpackSchedule(key, raw);
+                            existingSchedules.put(key, point);
+                        });
+            }
+
+            //Get the chain info
+            Long[] toQueryId = chainidToScheduleId.keySet().parallelStream()
+                    .toArray(Long[]::new);
+            String[] toQuery = Arrays.stream(toQueryId).parallel()
+                    .map(i -> RedisUtils.CHAIN_PREFIX_NAME + RedisUtils.KEY_SPLITER + station.getID()
+                            .getDatabaseName() + RedisUtils.KEY_SPLITER + i)
+                    .toArray(String[]::new);
+
+            if (toQuery.length > 0) {
+                List<String> allChainsRaw = jedis.mget(toQuery);
+                IntStream.range(0, toQuery.length).boxed().parallel().forEach(i -> {
+                    String raw = allChainsRaw.get(i);
+                    if (raw == null) {
+                        return;
+                    }
+                    Long id = toQueryId[i];
+                    TransChain value = RedisUtils.unpackChain(toQuery[i], raw);
+                    existingChains.put(id, value);
+                });
+            }
+
+
+            //Combine
+            Map<TransChain, List<SchedulePoint>> rval = new ConcurrentHashMap<>(chainidToScheduleId.size());
+            chainidToScheduleId.entrySet().parallelStream().forEach(e -> {
+                Long key1 = e.getKey();
+                List<String> value1 = e.getValue();
+                TransChain key = existingChains.get(key1);
+                List<SchedulePoint> value = value1.parallelStream()
+                        .map(existingSchedules::get)
+                        .collect(Collectors.toList());
+                if (key != null && value != null && !value.contains(null)) {
+                    rval.put(key, value);
+                }
+            });
+            return rval;
+        } catch (Exception e) {
+            LoggingUtils.logError(e);
+            return Collections.emptyMap();
+        }
+    }
+
+    @Override
+    public Map<TransStation, TimeDelta> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta) {
+
+        //Get the index info
+        String indexKey = RedisUtils.SCHEDULE_CHAIN_INDEX_PREFIX + RedisUtils.KEY_SPLITER +
+                chain.getID().getDatabaseName() + RedisUtils.KEY_SPLITER +
+                chain.getID().getId();
+        Map<Long, List<String>> stationidToScheduleId = jedis.hgetAll(indexKey).entrySet().stream()
                 .collect(
                         ConcurrentHashMap::new,
-                        (map, entry) -> map.computeIfAbsent(Long.parseLong(entry.getValue()), aLong -> new ArrayList<>())
+                        (map, entry) -> map
+                                .computeIfAbsent(Long.parseLong(entry.getValue()), aLong -> new ArrayList<>())
                                 .add(entry.getKey()),
                         ConcurrentHashMap::putAll
                 );
 
-
         //Get the schedule info
-        String[] schedIds = chainidToScheduleId.values().stream()
+        String[] schedIds = stationidToScheduleId.values().stream()
                 .flatMap(Collection::stream)
                 .distinct()
                 .toArray(String[]::new);
         List<String> allScheduleRaw = jedis.mget(schedIds);
         Map<String, SchedulePoint> idToSched = IntStream.range(0, schedIds.length).boxed().parallel()
+                .filter(RedisUtils.indexNonNull(schedIds, allScheduleRaw))
                 .collect(StreamUtils.collectWithMapping(
                         i -> schedIds[i],
                         i -> RedisUtils.unpackSchedule(schedIds[i], allScheduleRaw.get(i))
                 ));
 
-
-        //Get the chain info
-        String[] chainIds = chainidToScheduleId.keySet().stream()
-                .map(i -> RedisUtils.CHAIN_PREFIX_NAME + RedisUtils.KEY_SPLITER + station.getID()
+        //Get the station info
+        String[] stationIds = stationidToScheduleId.keySet().stream()
+                .map(i -> RedisUtils.STATION_PREFIX_NAME + RedisUtils.KEY_SPLITER + chain.getID()
                         .getDatabaseName() + RedisUtils.KEY_SPLITER + i)
                 .toArray(String[]::new);
 
-        List<String> allChainsRaw = jedis.mget(chainIds);
-        Map<Long, TransChain> idToChain = IntStream.range(0, chainIds.length).boxed().parallel()
+        List<String> allStationsRaw = jedis.mget(stationIds);
+        Map<Long, TransStation> idToChain = IntStream.range(0, stationIds.length).boxed().parallel()
+                .filter(RedisUtils.indexNonNull(stationIds, allStationsRaw))
                 .collect(StreamUtils.collectWithMapping(
-                        i -> Long.parseLong(chainIds[i].split(RedisUtils.KEY_SPLITER)[2]),
-                        i -> RedisUtils.unpackChain(chainIds[i], allChainsRaw.get(i))
+                        i -> Long.parseLong(stationIds[i].split(RedisUtils.KEY_SPLITER)[2]),
+                        i -> RedisUtils.unpackStation(stationIds[i], allStationsRaw.get(i))
                 ));
 
 
         //Combine
-        return chainidToScheduleId.entrySet().stream()
+        return stationidToScheduleId.entrySet().stream()
                 .collect(StreamUtils.collectWithMapping(
                         entry -> idToChain.get(entry.getKey()),
                         entry -> entry.getValue().stream()
                                 .map(idToSched::get)
-                                .collect(Collectors.toList())
+                                .map(sched -> startTime.timeUntil(sched.nextValidTime(startTime)))
+                                .filter(dt -> dt.getDeltaLong() <= maxDelta.getDeltaLong())
+                                .min(Comparator.comparing(TimeDelta::getDeltaLong))
+                                .orElse(null)
                 ));
-    }
-
-    @Override
-    public Map<TransStation, TimeDelta> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta) {
-        return null;
     }
 
     @Override
@@ -143,8 +222,8 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
         Map<String, GeoCoordinate> geoInput = stationToPacked.entrySet().stream()
                 .collect(StreamUtils.collectWithMapping(
                         entry -> entry.getValue()[0],
-                        entry -> new GeoCoordinate(entry.getKey().getCoordinates()[0], entry.getKey()
-                                .getCoordinates()[1])
+                        entry -> new GeoCoordinate(entry.getKey().getCoordinates()[1], entry.getKey()
+                                .getCoordinates()[0])
                 ));
         jedis.geoadd(RedisUtils.LATLNG_INDEX, geoInput);
 
@@ -203,17 +282,18 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
         if (!isUp) return false;
         if (hasWorld(request)) return true;
 
-        Set<String[]> chainData = new HashSet<>();
-        Set<String[]> stationData = new HashSet<>();
-        Set<String[]> scheduleData = new HashSet<>();
-
         Map<String, GeoCoordinate> stLatlngIndexData = new ConcurrentHashMap<>();
         Map<String, Map<String, String>> schedStatIndexData = new ConcurrentHashMap<>();
         Map<String, Map<String, String>> schedChainIndexData = new ConcurrentHashMap<>();
+        List<String[]> msetData = new ArrayList<>();
 
+        AtomicInteger i = new AtomicInteger(0);
 
         //Build the data to place
         world.forEach((cur, curData) -> {
+            List<String[]> chainData = new ArrayList<>();
+            List<String[]> stationData = new ArrayList<>();
+            List<String[]> scheduleData = new ArrayList<>();
 
             chainData.add(RedisUtils.packChain(cur)); //Raw chain
 
@@ -222,8 +302,8 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
                 String[] stIdVal = RedisUtils.packStation(station);
                 stationData.add(stIdVal); //Raw station
 
-                GeoCoordinate packedLatlng = new GeoCoordinate(station.getCoordinates()[0], station.getCoordinates()[1]);
-                stLatlngIndexData.put(stIdVal[0], packedLatlng); //Station geolocaiton index
+                GeoCoordinate packedLatlng = new GeoCoordinate(station.getCoordinates()[1], station.getCoordinates()[0]);
+                stLatlngIndexData.put(stIdVal[0], packedLatlng); //Station geolocation index
 
                 for (SchedulePoint schedulePoint : schedule) {
 
@@ -243,32 +323,44 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
                             .put(scIdVal[0], station.getID().getId()); //Schedule chain primary index
                 }
             });
-        });
 
-        //Insert station and chains with a single mset
-        List<String[]> msetData = new ArrayList<>();
-        msetData.add(Stream.concat(
-                chainData.stream().flatMap(Arrays::stream),
-                Stream.concat(
-                        stationData.stream().flatMap(Arrays::stream),
-                        scheduleData.stream().flatMap(Arrays::stream)
-                )
-        ).toArray(String[]::new));
+            msetData.add(Stream.concat(
+                    chainData.stream().flatMap(Arrays::stream),
+                    Stream.concat(
+                            stationData.stream().flatMap(Arrays::stream),
+                            scheduleData.stream().flatMap(Arrays::stream)
+                    )
+            ).toArray(String[]::new));
 
-        while (msetData.stream().anyMatch(ar -> ar.length > BULK_SIZE * 2)) {
-            List<String[]> m2 = new ArrayList<>();
-            for (String[] ar : msetData) {
-                if (ar.length > BULK_SIZE * 2) {
-                    m2.add(Arrays.copyOfRange(ar, 0, BULK_SIZE * 2));
-                    m2.add(Arrays.copyOfRange(ar, BULK_SIZE * 2, ar.length));
-                } else {
-                    m2.add(ar);
+            if (msetData.stream().mapToInt(a -> a.length).sum() >= BULK_SIZE) {
+                while (msetData.stream().anyMatch(ar -> ar.length > BULK_SIZE * 2)) {
+                    List<String[]> m2 = new ArrayList<>();
+                    for (String[] ar : msetData) {
+                        if (ar.length > BULK_SIZE * 2) {
+                            m2.add(Arrays.copyOfRange(ar, 0, BULK_SIZE * 2));
+                            m2.add(Arrays.copyOfRange(ar, BULK_SIZE * 2, ar.length));
+                        } else {
+                            m2.add(ar);
+                        }
+                    }
+                    msetData.clear();
+                    msetData.addAll(m2);
                 }
-            }
-            msetData = m2;
-        }
+                msetData.forEach(jedis::mset);
+                msetData.clear();
+                stationData.clear();
+                chainData.clear();
+                scheduleData.clear();
+                jedis.geoadd(RedisUtils.LATLNG_INDEX, stLatlngIndexData);
+                stLatlngIndexData.clear();
+                schedChainIndexData.forEach(jedis::hmset);
+                schedChainIndexData.clear();
+                schedStatIndexData.forEach(jedis::hmset);
+                schedStatIndexData.clear();
 
-        msetData.forEach(jedis::mset);
+            }
+            i.incrementAndGet();
+        });
 
 
         //Then the indices

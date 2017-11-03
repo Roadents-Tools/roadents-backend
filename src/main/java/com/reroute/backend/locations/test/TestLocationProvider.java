@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Created by ilan on 7/14/16.
+ * A location provider for use in tests.
  */
 public class TestLocationProvider implements LocationProvider {
 
@@ -25,9 +25,14 @@ public class TestLocationProvider implements LocationProvider {
             new double[]{0, .01},
             new double[]{0, -.01}
     };
-    public static final int DEFAULT_POINTS_PER_QUERY = MULTIPLIERS.length;
+    private static final int DEFAULT_POINTS_PER_QUERY = MULTIPLIERS.length;
     private static Collection<DestinationLocation> testLocations = null;
 
+    /**
+     * Loads set test locations into the provider instead of creating the default semi-random ones.
+     *
+     * @param testLocations the locations to load
+     */
     public static void setTestLocations(Collection<DestinationLocation> testLocations) {
         TestLocationProvider.testLocations = testLocations;
     }

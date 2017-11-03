@@ -33,8 +33,9 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
 
     /* Database Constants */
     public static final String[] DB_URLS = new String[] {
-            "jdbc:postgresql://donutdb.c3ovzbdvtevz.us-west-2.rds.amazonaws.com:5432/DonutDump",
-            "jdbc:postgresql://192.168.1.71:5432/Donut"
+            //"jdbc:postgresql://donutdb.c3ovzbdvtevz.us-west-2.rds.amazonaws.com:5432/DonutDump",
+            //"jdbc:postgresql://192.168.1.71:5432/Donut",
+            //"jdbc:postgresql://localhost:5432/Donut"
     };
     private static final String TAG = "PostgresDonutDb";
     private static final String USER = "donut";
@@ -371,8 +372,8 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
     @Override
     public Map<TransChain, Map<TransStation, List<SchedulePoint>>> getWorld(LocationPoint center, Distance range, TimePoint startTime, TimeDelta maxDelta) {
 
-        LoggingUtils.logMessage(TAG, "Building world around (%f,%f), %d-%d-%d %d:%d:%d + %d seconds.",
-                center.getCoordinates()[0], center.getCoordinates()[1],
+        LoggingUtils.logMessage(TAG, "Building world around (%f,%f) + %f meters, %d-%d-%d %d:%d:%d + %d seconds.",
+                center.getCoordinates()[0], center.getCoordinates()[1], range.inMeters(),
                 startTime.getYear(), startTime.getMonth(), startTime.getDayOfMonth(),
                 startTime.getHour(), startTime.getMinute(), startTime.getSecond(),
                 maxDelta.getDeltaLong() / 1000L);
@@ -380,6 +381,10 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
         int startday = startTime.getDayOfWeek();
         int endday = startTime.plus(maxDelta).getDayOfWeek();
         if (endday < startday) endday += 7;
+        if (maxDelta.inDays() >= 7) {
+            startday = 0;
+            endday = 6;
+        }
 
         String query = String.format("SELECT " +
                         "%s.%s, " +
@@ -453,7 +458,7 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
                 boolean skipsked = IntStream.range(startday, endday + 1)
                         .boxed()
                         .map(i -> i % validDays.length)
-                        .anyMatch(i -> validDays[i]);
+                        .noneMatch(i -> validDays[i]);
 
                 if (skipsked) continue;
 

@@ -13,7 +13,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 /**
- * Created by ilan on 7/9/17.
+ * A location provider using a Postgresql database as the backing store.
  */
 public class PostgresqlLocationDb implements LocationProvider {
 
@@ -24,6 +24,11 @@ public class PostgresqlLocationDb implements LocationProvider {
     private Connection con;
     private boolean isUp;
 
+    /**
+     * Constructs a new PSQL database provider.
+     *
+     * @param url the JDBC connection url to use
+     */
     public PostgresqlLocationDb(String url) {
 
         isUp = true;
@@ -45,6 +50,10 @@ public class PostgresqlLocationDb implements LocationProvider {
         con = tempcon;
     }
 
+    /**
+     * Gets a connection to the database.
+     * @return a connection to the database
+     */
     public Connection getConnection() {
         return con;
     }
@@ -61,9 +70,11 @@ public class PostgresqlLocationDb implements LocationProvider {
 
     @Override
     public List<DestinationLocation> queryLocations(LocationPoint center, Distance range, LocationType type) {
+        //TODO
         return null;
     }
 
+    @Override
     public void close() {
         try {
             con.close();

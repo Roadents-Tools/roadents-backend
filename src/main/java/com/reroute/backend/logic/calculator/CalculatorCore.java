@@ -56,7 +56,7 @@ public class CalculatorCore implements LogicCore {
 
 
         TimeDelta maxRouteTime = baseRoutes.stream()
-                .map(TravelRoute::getTotalTime)
+                .map(TravelRoute::getTime)
                 .max(Comparator.comparing(TimeDelta::getDeltaLong))
                 .orElse(TimeDelta.NULL);
 
@@ -100,7 +100,7 @@ public class CalculatorCore implements LogicCore {
         }
 
         TimeDelta abDelta = baseRoutes.stream()
-                .map(TravelRoute::getTotalTime)
+                .map(TravelRoute::getTime)
                 .min(Comparator.comparing(TimeDelta::getDeltaLong))
                 .orElse(TimeDelta.NULL);
         if (TimeDelta.NULL.equals(abDelta)) {
@@ -131,7 +131,7 @@ public class CalculatorCore implements LogicCore {
 
         Map<DestinationLocation, TravelRoute> minRoutes = new ConcurrentHashMap<>();
         allRoutes.forEach((key, value) -> {
-            TravelRoute minRoute = value.stream().min(Comparator.comparing(TravelRoute::getTotalTime)).get();
+            TravelRoute minRoute = value.stream().min(Comparator.comparing(TravelRoute::getTime)).get();
             minRoutes.put(key, minRoute);
         });
 
@@ -143,12 +143,12 @@ public class CalculatorCore implements LogicCore {
                 .withStartPoint(new StartPoint(destRoute.getCurrentEnd().getCoordinates()))
                 .withStartTime(destRoute.getEndTime())
                 .withEndPoint(b)
-                .withFilter(LogicUtils.isRouteInRange(b, maxDelta.minus(destRoute.getTotalTime())))
+                .withFilter(LogicUtils.isRouteInRange(b, maxDelta.minus(destRoute.getTime())))
                 .build();
 
         return ApplicationRunner.runApplication(routeRequest).getResult().stream()
                 .map(rt -> {
-                    TravelRoute base = destRoute.clone();
+                    TravelRoute base = destRoute.copy();
                     rt.getRoute().stream().skip(1).forEach(base::addNode);
                     return base;
                 })

@@ -4,6 +4,7 @@ import java.util.Calendar;
 import java.util.TimeZone;
 
 /**
+ * A single point in time with a timezone.
  * Created by ilan on 2/6/17.
  */
 public class TimePoint implements Comparable<TimePoint> {
@@ -19,6 +20,8 @@ public class TimePoint implements Comparable<TimePoint> {
     private static final long MIN_TIME = 31536000000L; //We don't allow for any time before 1971 for error checking
     private final String timeZone;
     private final long unixTime;
+    private final long offset;
+    private Calendar cal = null;
 
     /**
      * Creates a new TimePoint.
@@ -32,29 +35,36 @@ public class TimePoint implements Comparable<TimePoint> {
     }
 
     private TimePoint(long unixTime, String timeZone, boolean allowUnderflow) {
-        if (unixTime < MIN_TIME && !allowUnderflow)
+        if (unixTime < MIN_TIME && unixTime > 0 && !allowUnderflow)
             throw new IllegalArgumentException("Unixtime too low. Did you pass seconds instead of milliseconds?");
         this.unixTime = unixTime;
         this.timeZone = timeZone;
+        offset = TimeZone.getTimeZone(timeZone).getOffset(unixTime);
     }
 
+    /**
+     * Gets the current time. By default uses the GMT timezone.
+     *
+     * @return the current time in the GMT timezone
+     */
     public static TimePoint now() {
         return now("GMT");
     }
 
+    /**
+     * Gets the current time.
+     * @param timeZone the timezone to use
+     * @return a TimePoint representing the current time at the specified timezone
+     */
     public static TimePoint now(String timeZone) {
         return new TimePoint(System.currentTimeMillis(), timeZone);
     }
 
-    public TimePoint withYear(int year) {
-        Calendar cal = getCalendar();
-        cal.set(Calendar.YEAR, year);
-        return new TimePoint(cal.getTimeInMillis(), timeZone, true);
-    }
-
     private Calendar getCalendar() {
-        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone(timeZone));
-        cal.setTimeInMillis(unixTime);
+        if (cal == null) {
+            cal = Calendar.getInstance(TimeZone.getTimeZone(timeZone));
+            cal.setTimeInMillis(unixTime);
+        }
         return cal;
     }
 
@@ -71,10 +81,22 @@ public class TimePoint implements Comparable<TimePoint> {
         return new TimePoint(unixTime + millidiff, timeZone, true);
     }
 
+    /**
+     * Gets the day of the month this TimePoint represents.
+     * @return the day of the month, from 1 to 31.
+     */
     public int getDayOfMonth() {
         return getCalendar().get(Calendar.DAY_OF_MONTH);
     }
 
+    /**
+     * Creates a new TimeZone with the day of the week equal to the one specified, and all other time attributes being
+     * the same.
+     * NOTE: Currently, the new TimePoint is not guaranteed to have the save time information as the base. In a daylight
+     * savings time case the TimePoint might be an hour off.
+     * @param dayOfWeek the new day of the week, from 0 (Sunday) to 6 (Saturday)
+     * @return a new TimeZone whose day of the week is the one specified
+     */
     public TimePoint withDayOfWeek(int dayOfWeek) {
         if (dayOfWeek < 0 || dayOfWeek > 7) throw new IllegalArgumentException("Day of week invalid.");
         int dayDiff = dayOfWeek - getDayOfWeek();
@@ -82,11 +104,20 @@ public class TimePoint implements Comparable<TimePoint> {
         return new TimePoint(unixTime + millidiff, timeZone, true);
     }
 
+    /**
+     * Returns the day of the week of this TimePoint.
+     * @return the day of the week, from 0 (Sunday) to 6 (Saturday)
+     */
     public int getDayOfWeek() {
         //We go 0-6 instead of Calendar's 1-7
-        return getCalendar().get(Calendar.DAY_OF_WEEK) - 1;
+        return (int) ((((unixTime + offset) / 86400000) + 3) % 7);
     }
 
+    /**
+     * Construct a new TimePoint whose hour is the one specified.
+     * @param hour the hour value of the new TimePoint, from 0 to 23
+     * @return the new TimePoint
+     */
     public TimePoint withHour(int hour) {
         if (hour < 0 || hour > 23) throw new IllegalArgumentException("Hour invalid.");
         int hourDiff = hour - getHour();
@@ -94,20 +125,38 @@ public class TimePoint implements Comparable<TimePoint> {
         return new TimePoint(unixTime + milliDiff, timeZone, true);
     }
 
+    /**
+     * Gets the hour of this TimePoint.
+     * @return the hour of this TimePoint, from 0 to 23.
+     */
     public int getHour() {
-        return getCalendar().get(Calendar.HOUR_OF_DAY);
+        return (int) (((unixTime + offset) / 3600000) % 24);
     }
 
+    /**
+     * Constructs a new TimePoint whose minute is the one specified.
+     * @param minute the new minute, from 0 to 59.
+     * @return the new TimePoint with the specified minute
+     */
     public TimePoint withMinute(int minute) {
         int minDiff = minute - getMinute();
         long milliDiff = minDiff * MINUTES_TO_MILLIS;
         return new TimePoint(unixTime + milliDiff, timeZone, true);
     }
 
+    /**
+     * Gets the minute of this TimePoint.
+     * @return the minute of this TimePoint, from 0 to 59.
+     */
     public int getMinute() {
-        return getCalendar().get(Calendar.MINUTE);
+        return (int) ((unixTime / (60000.0)) % 60);
     }
 
+    /**
+     * Construct a new TimePoint whose seconds is the one specified.
+     * @param second the seconds value of the new TimePoint, from 0 to 59
+     * @return the new TimePoint
+     */
     public TimePoint withSecond(int second) {
         if (second < 0 || second > 60) throw new IllegalArgumentException("Second invalid.");
         int secDiff = second - getSecond();
@@ -115,51 +164,105 @@ public class TimePoint implements Comparable<TimePoint> {
         return new TimePoint(unixTime + milliDiff, timeZone, true);
     }
 
+    /**
+     * Gets the seconds of this TimePoint.
+     * @return the seconds of this TimePoint, from 0 to 59.
+     */
     public int getSecond() {
-        return getCalendar().get(Calendar.SECOND);
+        return (int) ((unixTime / SECONDS_TO_MILLIS) % 60);
     }
 
+    /**
+     * Constructs a new TimePoint whose milliseconds is the one specified.
+     * @param milliseconds the new milliseconds, from 0 to 999
+     * @return the new TimePoint with the specified milliseconds
+     */
     public TimePoint withMilliseconds(int milliseconds) {
         long millidiff = milliseconds - getMilliseconds();
         return new TimePoint(unixTime + millidiff, timeZone, true);
     }
 
+    /**
+     * Gets the milliseconds of this TimePoint.
+     * @return the milliseconds of this TimePoint, from 0 to 999
+     */
     public long getMilliseconds() {
-        return unixTime % 1000;
+        return unixTime % SECONDS_TO_MILLIS;
     }
 
+    /**
+     * Adds exactly 7 days worth of time to this TimePoint.
+     * @return a new TimePoint whose time is this + 168 hours
+     */
     public TimePoint addWeek() {
         return new TimePoint(unixTime + WEEKS_TO_MILLIS, timeZone, true);
     }
 
+    /**
+     * Adds exactly 1 days worth time to this TimePoint.
+     * @return a new TimePoint whose time is this + 24 hours
+     */
     public TimePoint addDay() {
         return new TimePoint(unixTime + DAYS_TO_MILLIS, timeZone, true);
     }
 
+    /**
+     * Adds time to this TimePoint.
+     * @param delta the time to add
+     * @return a new TimePoint representing the time this + delta
+     */
     public TimePoint plus(TimeDelta delta) {
         return new TimePoint(unixTime + delta.getDeltaLong(), timeZone, true);
     }
 
+    /**
+     * Subtracts time to this TimePoint.
+     * @param delta the time to subtract
+     * @return a new TimePoint representing the time this - delta
+     */
     public TimePoint minus(TimeDelta delta) {
         return new TimePoint(unixTime - delta.getDeltaLong(), timeZone, true);
     }
 
+    /**
+     * Gets the time difference between 2 TimePoints.
+     * @param other the other TimePoint to compare
+     * @return the time from this to other
+     */
     public TimeDelta timeUntil(TimePoint other) {
         return new TimeDelta(other.getUnixTime() - getUnixTime());
     }
 
+    /**
+     * Gets the unix epoch time of this TimePoint.
+     * @return the number of milliseconds between January 1, 1970, 0000:0000 and this TimePoint.
+     */
     public long getUnixTime() {
         return unixTime;
     }
 
+    /**
+     * Gets the TimeZone of this TimePoint.
+     * @return the string name of thise TimeZone, eg "America/New_York".
+     */
     public String getTimeZone() {
         return timeZone;
     }
 
+    /**
+     * Constructs a new TimePoint with the same time as this but a different timezone.
+     * @param timeZone the new timezone
+     * @return a new TimePoint in the specified timezone
+     */
     public TimePoint withTimeZone(String timeZone) {
         return new TimePoint(unixTime, timeZone);
     }
 
+    /**
+     * Gets whether this TimeZone is before another.
+     * @param other the timezone to compare
+     * @return whether this is before other
+     */
     public boolean isBefore(TimePoint other) {
         return other.getUnixTime() > unixTime;
     }

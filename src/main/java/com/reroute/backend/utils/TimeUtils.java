@@ -4,8 +4,6 @@ import com.reroute.backend.model.database.DatabaseID;
 import com.reroute.backend.model.time.SchedulePoint;
 import com.reroute.backend.model.time.TimePoint;
 
-import java.util.stream.IntStream;
-
 /**
  * Static utility class for time-based helper methods.
  */
@@ -76,11 +74,9 @@ public class TimeUtils {
      */
     public static boolean[] bitStrToBools(String str) {
         boolean[] rval = new boolean[str.length()];
-
-        IntStream.range(0, str.length())
-                .boxed()
-                .parallel()
-                .forEach(i -> rval[i] = str.charAt(i) != '0');
+        for (int i = 0; i < str.length(); i++) {
+            rval[i] = str.charAt(i) != '0';
+        }
 
         return rval;
     }
@@ -93,8 +89,11 @@ public class TimeUtils {
      * @return the string containing 1's and 0's that maps to bools
      */
     public static String boolsToBitStr(boolean[] bools) {
-        return StreamUtils.streamBoolArray(bools)
-                .map(bol -> bol ? '1' : '0')
-                .collect(StreamUtils.joinToString(""));
+        StringBuilder b = new StringBuilder(bools.length);
+        for (boolean q : bools) {
+            if (q) b.append('1');
+            else b.append('0');
+        }
+        return b.toString();
     }
 }

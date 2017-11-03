@@ -48,7 +48,7 @@ public class LogicUtils {
             return (curmap, route) -> {
                 DestinationLocation dest = route.getDestination();
                 TravelRoute current = curmap.get(dest);
-                if (current == null || current.getTotalTime().getDeltaLong() > route.getTotalTime().getDeltaLong())
+                if (current == null || current.getTime().getDeltaLong() > route.getTime().getDeltaLong())
                     curmap.put(dest, route);
             };
         }
@@ -59,7 +59,7 @@ public class LogicUtils {
                 for (DestinationLocation key : curmap2.keySet()) {
                     TravelRoute current = curmap.get(key);
                     TravelRoute current2 = curmap2.get(key);
-                    if (current == null || current.getTotalTime().getDeltaLong() > current2.getTotalTime()
+                    if (current == null || current.getTime().getDeltaLong() > current2.getTime()
                             .getDeltaLong())
                         curmap.put(key, current2);
                 }
@@ -94,10 +94,10 @@ public class LogicUtils {
         if (layerFilters == null) {
             return buildStationRouteList(new StationRoutesBuildRequest(initialPoint, startTime, maxDelta));
         } else if (layerFilters.length == 1) {
-            return buildStationRouteList(new StationRoutesBuildRequest(initialPoint, startTime, maxDelta).setLayerFilter(layerFilters[0]));
+            return buildStationRouteList(new StationRoutesBuildRequest(initialPoint, startTime, maxDelta).withLayerFilter(layerFilters[0]));
         } else {
             Predicate<TravelRoute> allFilters = Arrays.stream(layerFilters).reduce(a -> true, Predicate::and);
-            return buildStationRouteList(new StationRoutesBuildRequest(initialPoint, startTime, maxDelta).setLayerFilter(allFilters));
+            return buildStationRouteList(new StationRoutesBuildRequest(initialPoint, startTime, maxDelta).withLayerFilter(allFilters));
         }
     }
 
@@ -137,8 +137,8 @@ public class LogicUtils {
 
     private static Function<TravelRoute, Stream<TravelRoute>> buildNextLayerFunction(TimePoint startTime, TimeDelta maxDelta) {
         return route -> {
-            TimePoint effectiveTime = startTime.plus(route.getTotalTime());
-            TimeDelta effectiveDelta = maxDelta.minus(route.getTotalTime());
+            TimePoint effectiveTime = startTime.plus(route.getTime());
+            TimeDelta effectiveDelta = maxDelta.minus(route.getTime());
 
             //Version 2 iterator
             //Steps:
@@ -148,11 +148,11 @@ public class LogicUtils {
             //   If a walkable has no arrivable, then it isn't paired and discarded.
             //4. For each pair, construct the new routes.
             //   This means that each new route actually has 2 new nodes, not 1.
-            return getWalkableStations(route.getCurrentEnd(), effectiveTime, effectiveDelta).stream()
+            return getWalkableStations(route.getCurrentEnd(), effectiveTime, effectiveDelta).parallelStream()
                     .flatMap(base -> getArrivalNodesForBase(base, effectiveTime, effectiveDelta)
                             .map(aNode -> new TravelRouteNode[] { base, aNode })
                     )
-                    .map(nodePair -> route.clone().addNode(nodePair[0]).addNode(nodePair[1]));
+                    .map(nodePair -> route.copy().addNode(nodePair[0]).addNode(nodePair[1]));
         };
     }
 
@@ -167,34 +167,20 @@ public class LogicUtils {
     }
 
     /**
-     * Get all stations directly travelable to within a given time.
+     * Get all stations within a certain walking time.
      *
-     * @param station   the station to start at
-     * @param startTime the time to start at
-     * @param maxDelta  the maximum time to travel
-     * @return nodes representing directly travelling from station to all possible stations
+     * @param begin    the location to start at
+     * @param maxDelta the maximum walking time
+     * @return nodes representing walking to all possible stations
      */
-    public static Set<TravelRouteNode> getArrivableStations(TransStation station, TimePoint startTime, TimeDelta maxDelta) {
-        if (station.getChain() == null) return Collections.emptySet();
-
-        TimePoint trueStart = getStationWithSchedule(station).getNextArrival(startTime);
-        TimeDelta waitTime = startTime.timeUntil(trueStart);
-        TimeDelta trueDelta = maxDelta.minus(startTime.timeUntil(trueStart));
-
-
-        if (waitTime.getDeltaLong() >= maxDelta.getDeltaLong()) {
-            return Collections.emptySet();
-        }
-
-        return StationRetriever.getArrivableStations(station.getChain(), trueStart, trueDelta)
-                .entrySet().stream()
-                .filter(entry -> !Arrays.equals(entry.getKey().getCoordinates(), station.getCoordinates()))
-                .filter(entry -> entry.getValue().getDeltaLong() <= trueDelta.getDeltaLong())
-                .map(entry -> new TravelRouteNode.Builder()
-                        .setWaitTime(waitTime.getDeltaLong())
-                        .setPoint(entry.getKey())
-                        .setTravelTime(entry.getValue().getDeltaLong())
-                        .build())
+    private static Set<TravelRouteNode> getWalkableStations(LocationPoint begin, TimePoint startTime, TimeDelta maxDelta) {
+        Distance range = LocationUtils.timeToWalkDistance(maxDelta);
+        return StationRetriever.getStationsInArea(begin, range, null).parallelStream()
+                .map(point -> new TravelRouteNode.Builder()
+                        .setWalkTime(LocationUtils.timeBetween(begin, point).getDeltaLong())
+                        .setPoint(point)
+                        .build()
+                )
                 .collect(Collectors.toSet());
     }
 
@@ -219,8 +205,40 @@ public class LogicUtils {
         return station.withSchedule(station.getChain(), schedule);
     }
 
+    /**
+     * Get all stations directly travelable to within a given time.
+     *
+     * @param station   the station to start at
+     * @param startTime the time to start at
+     * @param maxDelta  the maximum time to travel
+     * @return nodes representing directly travelling from station to all possible stations
+     */
+    public static Set<TravelRouteNode> getArrivableStations(TransStation station, TimePoint startTime, TimeDelta maxDelta) {
+        if (station.getChain() == null) return Collections.emptySet();
+
+        TimePoint trueStart = getStationWithSchedule(station).getNextArrival(startTime);
+        TimeDelta waitTime = startTime.timeUntil(trueStart);
+        TimeDelta trueDelta = maxDelta.minus(startTime.timeUntil(trueStart));
+
+
+        if (waitTime.getDeltaLong() >= maxDelta.getDeltaLong()) {
+            return Collections.emptySet();
+        }
+
+        return StationRetriever.getArrivableStations(station.getChain(), trueStart, trueDelta)
+                .entrySet().parallelStream()
+                .filter(entry -> !Arrays.equals(entry.getKey().getCoordinates(), station.getCoordinates()))
+                .filter(entry -> entry.getValue().getDeltaLong() <= trueDelta.getDeltaLong())
+                .map(entry -> new TravelRouteNode.Builder()
+                        .setWaitTime(waitTime.getDeltaLong())
+                        .setPoint(entry.getKey())
+                        .setTravelTime(entry.getValue().getDeltaLong())
+                        .build())
+                .collect(Collectors.toSet());
+    }
+
     private static Set<TransStation> getAllChainsForStop(TransStation orig, TimePoint startTime, TimeDelta maxDelta) {
-        Set<TransStation> rval = StationRetriever.getChainsForStation(orig, null).entrySet().stream()
+        Set<TransStation> rval = StationRetriever.getChainsForStation(orig, null).entrySet().parallelStream()
                 .map(entry -> orig.withSchedule(entry.getKey(), entry.getValue()))
                 .filter(stat -> startTime.timeUntil(stat.getNextArrival(startTime))
                         .getDeltaLong() <= maxDelta.getDeltaLong())
@@ -230,30 +248,12 @@ public class LogicUtils {
         return rval;
     }
 
-    /**
-     * Get all stations within a certain walking time.
-     *
-     * @param begin    the location to start at
-     * @param maxDelta the maximum walking time
-     * @return nodes representing walking to all possible stations
-     */
-    private static Set<TravelRouteNode> getWalkableStations(LocationPoint begin, TimePoint startTime, TimeDelta maxDelta) {
-        Distance range = LocationUtils.timeToWalkDistance(maxDelta);
-        return StationRetriever.getStationsInArea(begin, range, null).stream()
-                .map(point -> new TravelRouteNode.Builder()
-                        .setWalkTime(LocationUtils.timeBetween(begin, point).getDeltaLong())
-                        .setPoint(point)
-                        .build()
-                )
-                .collect(Collectors.toSet());
-    }
-
     @SafeVarargs
     private static Predicate<TravelRoute> nextLayerFilter(TimeDelta maxDelta, Map<String, TravelRoute> currentRoutes, Predicate<TravelRoute>... others) {
-        Predicate<TravelRoute> rval = route -> route.getTotalTime().getDeltaLong() <= maxDelta.getDeltaLong();
+        Predicate<TravelRoute> rval = route -> route.getTime().getDeltaLong() <= maxDelta.getDeltaLong();
         rval = rval.and(
                 route -> Optional.ofNullable(currentRoutes.get(getLocationTag(route.getCurrentEnd())))
-                        .map(rt -> rt.getTotalTime().getDeltaLong() > route.getTotalTime().getDeltaLong())
+                        .map(rt -> rt.getTime().getDeltaLong() > route.getTime().getDeltaLong())
                         .orElse(true)
         );
         for (Predicate<TravelRoute> passed : others) {
@@ -274,6 +274,6 @@ public class LogicUtils {
 
     public static Predicate<TravelRoute> isRouteInRange(LocationPoint end, TimeDelta maxDelta) {
         return route -> LocationUtils.distanceBetween(end, route.getCurrentEnd()).inMeters()
-                <= LocationUtils.timeToMaxTransit(maxDelta.minus(route.getTotalTime())).inMeters();
+                <= LocationUtils.timeToMaxTransit(maxDelta.minus(route.getTime())).inMeters();
     }
 }

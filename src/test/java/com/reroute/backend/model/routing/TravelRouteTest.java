@@ -37,10 +37,10 @@ public class TravelRouteTest {
                 .map(TravelRouteNode::getTotalTimeToArrive)
                 .reduce(TimeDelta.NULL, TimeDelta::plus);
 
-        Assert.assertEquals(totalWalk, base.getTotalWalkTime());
-        Assert.assertEquals(totalWait, base.getTotalWaitTime());
-        Assert.assertEquals(totalTravel, base.getTotalTravelTime());
-        Assert.assertEquals(totalTime, base.getTotalTime());
+        Assert.assertEquals(totalWalk, base.getWalkTime());
+        Assert.assertEquals(totalWait, base.getWaitTime());
+        Assert.assertEquals(totalTravel, base.getTravelTime());
+        Assert.assertEquals(totalTime, base.getTime());
         Assert.assertEquals(base.getStartTime().plus(totalTime), base.getEndTime());
         Assert.assertEquals(10, base.getRoute().size());
     }
