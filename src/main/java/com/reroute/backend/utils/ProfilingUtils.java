@@ -18,6 +18,11 @@ public class ProfilingUtils {
     private static final Map<String, Set<MethodTimer>> times = new ConcurrentHashMap<>();
     private static Thread profilerThread = null;
 
+    /**
+     * Sets how often we print data.
+     *
+     * @param millis how long between prints, in milliseconds.
+     */
     public static void printDataEvery(long millis) {
         if (profilerThread != null) {
             profilerThread.interrupt();
@@ -36,6 +41,10 @@ public class ProfilingUtils {
         profilerThread.start();
     }
 
+    /**
+     * Outputs the profiling data statistics.
+     * @return the formatted profiling statistics
+     */
     public static String printData() {
         ProfilingUtils.MethodTimer ourtm = ProfilingUtils.startTimer("Profile");
         StringBuilder builder = new StringBuilder();
@@ -68,7 +77,6 @@ public class ProfilingUtils {
         }
 
 
-
         times.values().stream()
                 .flatMap(Collection::stream)
                 .filter(timer -> timer.endTime == -1)
@@ -78,10 +86,19 @@ public class ProfilingUtils {
         return builder.toString();
     }
 
+    /**
+     * Gets the tags we have profiling data for.
+     * @return the tags currently profiled
+     */
     public static Set<String> getMethodTags() {
         return times.keySet();
     }
 
+    /**
+     * Gets a tag's running time as a percentage of the total time.
+     * @param tag the tag to calculate
+     * @return how long that tag has been running / how long all tags have been running
+     */
     public static double getTimeAsPercent(String tag) {
         if (!times.containsKey(tag)) return 0;
         long allTime = times.keySet().stream()
@@ -91,6 +108,11 @@ public class ProfilingUtils {
         return 100.0 * getTotalTime(tag) / allTime;
     }
 
+    /**
+     * Gets the total time a tag has run.
+     * @param tag the tag to get time for
+     * @return how long the tag has run, in milliseconds.
+     */
     public static long getTotalTime(String tag) {
         if (!times.containsKey(tag)) return 0;
         return times.get(tag).stream()
@@ -98,6 +120,19 @@ public class ProfilingUtils {
                 .sum();
     }
 
+    /**
+     * Starts a new timer.
+     *
+     * @param tag the tag of the timer
+     * @return the new timer object
+     */
+    public static MethodTimer startTimer(String tag) {
+        return new MethodTimer(tag, System.currentTimeMillis());
+    }
+
+    /**
+     * Stops the thread activated by ProfilingUtils::printDataEvery.
+     */
     public static void stopPrinting() {
         if (profilerThread != null) {
             profilerThread.interrupt();
@@ -105,10 +140,9 @@ public class ProfilingUtils {
         profilerThread = null;
     }
 
-    public static MethodTimer startTimer(String tag) {
-        return new MethodTimer(tag, System.currentTimeMillis());
-    }
-
+    /**
+     * A timer of a single execution of a method.
+     */
     public static class MethodTimer {
         private final long startTime;
         private final String methodTag;
@@ -121,19 +155,34 @@ public class ProfilingUtils {
             times.get(methodTag).add(this);
         }
 
+        /**
+         * Stops the timer. If the timer has already been stopped, do nothing.
+         */
         public void stop() {
             if (endTime > 0) return;
             endTime = System.currentTimeMillis();
         }
 
+        /**
+         * Gets the time the timer was started.
+         * @return the time the timer was started
+         */
         private long getStartTime() {
             return startTime;
         }
 
+        /**
+         * Gets the time the timer was stopped.
+         * @return the time the timer was stopped, or -1 if the timer has not yet stopped.
+         */
         private long getEndTime() {
             return endTime;
         }
 
+        /**
+         * Gets the tag of the timer.
+         * @return the tag of the timer
+         */
         private String getMethodTag() {
             return methodTag;
         }
