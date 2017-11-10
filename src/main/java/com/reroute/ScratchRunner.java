@@ -24,6 +24,7 @@ import com.reroute.backend.model.routing.TravelRoute;
 import com.reroute.backend.model.routing.TravelRouteNode;
 import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
+import com.reroute.backend.stations.WorldInfo;
 import com.reroute.backend.stations.gtfs.GtfsProvider;
 import com.reroute.backend.stations.postgresql.PostgresqlDonutDb;
 import com.reroute.backend.stations.transitland.TransitlandApiDb;
@@ -70,6 +71,10 @@ public class ScratchRunner {
         LoggingUtils.setPrintImmediate(true);
         try {
             for (String arg : args) {
+                if ("--cache".equals(arg)) {
+                    cache(args);
+                    return;
+                }
                 if ("--spark".equals(arg)) {
                     runSpark(args);
                     return;
@@ -698,6 +703,18 @@ public class ScratchRunner {
         String output = new TravelRouteJsonConverter().toJson(res.getResult());
         LoggingUtils.logMessage("SCRATCH", "Finished pitch.");
         System.out.println(new TravelRouteJsonConverter().toJson(res.getResult()));
+    }
+
+    private static void cache(String[] args) {
+        RedisDonutCache cache = new RedisDonutCache("debstop.dynamic.ucsd.edu", 6379);
+        PostgresqlDonutDb db = new PostgresqlDonutDb(PostgresqlDonutDb.DB_URLS[0]);
+        WorldInfo req = new WorldInfo.Builder()
+                .setCenter(new StartPoint(40.676843, -74.041512))
+                .setRange(new Distance(1000, DistanceUnits.KILOMETERS))
+                .setStartTime(TimePoint.NULL)
+                .setMaxDelta(new TimeDelta(Long.MAX_VALUE))
+                .build();
+        cache.putWorld(req, db.getWorld(req.getCenter(), req.getRange(), req.getStartTime(), req.getMaxDelta()));
     }
 
     private static void analyzeJson(String[] args) throws IOException {

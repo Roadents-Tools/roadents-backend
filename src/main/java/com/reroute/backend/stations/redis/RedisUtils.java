@@ -4,6 +4,7 @@ import com.reroute.backend.model.database.DatabaseID;
 import com.reroute.backend.model.location.TransChain;
 import com.reroute.backend.model.location.TransStation;
 import com.reroute.backend.model.time.SchedulePoint;
+import com.reroute.backend.utils.LoggingUtils;
 import com.reroute.backend.utils.TimeUtils;
 
 import java.util.List;
@@ -22,14 +23,22 @@ public final class RedisUtils {
     public static final String SCHEDULE_CHAIN_INDEX_PREFIX = "schedule_chain_idx";
     public static final String SCHEDULE_STATION_INDEX_PREFIX = "schedule_station_idx";
 
-    public static final String DATA_SPLITER = ";:;";
-    public static final String KEY_SPLITER = ":;:";
+    public static final String DATA_SPLITER = ";;";
+    public static final String KEY_SPLITER = "::";
+
+    public static final String SERIAL_SPLITER = ":;";
+    public static final String ITEM_SPLITER = ";:";
 
     private RedisUtils() {
     }
 
     public static <T, Q> Predicate<Integer> indexNonNull(T[] keys, List<Q> toVerify) {
         return index -> toVerify.get(index) != null;
+    }
+
+    public static String serializeStation(TransStation station) {
+        String[] packed = packStation(station);
+        return packed[0] + SERIAL_SPLITER + packed[1];
     }
 
     public static String[] packStation(TransStation station) {
@@ -44,8 +53,16 @@ public final class RedisUtils {
         return new String[] { keyString, valueString };
     }
 
+    public static TransStation deserializeStation(String serial) {
+        String[] parts = serial.split(SERIAL_SPLITER);
+        return unpackStation(parts[0], parts[1]);
+    }
+
     public static TransStation unpackStation(String idKey, String stationString) {
         String[] splitId = idKey.split(KEY_SPLITER);
+        if (splitId.length != 3) {
+            LoggingUtils.logError("REDIS", "BAD CHAIN KEY: " + idKey);
+        }
         DatabaseID id = new DatabaseID(splitId[1], splitId[2]);
 
         String[] splitData = stationString.split(DATA_SPLITER);
@@ -63,6 +80,26 @@ public final class RedisUtils {
 
         String valueString = chain.getName();
         return new String[] { keyString, valueString };
+    }
+
+    public static String serializeChain(TransChain chain) {
+        return CHAIN_PREFIX_NAME + KEY_SPLITER +
+                chain.getID().getDatabaseName() + KEY_SPLITER +
+                chain.getID().getId() +
+                SERIAL_SPLITER +
+                chain.getName();
+    }
+
+    public static TransChain deserializeChain(String serial) {
+        String[] split = serial.split(SERIAL_SPLITER);
+        String[] splitId = split[0].split(KEY_SPLITER);
+        return new TransChain(
+                split[1],
+                new DatabaseID(
+                        splitId[1],
+                        splitId[2]
+                )
+        );
     }
 
     public static TransChain unpackChain(String idKey, String chainString) {
@@ -87,6 +124,11 @@ public final class RedisUtils {
         return new String[] { keyString, valueString };
     }
 
+    public static String serializeSchedule(SchedulePoint point) {
+        String[] packed = packSchedule(point);
+        return packed[0] + SERIAL_SPLITER + packed[1];
+    }
+
     public static SchedulePoint unpackSchedule(String idKey, String scheduleString) {
         String[] splitId = idKey.split(KEY_SPLITER);
         DatabaseID id = new DatabaseID(splitId[1], splitId[2]);
@@ -97,5 +139,10 @@ public final class RedisUtils {
         String packedValid = splitData[2];
 
         return TimeUtils.unpackPoint(packedTime, TimeUtils.bitStrToBools(packedValid), fuzz, id);
+    }
+
+    public static SchedulePoint deserializeSchedule(String serial) {
+        String[] unpacked = serial.split(SERIAL_SPLITER);
+        return unpackSchedule(unpacked[0], unpacked[1]);
     }
 }
