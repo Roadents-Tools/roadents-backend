@@ -7,7 +7,6 @@ import com.reroute.backend.model.location.StartPoint;
 import com.reroute.backend.model.time.TimeDelta;
 import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.utils.LocationUtils;
-import com.reroute.backend.utils.TimeUtils;
 import org.json.JSONObject;
 
 public class WorldInfo {
@@ -70,13 +69,11 @@ public class WorldInfo {
             return false;
         }
 
-        long rangeStart =
-                getStartTime().getDayOfWeek() * SECONDS_IN_DAY + TimeUtils.packTimePoint(getStartTime());
+        long rangeStart = getStartTime().getDayOfWeek() * SECONDS_IN_DAY + getStartTime().getPackedTime();
 
         long rangeEnd = rangeStart + (long) getMaxDelta().inSeconds();
 
-        long otherStart =
-                other.getStartTime().getDayOfWeek() * SECONDS_IN_DAY + TimeUtils.packTimePoint(other.getStartTime());
+        long otherStart = other.getStartTime().getDayOfWeek() * SECONDS_IN_DAY + other.getStartTime().getPackedTime();
 
         long otherEnd = otherStart + (long) other.getMaxDelta().inSeconds();
 
@@ -86,11 +83,8 @@ public class WorldInfo {
         }
 
         //If we overflow into the next week and the other's range is completely in that overflow, return true.
-        if (otherEnd < SECONDS_IN_WEEK && rangeEnd >= SECONDS_IN_WEEK && otherEnd <= rangeEnd - SECONDS_IN_WEEK) {
-            return true;
-        }
+        return otherEnd < SECONDS_IN_WEEK && rangeEnd >= SECONDS_IN_WEEK && otherEnd <= rangeEnd - SECONDS_IN_WEEK;
 
-        return false;
     }
 
     public LocationPoint getCenter() {

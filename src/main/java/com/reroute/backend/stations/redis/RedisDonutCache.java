@@ -11,7 +11,6 @@ import com.reroute.backend.stations.WorldInfo;
 import com.reroute.backend.stations.interfaces.StationCacheInstance;
 import com.reroute.backend.utils.LoggingUtils;
 import com.reroute.backend.utils.StreamUtils;
-import com.reroute.backend.utils.TimeUtils;
 import redis.clients.jedis.GeoCoordinate;
 import redis.clients.jedis.GeoRadiusResponse;
 import redis.clients.jedis.GeoUnit;
@@ -92,8 +91,8 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
             TimePoint endTime = startTime.plus(maxDelta);
             int minDay = startTime.getDayOfWeek();
             int maxDay = endTime.getDayOfWeek() > minDay ? endTime.getDayOfWeek() : endTime.getDayOfWeek() + 7;
-            double min = TimeUtils.packTimePoint(startTime);
-            double max = TimeUtils.packTimePoint(endTime);
+            double min = startTime.getPackedTime();
+            double max = endTime.getPackedTime();
             if (maxDelta.getDeltaLong() >= 86390000L) {
                 min = 0;
                 max = 86400;
@@ -138,8 +137,8 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
         String key = RedisUtils.SCHEDULE_CHAIN_INDEX_PREFIX + RedisUtils.KEY_SPLITER +
                 chain.getID().getDatabaseName() + RedisUtils.KEY_SPLITER +
                 chain.getID().getId();
-        double min = TimeUtils.packTimePoint(startTime) - 1;
-        double max = TimeUtils.packTimePoint(startTime.plus(maxDelta)) + 1;
+        double min = startTime.getPackedTime() - 1;
+        double max = startTime.plus(maxDelta).getPackedTime() + 1;
         Set<String> toParse;
         if (min < max) {
             toParse = jedis.zrangeByScore(key, min, max);
@@ -175,7 +174,7 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
                                 sched -> RedisUtils.serializeChain(e.getKey()) +
                                         RedisUtils.ITEM_SPLITER +
                                         RedisUtils.serializeSchedule(sched),
-                                sched -> (double) TimeUtils.packSchedulePoint(sched)))
+                                sched -> (double) sched.getPackedTime()))
                 )
                 .reduce((stringDoubleMap, stringDoubleMap2) -> {
                     stringDoubleMap.putAll(stringDoubleMap2);
@@ -239,7 +238,7 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
                                 sched -> RedisUtils.serializeStation(e.getKey()) +
                                         RedisUtils.ITEM_SPLITER +
                                         RedisUtils.serializeSchedule(sched),
-                                sched -> (double) TimeUtils.packSchedulePoint(sched)
+                                sched -> (double) sched.getPackedTime()
                         ))
                 )
                 .reduce((stringDoubleMap, stringDoubleMap2) -> {

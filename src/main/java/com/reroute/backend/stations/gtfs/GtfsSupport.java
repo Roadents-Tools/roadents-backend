@@ -6,7 +6,6 @@ import com.reroute.backend.model.location.TransChain;
 import com.reroute.backend.model.location.TransStation;
 import com.reroute.backend.model.time.SchedulePoint;
 import com.reroute.backend.utils.StreamUtils;
-import com.reroute.backend.utils.TimeUtils;
 import org.onebusaway.gtfs.impl.GtfsDaoImpl;
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.model.Route;
@@ -59,12 +58,7 @@ public class GtfsSupport {
                             ? stopTime.getDepartureTime() - stopTime.getArrivalTime()
                             : 60;
 
-                    SchedulePoint model = TimeUtils.unpackPoint(
-                            secondsSinceMidnight,
-                            serviceToSchedule.getOrDefault(serviceId, null),
-                            fuzz,
-                            null
-                    );
+                    SchedulePoint model = new SchedulePoint(secondsSinceMidnight, serviceToSchedule.getOrDefault(serviceId, null), (long) fuzz, null);
 
                     rval.computeIfAbsent(tripId, tid -> new ConcurrentHashMap<>())
                             .computeIfAbsent(station, st -> new ArrayList<>())

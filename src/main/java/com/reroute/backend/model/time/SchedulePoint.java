@@ -12,9 +12,7 @@ import java.util.Arrays;
 public class SchedulePoint implements DatabaseObject {
 
     private final boolean[] validDays; //len 7 array, sun-sat, true on valid days
-    private final int hour; //0-24
-    private final int minute; //0-60
-    private final int second; //0-60
+    private final int time; //0 to 86400
     private final long fuzz;
     private final DatabaseID id;
 
@@ -29,25 +27,32 @@ public class SchedulePoint implements DatabaseObject {
      * @param fuzz      how far after the passed time that the chain will wait, in milliseconds
      */
     public SchedulePoint(int hour, int minute, int second, boolean[] validDays, long fuzz) {
+        this(hour * 3600 + minute * 60 + second, validDays, fuzz, null);
+    }
+
+    /**
+     * Constructs a new, database-connected schedule point.
+     *
+     * @param time      the time the chain arrives at the stations, in seconds since midnight.
+     * @param validDays an array of booleans, length 7, with each item representing whether this schedule is valid on
+     *                  that day. For example, if validDays[2] = true, this schedule is valid on Tuesdays.
+     * @param fuzz      how far after the passed time that the chain will wait, in milliseconds
+     * @param id        the database ID of this schedule point
+     */
+    public SchedulePoint(int time, boolean[] validDays, long fuzz, DatabaseID id) {
         if (validDays == null) {
             validDays = new boolean[7];
             Arrays.fill(validDays, true);
         }
         if (validDays.length != 7)
             throw new IllegalArgumentException("There are 7 days in the week. You passed: " + validDays.length);
-        if (hour < 0 || hour > 23)
-            throw new IllegalArgumentException("There are 24 hours in the day. You passed " + hour);
-        if (minute < 0 || minute > 60)
-            throw new IllegalArgumentException("There are 60 minutes in an hour. You passed " + minute);
-        if (second < 0 || second > 60)
-            throw new IllegalArgumentException("there are 60 seconds in a minute. You passed " + second);
+        if (time < 0 || time >= 86400)
+            throw new IllegalArgumentException("There are 86400 seconds in the day. You passed " + time);
         if (fuzz < 0) throw new IllegalArgumentException("Cannot time travel.");
         this.validDays = validDays;
-        this.hour = hour;
-        this.minute = minute;
-        this.second = second;
+        this.time = time;
         this.fuzz = fuzz;
-        this.id = null;
+        this.id = id;
     }
 
     /**
@@ -61,37 +66,7 @@ public class SchedulePoint implements DatabaseObject {
      * @param id the database ID of this schedule point
      */
     public SchedulePoint(int hour, int minute, int second, boolean[] validDays, long fuzz, DatabaseID id) {
-        if (validDays == null) {
-            validDays = new boolean[7];
-            Arrays.fill(validDays, true);
-        }
-        if (validDays.length != 7)
-            throw new IllegalArgumentException("There are 7 days in the week. You passed: " + validDays.length);
-        if (hour < 0 || hour > 23)
-            throw new IllegalArgumentException("There are 24 hours in the day. You passed " + hour);
-        if (minute < 0 || minute > 60)
-            throw new IllegalArgumentException("There are 60 minutes in an hour. You passed " + minute);
-        if (second < 0 || second > 60)
-            throw new IllegalArgumentException("there are 60 seconds in a minute. You passed " + second);
-        if (fuzz < 0) throw new IllegalArgumentException("Cannot time travel.");
-        this.validDays = validDays;
-        this.hour = hour;
-        this.minute = minute;
-        this.second = second;
-        this.fuzz = fuzz;
-        this.id = id;
-    }
-
-    /**
-     * Calculates how long after this schedule point will another arrival happen.
-     * @param other the other schedule point
-     * @return the difference in time between an arrival of this point and the arrival of another point
-     */
-    @Deprecated
-    public TimeDelta timeBefore(SchedulePoint other) {
-        TimePoint thisBase = nextValidTime(TimePoint.NULL.addDay());
-        TimePoint otherBase = other.nextValidTime(thisBase);
-        return thisBase.timeUntil(otherBase);
+        this(hour * 3600 + minute * 60 + second, validDays, fuzz, id);
     }
 
     /**
@@ -101,9 +76,7 @@ public class SchedulePoint implements DatabaseObject {
      */
     public TimePoint nextValidTime(TimePoint base) {
         if (isValidTime(base)) return base;
-        TimePoint rval = base.withHour(hour)
-                .withMinute(minute)
-                .withSecond(second);
+        TimePoint rval = base.withTime(getPackedTime());
         if (rval.isBefore(base)) rval = rval.addDay();
         if (!validDays[rval.getDayOfWeek()]) {
             for (int i = rval.getDayOfWeek(); i < rval.getDayOfWeek() + 7; i++) {
@@ -124,47 +97,7 @@ public class SchedulePoint implements DatabaseObject {
      * @return whether the chain arrives at the station at that time
      */
     public boolean isValidTime(TimePoint base) {
-        if (!validDays[base.getDayOfWeek()]) return false;
-        TimePoint valid = base.withHour(hour)
-                .withMinute(minute)
-                .withSecond(second);
-        long diff = base.timeUntil(valid).getDeltaLong();
-        return diff > 0 && diff < fuzz;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = Arrays.hashCode(getValidDays());
-        result = 31 * result + getHour();
-        result = 31 * result + getMinute();
-        result = 31 * result + getSecond();
-        result = 31 * result + (int) (getFuzz() ^ (getFuzz() >>> 32));
-        return result;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        SchedulePoint that = (SchedulePoint) o;
-
-        if (getHour() != that.getHour()) return false;
-        if (getMinute() != that.getMinute()) return false;
-        if (getSecond() != that.getSecond()) return false;
-        if (getFuzz() != that.getFuzz()) return false;
-        return Arrays.equals(getValidDays(), that.getValidDays());
-    }
-
-    @Override
-    public String toString() {
-        return "SchedulePoint{" +
-                "validDays=" + Arrays.toString(validDays) +
-                ", hour=" + hour +
-                ", minute=" + minute +
-                ", second=" + second +
-                ", fuzz=" + fuzz +
-                '}';
+        return validDays[base.getDayOfWeek()] && Math.abs(base.getPackedTime() - time) <= fuzz;
     }
 
     /**
@@ -176,11 +109,20 @@ public class SchedulePoint implements DatabaseObject {
     }
 
     /**
+     * Gets the packed representation of this time, in seconds-since-midnight format.
+     *
+     * @return the time of arrival, between 0 and 86400
+     */
+    public int getPackedTime() {
+        return time;
+    }
+
+    /**
      * Gets the hour of this schedule point.
      * @return the hour of this schedule point
      */
     public int getHour() {
-        return hour;
+        return time / 3600;
     }
 
     /**
@@ -188,7 +130,7 @@ public class SchedulePoint implements DatabaseObject {
      * @return the minute of this schedule point
      */
     public int getMinute() {
-        return minute;
+        return (time / 60) % 60;
     }
 
     /**
@@ -196,7 +138,7 @@ public class SchedulePoint implements DatabaseObject {
      * @return the second of this schedule point
      */
     public int getSecond() {
-        return second;
+        return time % 60;
     }
 
     /**
@@ -210,5 +152,37 @@ public class SchedulePoint implements DatabaseObject {
     @Override
     public DatabaseID getID() {
         return id;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Arrays.hashCode(validDays);
+        result = 31 * result + time;
+        result = 31 * result + (int) (fuzz ^ (fuzz >>> 32));
+        result = 31 * result + (id != null ? id.hashCode() : 0);
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        SchedulePoint that = (SchedulePoint) o;
+
+        if (time != that.time) return false;
+        if (fuzz != that.fuzz) return false;
+        if (!Arrays.equals(validDays, that.validDays)) return false;
+        return id != null ? id.equals(that.id) : that.id == null;
+    }
+
+    @Override
+    public String toString() {
+        return "SchedulePoint{" +
+                "validDays=" + Arrays.toString(validDays) +
+                ", time=" + time +
+                ", fuzz=" + fuzz +
+                ", id=" + id +
+                '}';
     }
 }

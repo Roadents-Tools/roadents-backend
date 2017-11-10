@@ -117,7 +117,7 @@ public final class RedisUtils {
                 point.getID().getDatabaseName() + KEY_SPLITER +
                 point.getID().getId();
 
-        String valueString = TimeUtils.packSchedulePoint(point) + DATA_SPLITER +
+        String valueString = point.getPackedTime() + DATA_SPLITER +
                 point.getFuzz() + DATA_SPLITER +
                 TimeUtils.boolsToBitStr(point.getValidDays());
 
@@ -138,7 +138,7 @@ public final class RedisUtils {
         long fuzz = Long.parseLong(splitData[1]);
         String packedValid = splitData[2];
 
-        return TimeUtils.unpackPoint(packedTime, TimeUtils.bitStrToBools(packedValid), fuzz, id);
+        return new SchedulePoint(packedTime, TimeUtils.bitStrToBools(packedValid), fuzz, id);
     }
 
     public static SchedulePoint deserializeSchedule(String serial) {

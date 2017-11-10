@@ -150,7 +150,7 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
                                                 "(SELECT %s FROM %s WHERE %s=\'%s\' LIMIT 1))",
 
                                         TimeUtils.boolsToBitStr(spt.getValidDays()),
-                                        spt.getFuzz(), TimeUtils.packSchedulePoint(spt),
+                                        spt.getFuzz(), spt.getPackedTime(),
 
                                         PostgresqlContract.StationTable.ID_KEY, PostgresqlContract.StationTable.TABLE_NAME,
                                         PostgresqlContract.StationTable.NAME_KEY, station.getName().replace("'", "`"),
@@ -281,12 +281,9 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
 
             Map<Integer, TransChain> chainstore = new HashMap<>();
             do {
-                SchedulePoint pt = TimeUtils.unpackPoint(
-                        rs.getInt(PostgresqlContract.ScheduleTable.PACKED_TIME_KEY),
-                        TimeUtils.bitStrToBools(rs.getString(PostgresqlContract.ScheduleTable.PACKED_VALID_KEY)),
-                        60,
-                        new DatabaseID(url, "" + rs.getInt(PostgresqlContract.ScheduleTable.ID_KEY))
-                );
+                SchedulePoint pt = new SchedulePoint(rs.getInt(PostgresqlContract.ScheduleTable.PACKED_TIME_KEY), TimeUtils
+                        .bitStrToBools(rs.getString(PostgresqlContract.ScheduleTable.PACKED_VALID_KEY)), (long) 60, new DatabaseID(url, "" + rs
+                        .getInt(PostgresqlContract.ScheduleTable.ID_KEY)));
 
                 int chainid = rs.getInt(PostgresqlContract.ScheduleTable.CHAIN_ID_KEY);
 
@@ -328,7 +325,7 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
                 PostgresqlContract.StationsForChainsView.STATION_NAME_KEY,
                 PostgresqlContract.StationsForChainsView.STATION_ID_KEY,
                 PostgresqlContract.StationsForChainsView.PACKED_TIME_KEY,
-                TimeUtils.packTimePoint(startTime), DELTA_KEY,
+                startTime.getPackedTime(), DELTA_KEY,
                 PostgresqlContract.StationsForChainsView.TABLE_NAME,
                 PostgresqlContract.StationsForChainsView.CHAIN_ID_KEY, chain.getID().getId(),
                 buildTimeQuery(startTime, maxDelta)
@@ -461,12 +458,7 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
 
                 if (skipsked) continue;
 
-                SchedulePoint pt = TimeUtils.unpackPoint(
-                        time,
-                        validDays,
-                        60,
-                        new DatabaseID(url, "" + rs.getInt(PostgresqlContract.ScheduleTable.ID_KEY))
-                );
+                SchedulePoint pt = new SchedulePoint(time, validDays, (long) 60, new DatabaseID(url, "" + rs.getInt(PostgresqlContract.ScheduleTable.ID_KEY)));
 
                 rval.computeIfAbsent(chain, c -> new HashMap<>())
                         .computeIfAbsent(station, s -> new ArrayList<>())
@@ -499,16 +491,16 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
         if (endTime.getHour() >= startTime.getHour()) {
             return String.format(" %s BETWEEN %d AND %d",
                     "packedtime",
-                    TimeUtils.packTimePoint(startTime),
-                    TimeUtils.packTimePoint(endTime)
+                    startTime.getPackedTime(),
+                    endTime.getPackedTime()
             );
         } else {
             return String.format(" (%s BETWEEN %d AND %d OR %s BETWEEN 0 AND %d)",
                     "packedtime",
-                    TimeUtils.packTimePoint(startTime),
+                    startTime.getPackedTime(),
                     86400,
                     "packedtime",
-                    TimeUtils.packTimePoint(endTime)
+                    endTime.getPackedTime()
             );
         }
     }
