@@ -10,6 +10,7 @@ import com.reroute.backend.model.time.TimePoint;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Created by ilan on 7/7/16.
@@ -32,6 +33,15 @@ public interface StationDbInstance {
         List<TransStation> getStationsInArea(LocationPoint center, Distance range);
 
         Map<TransChain, List<SchedulePoint>> getChainsForStation(TransStation station);
+
+        default Map<TransChain, List<SchedulePoint>> getChainsForStation(TransStation station, TimePoint startTime, TimeDelta maxDelta) {
+            return getChainsForStation(station).entrySet().stream()
+                    .filter(e -> e.getValue()
+                            .stream()
+                            .anyMatch(pt -> startTime.timeUntil(pt.nextValidTime(startTime))
+                                    .getDeltaLong() < maxDelta.getDeltaLong()))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        }
 
         Map<TransStation, TimeDelta> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta);
 

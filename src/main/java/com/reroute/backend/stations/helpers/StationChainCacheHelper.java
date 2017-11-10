@@ -76,6 +76,19 @@ public class StationChainCacheHelper {
                 .orElse(Collections.emptyMap());
     }
 
+    public Map<TransChain, List<SchedulePoint>> getChainsForStation(TransStation station, TimePoint startTime, TimeDelta maxDelta) {
+        if (isTest || station == null) {
+            return Collections.emptyMap();
+        }
+
+        return Arrays.stream(donutCaches)
+                .map(cache -> cache.getChainsForStation(station, startTime, maxDelta))
+                .filter(Objects::nonNull)
+                .filter(a -> !a.isEmpty())
+                .findAny()
+                .orElse(Collections.emptyMap());
+    }
+
     public Map<TransStation, TimeDelta> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta) {
         if (isTest || chain == null) {
             return Collections.emptyMap();

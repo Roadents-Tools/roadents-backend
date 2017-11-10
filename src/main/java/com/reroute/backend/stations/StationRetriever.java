@@ -60,6 +60,7 @@ public final class StationRetriever {
 
         return filterList(allStations, args);
     }
+
     public static Map<TransChain, List<SchedulePoint>> getChainsForStation(TransStation station, List<CostArgs> args) {
 
         Map<TransChain, List<SchedulePoint>> rval = StationChainCacheHelper.getHelper()
@@ -68,6 +69,22 @@ public final class StationRetriever {
         if (rval != null && !rval.isEmpty()) return rval;
         rval = StationDbHelper.getHelper()
                 .getChainsForStation(station);
+
+        if (rval == null || rval.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        return rval;
+    }
+
+    public static Map<TransChain, List<SchedulePoint>> getChainsForStation(TransStation station, TimePoint startTime, TimeDelta maxDelta) {
+
+        Map<TransChain, List<SchedulePoint>> rval = StationChainCacheHelper.getHelper()
+                .getChainsForStation(station, startTime, maxDelta);
+
+        if (rval != null && !rval.isEmpty()) return rval;
+        rval = StationDbHelper.getHelper()
+                .getChainsForStation(station, startTime, maxDelta);
 
         if (rval == null || rval.isEmpty()) {
             return Collections.emptyMap();

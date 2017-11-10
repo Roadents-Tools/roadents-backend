@@ -238,11 +238,10 @@ public class LogicUtils {
     }
 
     private static Set<TransStation> getAllChainsForStop(TransStation orig, TimePoint startTime, TimeDelta maxDelta) {
-        Set<TransStation> rval = StationRetriever.getChainsForStation(orig, null).entrySet().parallelStream()
+        Set<TransStation> rval = StationRetriever.getChainsForStation(orig, startTime, maxDelta)
+                .entrySet()
+                .parallelStream()
                 .map(entry -> orig.withSchedule(entry.getKey(), entry.getValue()))
-                .filter(stat -> startTime.timeUntil(stat.getNextArrival(startTime))
-                        .getDeltaLong() <= maxDelta.getDeltaLong())
-                .distinct()
                 .collect(Collectors.toSet());
         if (orig.getChain() != null) rval.add(orig);
         return rval;

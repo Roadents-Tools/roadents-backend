@@ -87,6 +87,10 @@ public class StationDbHelper {
         return doDonutQuery(db -> db.getChainsForStation(station), Collections::emptyMap);
     }
 
+    public Map<TransChain, List<SchedulePoint>> getChainsForStation(TransStation station, TimePoint startTime, TimeDelta maxDelta) {
+        return doDonutQuery(db -> db.getChainsForStation(station, startTime, maxDelta), Collections::emptyMap);
+    }
+
     public Map<TransStation, TimeDelta> getArrivableStations(TransChain chain, TimePoint startTime, TimeDelta maxDelta) {
         return doDonutQuery(db -> db.getArrivableStations(chain, startTime, maxDelta), Collections::emptyMap);
     }
