@@ -412,7 +412,7 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
 
                 PostgresqlContract.ScheduleTable.TABLE_NAME, PostgresqlContract.ChainTable.TABLE_NAME, PostgresqlContract.StationTable.TABLE_NAME,
 
-                PostgresqlContract.StationTable.LATLNG_KEY, center.getCoordinates()[0], center.getCoordinates()[1], range
+                PostgresqlContract.StationTable.LATLNG_KEY, center.getCoordinates()[1], center.getCoordinates()[0], range
                         .inMeters(),
                 buildTimeQuery(startTime, maxDelta),
                 PostgresqlContract.ScheduleTable.STATION_ID_KEY, PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.ID_KEY,
