@@ -60,7 +60,7 @@ public class TravelRouteJsonConverter implements JsonConverter<TravelRoute> {
 
         JSONObject jsonObject = new JSONObject(json);
 
-        TimePoint startTime = new TimePoint(jsonObject.getLong(START_TIME_TAG), "America/Los_Angeles");
+        TimePoint startTime = TimePoint.from(jsonObject.getLong(START_TIME_TAG), "America/Los_Angeles");
 
         Map<String, TransChain> storedChains = new ConcurrentHashMap<>();
 

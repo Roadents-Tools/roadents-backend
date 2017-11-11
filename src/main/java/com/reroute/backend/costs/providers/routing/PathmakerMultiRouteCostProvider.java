@@ -66,7 +66,7 @@ public class PathmakerMultiRouteCostProvider extends MultiRouteCostProvider impl
         }
 
         StartPoint start = extractStart(randomSingleArgs);
-        TimePoint startTime = new TimePoint(extractStartTime(randomSingleArgs), "America/Los Angeles");
+        TimePoint startTime = TimePoint.from(extractStartTime(randomSingleArgs), "America/Los Angeles");
 
         return buildRoutes(start, dests, startTime).entrySet().stream()
                 .collect(StreamUtils.collectWithMapping(Map.Entry::getKey, Map.Entry::getValue));

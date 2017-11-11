@@ -31,7 +31,7 @@ public class WorldInfo {
         return new WorldInfo(
                 new StartPoint(new double[] { obj.getDouble("centerlat"), obj.getDouble("centerlng") }),
                 new Distance(obj.getDouble("range"), DistanceUnits.METERS),
-                new TimePoint(obj.getLong("time"), obj.getString("tz")),
+                TimePoint.from(obj.getLong("time"), obj.getString("tz")),
                 new TimeDelta(obj.getLong("delta"))
         );
     }

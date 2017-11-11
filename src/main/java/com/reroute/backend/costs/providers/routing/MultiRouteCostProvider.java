@@ -42,7 +42,7 @@ public abstract class MultiRouteCostProvider implements CostProvider {
     public Object getCostValue(CostArgs arg) {
         StartPoint start = extractStart(arg);
         DestinationLocation end = extractEnd(arg);
-        TimePoint startTime = new TimePoint(extractStartTime(arg), "America/Los Angeles");
+        TimePoint startTime = TimePoint.from(extractStartTime(arg), "America/Los Angeles");
         return buildRoute(start, end, startTime);
     }
 

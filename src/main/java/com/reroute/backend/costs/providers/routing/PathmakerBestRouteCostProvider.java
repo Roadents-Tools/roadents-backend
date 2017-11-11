@@ -68,7 +68,7 @@ public class PathmakerBestRouteCostProvider extends BestRouteCostProvider implem
 
         int destSize = dests.size();
         StartPoint start = extractStart(randomSingleArgs);
-        TimePoint startTime = new TimePoint(extractStartTime(randomSingleArgs), "America/Los Angeles");
+        TimePoint startTime = TimePoint.from(extractStartTime(randomSingleArgs), "America/Los Angeles");
 
         List<TravelRoute> routes = buildRoutes(start, dests, startTime);
 

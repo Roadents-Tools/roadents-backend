@@ -41,7 +41,7 @@ public class TravelRouteJsonConverterTest {
         final double latitude = 37.358658;
         final double longitude = -122.008763;
         StartPoint startPoint = new StartPoint(new double[]{latitude, longitude});
-        TimePoint startTime = new TimePoint(System.currentTimeMillis(), "America/Los_Angeles");
+        TimePoint startTime = TimePoint.from(System.currentTimeMillis(), "America/Los_Angeles");
         testRoute = new TravelRoute(startPoint, startTime);
         Random rng = new Random();
 

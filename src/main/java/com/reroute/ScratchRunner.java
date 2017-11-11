@@ -27,6 +27,7 @@ import com.reroute.backend.model.time.TimePoint;
 import com.reroute.backend.stations.WorldInfo;
 import com.reroute.backend.stations.gtfs.GtfsProvider;
 import com.reroute.backend.stations.postgresql.PostgresqlDonutDb;
+import com.reroute.backend.stations.redis.RedisDonutCache;
 import com.reroute.backend.stations.transitland.TransitlandApiDb;
 import com.reroute.backend.utils.LocationUtils;
 import com.reroute.backend.utils.LoggingUtils;
@@ -164,7 +165,7 @@ public class ScratchRunner {
     }
 
     private static void mapLocations(String[] args) {
-        TimePoint startTime = new TimePoint(1500829200 * 1000L, "America/New_York");
+        TimePoint startTime = TimePoint.from(1500829200 * 1000L, "America/New_York");
         TimeDelta maxDelta = new TimeDelta(900 * 1000);
         String outputDir = "~";
         String filePath = null;
@@ -557,7 +558,7 @@ public class ScratchRunner {
 
         //TODO: Extract args
         StartPoint startPoint = new StartPoint(40.7570, -73.9718);
-        TimePoint startTime = new TimePoint(1500829200 * 1000L, "America/New_York");
+        TimePoint startTime = TimePoint.from(1500829200 * 1000L, "America/New_York");
         TimeDelta maxDelta = new TimeDelta(30 * 60 * 1000);
 
         Map<String, StationRoutesBuildRequest> reqToTags = new HashMap<>();
@@ -633,7 +634,7 @@ public class ScratchRunner {
                     double maxPercent = IntStream.range(1, totalLayers)
                             .mapToDouble(a -> 1./Math.pow(2, a))
                             .sum();
-                    return  rt.getTime().getDeltaLong() <= maxPercent * maxDelta.getDeltaLong();
+                    return  rt.getPackedTime().getDeltaLong() <= maxPercent * maxDelta.getDeltaLong();
                 })
         );*/
 
@@ -684,7 +685,7 @@ public class ScratchRunner {
     private static void testPitch(String[] args) {
 
         StartPoint startPoint = new StartPoint(40.7570, -73.9718);
-        TimePoint startTime = new TimePoint(1500829200 * 1000L, "America/New_York");
+        TimePoint startTime = TimePoint.from(1500829200 * 1000L, "America/New_York");
         TimeDelta maxDelta = new TimeDelta(30 * 60 * 1000);
         LocationType query = new LocationType("Food", "Food");
 

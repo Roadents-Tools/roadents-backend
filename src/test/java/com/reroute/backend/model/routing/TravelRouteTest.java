@@ -54,7 +54,7 @@ public class TravelRouteTest {
 
         TravelRoute rt = new TravelRoute(
                 new StartPoint(startcoords),
-                new TimePoint(Math.abs(rng.nextLong()), "GMT")
+                TimePoint.from(Math.abs(rng.nextLong()), "GMT")
         );
 
         IntStream.range(1, size)
