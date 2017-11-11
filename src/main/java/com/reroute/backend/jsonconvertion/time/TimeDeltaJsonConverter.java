@@ -17,7 +17,12 @@ public class TimeDeltaJsonConverter implements JsonConverter<TimeDelta> {
     }
 
     @Override
-    public TimeDelta fromJson(String json) {
-        return new TimeDelta(new JSONObject(json).getLong(TIME_DELTA_TAG));
+    public JSONObject toJsonObject(TimeDelta input) {
+        return new JSONObject().put(TIME_DELTA_TAG, input.getDeltaLong());
+    }
+
+    @Override
+    public TimeDelta fromJsonObject(JSONObject obj) {
+        return new TimeDelta(obj.getLong(TIME_DELTA_TAG));
     }
 }

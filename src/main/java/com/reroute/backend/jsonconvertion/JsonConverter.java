@@ -17,7 +17,11 @@ public interface JsonConverter<T> {
      * @param input the model
      * @return the JSON string
      */
-    String toJson(T input);
+    default String toJson(T input) {
+        return toJsonObject(input).toString();
+    }
+
+    JSONObject toJsonObject(T input);
 
     /**
      * Converts a collection of model objects to JSON
@@ -40,12 +44,17 @@ public interface JsonConverter<T> {
      */
     default void fromJson(String json, Collection<T> output) {
         JSONArray array = new JSONArray(json);
+        fromJsonArray(array, output);
+    }
+
+    default void fromJsonArray(JSONArray array, Collection<T> output) {
         for (int i = 0; i < array.length(); i++) {
             JSONObject objJson = array.getJSONObject(i);
             String objString = objJson.toString();
             T obj = fromJson(objString);
             output.add(obj);
         }
+
     }
 
     /**
@@ -53,6 +62,9 @@ public interface JsonConverter<T> {
      * @param json the JSON to convert
      * @return the model the JSON represents
      */
-    T fromJson(String json);
+    default T fromJson(String json) {
+        return fromJsonObject(new JSONObject(json));
+    }
 
+    T fromJsonObject(JSONObject json);
 }

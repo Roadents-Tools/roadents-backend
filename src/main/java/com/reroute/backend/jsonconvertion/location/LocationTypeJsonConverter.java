@@ -13,16 +13,15 @@ public class LocationTypeJsonConverter implements JsonConverter<LocationType> {
     private static final String ENCODED_NAME_TAG = "encoded_name";
 
     @Override
-    public String toJson(LocationType input) {
+    public JSONObject toJsonObject(LocationType input) {
         JSONObject obj = new JSONObject();
         obj.put(VISIBLE_NAME_TAG, input.getVisibleName());
         obj.put(ENCODED_NAME_TAG, input.getEncodedname());
-        return obj.toString();
+        return obj;
     }
 
     @Override
-    public LocationType fromJson(String json) {
-        JSONObject obj = new JSONObject(json);
+    public LocationType fromJsonObject(JSONObject obj) {
         return new LocationType(obj.getString(VISIBLE_NAME_TAG), obj.getString(ENCODED_NAME_TAG));
     }
 }

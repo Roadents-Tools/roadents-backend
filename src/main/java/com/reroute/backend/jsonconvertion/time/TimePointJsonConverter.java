@@ -21,8 +21,14 @@ public class TimePointJsonConverter implements JsonConverter<TimePoint> {
     }
 
     @Override
-    public TimePoint fromJson(String json) {
-        JSONObject obj = new JSONObject(json);
+    public JSONObject toJsonObject(TimePoint input) {
+        return new JSONObject()
+                .put(UNIX_TIME_TAG, input.getUnixTime())
+                .put(TIME_ZONE_TAG, input.getTimeZone());
+    }
+
+    @Override
+    public TimePoint fromJsonObject(JSONObject obj) {
         return TimePoint.from(obj.getLong(UNIX_TIME_TAG), obj.getString(TIME_ZONE_TAG));
     }
 }

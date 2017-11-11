@@ -13,16 +13,15 @@ public class StartPointJsonConverter implements JsonConverter<StartPoint> {
     private static final String LONGITUDE_TAG = "longitude";
 
     @Override
-    public String toJson(StartPoint input) {
+    public JSONObject toJsonObject(StartPoint input) {
         JSONObject obj = new JSONObject();
         obj.put(LATITUDE_TAG, input.getCoordinates()[0]);
         obj.put(LONGITUDE_TAG, input.getCoordinates()[1]);
-        return obj.toString();
+        return obj;
     }
 
     @Override
-    public StartPoint fromJson(String json) {
-        JSONObject obj = new JSONObject(json);
+    public StartPoint fromJsonObject(JSONObject obj) {
         double lat = obj.getDouble(LATITUDE_TAG);
         double lonj = obj.getDouble(LONGITUDE_TAG);
         return new StartPoint(new double[]{lat, lonj});

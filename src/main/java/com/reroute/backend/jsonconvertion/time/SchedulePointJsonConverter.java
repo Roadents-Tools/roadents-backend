@@ -1,6 +1,5 @@
 package com.reroute.backend.jsonconvertion.time;
 
-import com.google.common.collect.Lists;
 import com.reroute.backend.jsonconvertion.JsonConverter;
 import com.reroute.backend.model.time.SchedulePoint;
 import org.json.JSONArray;
@@ -18,20 +17,18 @@ public class SchedulePointJsonConverter implements JsonConverter<SchedulePoint> 
     private static final String VALID_DAYS_ARRAY = "valid_days";
 
     @Override
-    public String toJson(SchedulePoint input) {
+    public JSONObject toJsonObject(SchedulePoint input) {
         JSONObject obj = new JSONObject();
         obj.put(HOUR_TAG, input.getHour());
         obj.put(MINUTE_TAG, input.getMinute());
         obj.put(SECOND_TAG, input.getSecond());
         obj.put(FUZZ_TAG, input.getFuzz());
-        obj.put(VALID_DAYS_ARRAY, Lists.newArrayList(input.getValidDays()));
-        return obj.toString();
+        obj.put(VALID_DAYS_ARRAY, input.getValidDays());
+        return obj;
     }
 
     @Override
-    public SchedulePoint fromJson(String json) {
-        JSONObject obj = new JSONObject(json);
-
+    public SchedulePoint fromJsonObject(JSONObject obj) {
         int hour = obj.getInt(HOUR_TAG);
         int min = obj.getInt(MINUTE_TAG);
         int sec = obj.getInt(SECOND_TAG);

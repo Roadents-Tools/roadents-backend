@@ -17,7 +17,7 @@ public class DestinationJsonConverter implements JsonConverter<DestinationLocati
     private static final String LONGITUDE_TAG = "longitude";
 
     @Override
-    public String toJson(DestinationLocation input) {
+    public JSONObject toJsonObject(DestinationLocation input) {
         JSONObject obj = new JSONObject();
         JSONObject typeObj = new JSONObject(new LocationTypeJsonConverter().toJson(input.getType()));
         obj.put(NAME_TAG, input.getName());
@@ -25,12 +25,11 @@ public class DestinationJsonConverter implements JsonConverter<DestinationLocati
         obj.put(LATITTUDE_TAG, input.getCoordinates()[0]);
         obj.put(LONGITUDE_TAG, input.getCoordinates()[1]);
         input.getAddress().ifPresent(addr -> obj.put(ADDRESS_TAG, addr));
-        return obj.toString();
+        return obj;
     }
 
     @Override
-    public DestinationLocation fromJson(String json) {
-        JSONObject obj = new JSONObject(json);
+    public DestinationLocation fromJsonObject(JSONObject obj) {
         String name = obj.getString(NAME_TAG);
         double latitude = obj.getDouble(LATITTUDE_TAG);
         double longitude = obj.getDouble(LONGITUDE_TAG);

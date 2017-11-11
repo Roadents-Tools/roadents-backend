@@ -28,7 +28,7 @@ public class TransStationJsonConverter implements JsonConverter<TransStation> {
     private static final String ID_TAG = "id";
 
     @Override
-    public String toJson(TransStation input) {
+    public JSONObject toJsonObject(TransStation input) {
         JSONObject obj = new JSONObject();
         obj.put(NAME_TAG, input.getName());
         obj.put(LAT_TAG, input.getCoordinates()[0]);
@@ -45,7 +45,7 @@ public class TransStationJsonConverter implements JsonConverter<TransStation> {
         }
 
 
-        return obj.toString();
+        return obj;
     }
 
     @Override
@@ -54,19 +54,27 @@ public class TransStationJsonConverter implements JsonConverter<TransStation> {
         JSONArray array = new JSONArray(json);
         for (int i = 0; i < array.length(); i++) {
             JSONObject objJson = array.getJSONObject(i);
-            String objString = objJson.toString();
-            TransStation obj = fromJson(objString, chainMap);
+            TransStation obj = fromJsonObject(objJson, chainMap);
             output.add(obj);
         }
     }
 
     @Override
-    public TransStation fromJson(String json) {
-        return fromJson(json, new ConcurrentHashMap<>());
+    public void fromJsonArray(JSONArray array, Collection<TransStation> output) {
+        Map<String, TransChain> chainMap = new ConcurrentHashMap<>();
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject objJson = array.getJSONObject(i);
+            TransStation obj = fromJsonObject(objJson, chainMap);
+            output.add(obj);
+        }
     }
 
-    public TransStation fromJson(String json, Map<String, TransChain> chains) {
-        JSONObject obj = new JSONObject(json);
+    @Override
+    public TransStation fromJsonObject(JSONObject json) {
+        return fromJsonObject(json, new ConcurrentHashMap<>());
+    }
+
+    public TransStation fromJsonObject(JSONObject obj, Map<String, TransChain> chains) {
         String name = obj.getString(NAME_TAG);
         double[] coords = new double[] { obj.getDouble(LAT_TAG), obj.getDouble(LNG_TAG) };
 

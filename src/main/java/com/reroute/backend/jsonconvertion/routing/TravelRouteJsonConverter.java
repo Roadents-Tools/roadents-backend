@@ -32,14 +32,14 @@ public class TravelRouteJsonConverter implements JsonConverter<TravelRoute> {
     private final TravelRouteNodeJsonConverter nodeConverter = new TravelRouteNodeJsonConverter();
 
     @Override
-    public String toJson(TravelRoute input) {
+    public JSONObject toJsonObject(TravelRoute input) {
         JSONObject obj = new JSONObject();
         obj.put(START_TIME_TAG, input.getStartTime().getUnixTime()); //Store seconds from unix epoch
         obj.put(START_TAG, new JSONObject(startConverter.toJson(input.getStart())));
         obj.put(ROUTE_TAG, convertRoute(input));
         if (input.getDestination() != null)
             obj.put(END_TAG, new JSONObject(destConverter.toJson(input.getDestination())));
-        return obj.toString();
+        return obj;
     }
 
     private JSONArray convertRoute(TravelRoute input) {
@@ -56,9 +56,7 @@ public class TravelRouteJsonConverter implements JsonConverter<TravelRoute> {
     }
 
     @Override
-    public TravelRoute fromJson(String json) {
-
-        JSONObject jsonObject = new JSONObject(json);
+    public TravelRoute fromJsonObject(JSONObject jsonObject) {
 
         TimePoint startTime = TimePoint.from(jsonObject.getLong(START_TIME_TAG), "America/Los_Angeles");
 

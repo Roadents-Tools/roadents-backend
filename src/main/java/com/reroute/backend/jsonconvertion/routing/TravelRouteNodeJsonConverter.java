@@ -52,13 +52,13 @@ public class TravelRouteNodeJsonConverter implements JsonConverter<TravelRouteNo
     }
 
     @Override
-    public String toJson(TravelRouteNode input) {
+    public JSONObject toJsonObject(TravelRouteNode input) {
         JSONObject obj = new JSONObject();
         obj.put(WAIT_TIME_TAG, input.getWaitTimeFromPrev().getDeltaLong());
         obj.put(TRAVEL_TIME_TAG, input.getTravelTimeFromPrev().getDeltaLong());
         obj.put(WALK_TIME_TAG, input.getWalkTimeFromPrev().getDeltaLong());
         obj.put(LOCATION_TAG, extractPt(input));
-        return obj.toString();
+        return obj;
     }
 
 
@@ -89,10 +89,7 @@ public class TravelRouteNodeJsonConverter implements JsonConverter<TravelRouteNo
     }
 
     @Override
-    public TravelRouteNode fromJson(String json) {
-
-        JSONObject obj = new JSONObject(json);
-
+    public TravelRouteNode fromJsonObject(JSONObject obj) {
         return new TravelRouteNode.Builder()
                 .setTravelTime(obj.getLong(TRAVEL_TIME_TAG))
                 .setWaitTime(obj.getLong(WAIT_TIME_TAG))
@@ -111,7 +108,7 @@ public class TravelRouteNodeJsonConverter implements JsonConverter<TravelRouteNo
             return destConv.fromJson(input.getJSONObject(DEST_POINT_TAG).toString());
         } else if (input.has(STATION_POINT_TAG)) {
             if (statConv == null) statConv = new TransStationJsonConverter();
-            return statConv.fromJson(input.getJSONObject(STATION_POINT_TAG).toString(), chainBucket);
+            return statConv.fromJsonObject(input.getJSONObject(STATION_POINT_TAG), chainBucket);
         } else {
             LoggingUtils.logError(getClass().getName() + "::extractPt", "pt was not instance of known types.");
             return null;
