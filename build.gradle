@@ -5,6 +5,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:latest.integration"
     }
 }
 
@@ -14,6 +15,7 @@ apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'application'
 apply plugin: 'com.github.johnrengelman.shadow'
+apply plugin: 'org.jetbrains.dokka'
 
 mainClassName = 'com.reroute.ScratchRunner'
 
@@ -78,4 +80,10 @@ task depsize  {
         out << "${String.format(formatStr, size)} Mb\n\n"
         println(out)
     }
+}
+dokka {
+    outputFormat = 'markdown'
+    outputDirectory = "$buildDir/javadoc"
+    sourceDirs = files('src/main/java')
+    //TODO: Either move to Kotlin or output a more Java-like documentation
 }
