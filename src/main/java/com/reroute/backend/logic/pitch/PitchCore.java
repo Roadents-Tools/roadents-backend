@@ -161,7 +161,7 @@ public class PitchCore implements LogicCore {
                         .collect(Collectors.toList())
                 )
                 .orElseGet(() -> {
-                    List<DestinationLocation> rval = LocationRetriever.getLocations(center, range, type, null);
+                    List<DestinationLocation> rval = LocationRetriever.getLocations(center, range, type);
                     destCache.getUnchecked(type).put(center, rval);
                     return rval;
                 });

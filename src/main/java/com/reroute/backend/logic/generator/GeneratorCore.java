@@ -93,7 +93,7 @@ public class GeneratorCore implements LogicCore {
      * @return the found destinations
      */
     public static Set<TravelRouteNode> getWalkableDestinations(LocationPoint center, TimeDelta maxDelta, LocationType type) {
-        return LocationRetriever.getLocations(center, LocationUtils.timeToWalkDistance(maxDelta), type, null)
+        return LocationRetriever.getLocations(center, LocationUtils.timeToWalkDistance(maxDelta), type)
                 .stream()
                 .map(point -> new TravelRouteNode.Builder()
                         .setWalkTime(LocationUtils.timeBetween(center, point).getDeltaLong())

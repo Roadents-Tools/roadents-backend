@@ -62,7 +62,7 @@ public class TravelRouteJsonConverterTest {
         }
 
         LocationType testType = new LocationType("food", "food");
-        List<DestinationLocation> locations = LocationRetriever.getLocations(testRoute.getCurrentEnd(), new Distance(range, DistanceUnits.MILES), testType, null);
+        List<DestinationLocation> locations = LocationRetriever.getLocations(testRoute.getCurrentEnd(), new Distance(range, DistanceUnits.MILES), testType);
         testRoute.setDestinationNode(new TravelRouteNode.Builder().setWalkTime(1).setPoint(locations.get(0)).build());
     }
 

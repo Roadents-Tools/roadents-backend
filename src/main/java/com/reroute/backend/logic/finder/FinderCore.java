@@ -1,8 +1,6 @@
 package com.reroute.backend.logic.finder;
 
 import com.google.common.collect.Lists;
-import com.reroute.backend.costs.CostCalculator;
-import com.reroute.backend.costs.arguments.BulkCostArgs;
 import com.reroute.backend.logic.ApplicationRequest;
 import com.reroute.backend.logic.ApplicationResult;
 import com.reroute.backend.logic.ApplicationRunner;
@@ -20,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 /**
  * Created by ilan on 4/30/17.
@@ -28,11 +25,11 @@ import java.util.stream.Collectors;
 public class FinderCore implements LogicCore {
 
     public static final String TAG = "WEASEL";
-    private static final String TIME_COST_START_TIME_TAG = "starttime";
+    /*private static final String TIME_COST_START_TIME_TAG = "starttime";
     private static final String TIME_COST_COMPARISON_TAG = "comparison";
     private static final String TIME_COST_COMPARE_VALUE_TAG = "compareto";
     private static final String TIME_COST_POINT_ONE_TAG = "p1";
-    private final static String TIME_COST_TAG = "time";
+    private final static String TIME_COST_TAG = "time";*/
 
     @Override
     public ApplicationResult performLogic(ApplicationRequest args) {
@@ -59,6 +56,8 @@ public class FinderCore implements LogicCore {
         Map<DestinationLocation, TravelRoute> routeMap = donutResults.getResult().stream()
                 .collect(StreamUtils.collectWithKeys(TravelRoute::getDestination));
 
+        /*
+        TODO: De-costify
         Set<BulkCostArgs> ags = locs.stream()
                 .map(pt -> new BulkCostArgs()
                         .setCostTag(TIME_COST_TAG)
@@ -75,7 +74,7 @@ public class FinderCore implements LogicCore {
                     .filter(dest -> !filters.getOrDefault(dest, false))
                     .forEach(routeMap::remove);
         }
-
+        */
 
         return ApplicationResult.ret(Lists.newArrayList(routeMap.values()));
 

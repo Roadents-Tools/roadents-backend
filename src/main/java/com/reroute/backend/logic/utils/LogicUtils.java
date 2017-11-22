@@ -175,7 +175,7 @@ public class LogicUtils {
      */
     private static Set<TravelRouteNode> getWalkableStations(LocationPoint begin, TimePoint startTime, TimeDelta maxDelta) {
         Distance range = LocationUtils.timeToWalkDistance(maxDelta);
-        return StationRetriever.getStationsInArea(begin, range, null).parallelStream()
+        return StationRetriever.getStationsInArea(begin, range).parallelStream()
                 .map(point -> new TravelRouteNode.Builder()
                         .setWalkTime(LocationUtils.timeBetween(begin, point).getDeltaLong())
                         .setPoint(point)
@@ -196,7 +196,7 @@ public class LogicUtils {
             return station;
         }
 
-        Map<TransChain, List<SchedulePoint>> scheduleMap = StationRetriever.getChainsForStation(station, null);
+        Map<TransChain, List<SchedulePoint>> scheduleMap = StationRetriever.getChainsForStation(station);
         List<SchedulePoint> schedule = scheduleMap.get(station.getChain());
         if (schedule == null || schedule.isEmpty()) {
             LoggingUtils.logError(TAG, "Error in requery for station %s.", station.toString());

@@ -1,7 +1,5 @@
 package com.reroute.backend.locations;
 
-import com.reroute.backend.costs.CostCalculator;
-import com.reroute.backend.costs.arguments.CostArgs;
 import com.reroute.backend.locations.helpers.LocationCacheHelper;
 import com.reroute.backend.locations.helpers.LocationProviderHelper;
 import com.reroute.backend.model.distance.Distance;
@@ -10,7 +8,6 @@ import com.reroute.backend.model.location.LocationPoint;
 import com.reroute.backend.model.location.LocationType;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -26,10 +23,9 @@ public class LocationRetriever {
      * @param center the center of the area
      * @param range  the distance around the center to check
      * @param type   the type of location to query for
-     * @param args   any extra filters
      * @return the locations meeting this query
      */
-    public static List<DestinationLocation> getLocations(LocationPoint center, Distance range, LocationType type, List<CostArgs> args) {
+    public static List<DestinationLocation> getLocations(LocationPoint center, Distance range, LocationType type) {
         List<DestinationLocation> locations = null;
         if (!isTest) locations = LocationCacheHelper.getHelper()
                 .getCachedLocations(center, range, type);
@@ -40,16 +36,8 @@ public class LocationRetriever {
         }
         if (locations == null || locations.size() == 0) return new ArrayList<>(0);
 
-        if (args == null || args.size() == 0) return locations;
-
-        Iterator<DestinationLocation> locationsIterator = locations.iterator();
-        while (locationsIterator.hasNext()) {
-            for (CostArgs arg : args) {
-                arg.setSubject(locationsIterator.next());
-                if (!CostCalculator.isWithinCosts(arg)) locationsIterator.remove();
-            }
-        }
         return locations;
+
     }
 
     /**

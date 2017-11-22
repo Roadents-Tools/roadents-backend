@@ -128,7 +128,7 @@ public class RouteMapsPageGenerator {
         TransStation aStat = (TransStation) a.getPt();
         TimePoint aTime = rt.getTimePointAt(a);
 
-        Map<TransChain, List<SchedulePoint>> achains = StationRetriever.getChainsForStation(aStat, null);
+        Map<TransChain, List<SchedulePoint>> achains = StationRetriever.getChainsForStation(aStat);
         if (achains.isEmpty()) {
             LoggingUtils.logError("RouteMapGen", "Got no achains.");
             throw new RuntimeException();

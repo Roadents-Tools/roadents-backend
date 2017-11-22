@@ -97,9 +97,9 @@ public class CalculatorSupport {
         TimeDelta maxDelta = base.timeUntil(maxTime);
 
         //Create an easily searchable set of all chains containing st2
-        Map<TransChain, List<SchedulePoint>> st2Chains = StationRetriever.getChainsForStation(st2, null);
+        Map<TransChain, List<SchedulePoint>> st2Chains = StationRetriever.getChainsForStation(st2);
 
-        return StationRetriever.getChainsForStation(st1, null)
+        return StationRetriever.getChainsForStation(st1)
                 .entrySet()
                 .stream()
                 .distinct()

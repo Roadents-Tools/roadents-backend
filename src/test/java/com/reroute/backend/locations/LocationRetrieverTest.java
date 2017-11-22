@@ -26,9 +26,9 @@ public class LocationRetrieverTest {
 
 
         long startTime = System.currentTimeMillis();
-        List<DestinationLocation> locations = LocationRetriever.getLocations(testPt, testRange, testType, null);
+        List<DestinationLocation> locations = LocationRetriever.getLocations(testPt, testRange, testType);
         long midTime = System.currentTimeMillis();
-        List<DestinationLocation> l2 = LocationRetriever.getLocations(testPt, testRange, testType, null);
+        List<DestinationLocation> l2 = LocationRetriever.getLocations(testPt, testRange, testType);
         long endTime = System.currentTimeMillis();
 
         Assert.assertEquals(locations.size(), l2.size());
