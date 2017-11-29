@@ -25,6 +25,7 @@ import com.reroute.backend.utils.LoggingUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -117,6 +118,10 @@ public class PitchCore implements LogicCore {
                 .flatMap(rt -> getDestRoutes(rt, request.getMaxDelta(), request.getQuery()))
                 .collect(LogicUtils.OPTIMAL_ROUTES_FOR_DESTINATIONS)
                 .values();
+        if (destRoutes.isEmpty()) {
+            TravelRoute base = new TravelRoute(request.getStarts().get(0), request.getStartTime());
+            destRoutes = getDestRoutes(base, request.getMaxDelta(), request.getQuery()).collect(Collectors.toList());
+        }
 
         Map<String, List<TravelRoute>> bestDestRoutes = new HashMap<>();
         for (PitchSorter compObj : PitchSorter.values()) {
@@ -160,12 +165,12 @@ public class PitchCore implements LogicCore {
                         .filter(d -> LocationUtils.distanceBetween(d, center).inMeters() <= range.inMeters())
                         .collect(Collectors.toList())
                 )
-                .orElseGet(() -> {
-                    List<DestinationLocation> rval = LocationRetriever.getLocations(center, range, type);
-                    destCache.getUnchecked(type).put(center, rval);
-                    return rval;
-                });
+                .orElse(Collections.emptyList());
 
+        if (dests.isEmpty()) {
+            dests = LocationRetriever.getLocations(center, range, type);
+            destCache.getUnchecked(type).put(center, dests);
+        }
 
         Stream<TravelRoute> baseRoutes = dests.stream()
                 .map(point -> new TravelRouteNode.Builder()
