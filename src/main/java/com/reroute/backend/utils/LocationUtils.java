@@ -17,6 +17,8 @@ public class LocationUtils {
     private static final double EARTH_RADIUS_KM = 6367.449; //kilometers
     private static final Distance AVG_WALKING_PER_HOUR = new Distance(5.0, DistanceUnits.KILOMETERS);
     private static final Distance MAX_TRANSIT_PER_HOUR = new Distance(65, DistanceUnits.MILES);
+    private static final Distance LENGTH_DEGREE_LAT = new Distance(111, DistanceUnits.KILOMETERS);
+    private static final Distance EQUATOR_LENGTH_DEGREE_LNG = new Distance(111.321, DistanceUnits.KILOMETERS);
     private static final double SAFETY_FACTOR = 1;
 
     /**
@@ -81,6 +83,15 @@ public class LocationUtils {
      */
     public static Distance timeToWalkDistance(TimeDelta time) {
         return AVG_WALKING_PER_HOUR.mul(time.inHours()).div(SAFETY_FACTOR);
+    }
+
+    public static double latitudeRange(LocationPoint center, Distance range) {
+        return range.inKilometers() / LENGTH_DEGREE_LAT.inKilometers();
+    }
+
+    public static double longitudeRange(LocationPoint center, Distance range) {
+        double unit = Math.cos(center.getCoordinates()[0]) * EQUATOR_LENGTH_DEGREE_LNG.inKilometers();
+        return range.inKilometers() / unit;
     }
 
 }

@@ -12,6 +12,7 @@ import org.junit.Assert;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 /**
@@ -20,13 +21,14 @@ import java.util.stream.Collectors;
 public class TestLocationProvider implements LocationProvider {
 
     private static final double[][] MULTIPLIERS = new double[][]{
-            new double[]{.01, 0},
-            new double[]{-.01, 0},
-            new double[]{0, .01},
-            new double[]{0, -.01}
+            new double[] { .99, 0 },
+            new double[] { -.99, 0 },
+            new double[] { 0, .99 },
+            new double[] { 0, -.99 }
     };
     private static final int DEFAULT_POINTS_PER_QUERY = MULTIPLIERS.length;
     private static Collection<DestinationLocation> testLocations = null;
+    private static Random rng = new Random();
 
     /**
      * Loads set test locations into the provider instead of creating the default semi-random ones.
@@ -65,17 +67,13 @@ public class TestLocationProvider implements LocationProvider {
 
         List<DestinationLocation> rval = new ArrayList<>(DEFAULT_POINTS_PER_QUERY);
         for (double[] muliplier : MULTIPLIERS) {
-            double newLat = center.getCoordinates()[0] + range.inMiles() * muliplier[0];
-            double newLong = center.getCoordinates()[1] + range.inMiles() * muliplier[1];
+            double newLat = center.getCoordinates()[0] + LocationUtils.latitudeRange(center, range) * muliplier[0];
+            double newLong = center.getCoordinates()[1] + LocationUtils.longitudeRange(center, range) * muliplier[1];
             double[] newCenter = new double[]{newLat, newLong};
             Assert.assertTrue(LocationUtils.distanceBetween(new StartPoint(newCenter), center)
                     .inMeters() <= range.inMeters());
 
-            String name = String.format("Test Dest: QueryCenter = (%f,%f), Type = %s, Additive = (%f,%f)",
-                    center.getCoordinates()[0], center.getCoordinates()[1],
-                    type.getEncodedname(),
-                    range.inMiles() * muliplier[0], range.inMiles() * muliplier[1]
-            );
+            String name = String.format("%s Place %d", type.getVisibleName(), rng.nextInt(100));
 
             rval.add(new DestinationLocation(name, type, newCenter));
         }
