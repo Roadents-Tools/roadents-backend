@@ -1,11 +1,7 @@
 package com.reroute.backend.model.location;
 
-import com.google.common.collect.Sets;
 import com.reroute.backend.model.database.DatabaseID;
 import com.reroute.backend.model.database.DatabaseObject;
-
-import java.util.Arrays;
-import java.util.Set;
 
 /**
  * A path taken by a public transit service. Analogous to GTFS "trips".
@@ -14,7 +10,6 @@ import java.util.Set;
 public class TransChain implements DatabaseObject {
 
     private final String name;
-    private final Set<TransStation> stations;
     private final DatabaseID id;
 
     /**
@@ -24,7 +19,6 @@ public class TransChain implements DatabaseObject {
      */
     public TransChain(String name) {
         this.name = name;
-        this.stations = Sets.newConcurrentHashSet();
         this.id = null;
     }
 
@@ -35,7 +29,6 @@ public class TransChain implements DatabaseObject {
      */
     public TransChain(String name, DatabaseID id) {
         this.name = name;
-        this.stations = Sets.newConcurrentHashSet();
         this.id = id;
     }
 
@@ -45,48 +38,6 @@ public class TransChain implements DatabaseObject {
      */
     public String getName() {
         return name;
-    }
-
-    @Deprecated
-    public TransStation getSchedule(TransStation base) {
-        if (this.equals(base.getChain())
-                && base.getSchedule() != null
-                && base.getSchedule().size() > 0) {
-            return base;
-        }
-        return stations.stream()
-                .filter(st -> Arrays.equals(st.getCoordinates(), base.getCoordinates()))
-                .findAny()
-                .map(onto -> base.withSchedule(this, onto.getSchedule()))
-                .orElse(base);
-    }
-
-    @Deprecated
-    public boolean containsStation(TransStation station) {
-        return containsLocation(station);
-    }
-
-    @Deprecated
-    public boolean containsLocation(LocationPoint point) {
-        return containsLocation(point.getCoordinates());
-    }
-
-    @Deprecated
-    public boolean containsLocation(double[] coords) {
-        return getStations().stream().anyMatch(st -> Arrays.equals(st.getCoordinates(), coords));
-    }
-
-    @Deprecated
-    public Set<TransStation> getStations() {
-        return stations;
-    }
-
-    @Deprecated
-    public void addStation(TransStation station) {
-        if (station != null && (!stations.contains(station) || (station.getSchedule() != null && station.getSchedule()
-                .size() != 0))) {
-            stations.add(station);
-        }
     }
 
     @Override

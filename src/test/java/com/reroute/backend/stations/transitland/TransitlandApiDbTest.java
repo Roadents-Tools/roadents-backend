@@ -48,7 +48,6 @@ public class TransitlandApiDbTest {
             Assert.assertTrue(station.getCoordinates()[0] > 20);
             Assert.assertTrue(station.getCoordinates()[1] < -110);
             Assert.assertTrue(station.getCoordinates()[1] > -125);
-            Assert.assertNotEquals(0, station.getChain().getStations().size());
             Assert.assertNotEquals(0, station.getSchedule().size());
         });
     }
@@ -59,7 +58,6 @@ public class TransitlandApiDbTest {
         Assert.assertNotEquals(0, stations.size());
         stations.forEach(station -> {
             Assert.assertEquals(TEST_CHAIN, station.getChain());
-            Assert.assertTrue(TEST_CHAIN.getStations().contains(station));
             Assert.assertNotNull(station.getName());
             Assert.assertNotEquals(0, station.getSchedule().size());
         });

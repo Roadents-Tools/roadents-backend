@@ -45,8 +45,6 @@ public class TransStation implements LocationPoint, DatabaseObject {
         this.schedule = schedule;
         this.chain = chain;
         id = null;
-
-        chain.addStation(this);
     }
 
     public TransStation(String name, double[] location, List<SchedulePoint> schedule, TransChain chain, DatabaseID id) {
@@ -55,8 +53,6 @@ public class TransStation implements LocationPoint, DatabaseObject {
         this.schedule = schedule;
         this.chain = chain;
         this.id = id;
-
-        chain.addStation(this);
     }
 
     @Override
