@@ -6,5 +6,5 @@ case class StationScala(
                          name: String,
                          override val latitude: Double,
                          override val longitude: Double,
-                         override val id: Option[DatabaseIDScala] = None
+                         override val id: DatabaseIDScala
                        ) extends LocationPointScala with DatabaseObjectScala

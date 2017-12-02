@@ -1,6 +1,6 @@
 package com.reroute.backend.model.time
 
-case class TimeDeltaScala(unixdelta: Long) {
+case class TimeDeltaScala(unixdelta: Long) extends Ordered[TimeDeltaScala] {
 
   def +(other: TimeDeltaScala): TimeDeltaScala = TimeDeltaScala(unixdelta + other.unixdelta)
 
@@ -17,6 +17,8 @@ case class TimeDeltaScala(unixdelta: Long) {
   def hours: Double = unixdelta / (60 * (60 * 1000.0))
 
   def days: Double = unixdelta / (24 * (60 * (60 * 1000.0)))
+
+  override def compare(that: TimeDeltaScala): Int = unixdelta.compareTo(that.unixdelta)
 }
 
 object TimeDeltaScala {

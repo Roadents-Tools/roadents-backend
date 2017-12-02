@@ -6,7 +6,8 @@ case class SchedulePointScala(
                                packedTime: Int,
                                validDays: Byte,
                                fuzz: Int,
-                               override val id: Option[DatabaseIDScala] = None
+                               index: Int,
+                               override val id: DatabaseIDScala
                              ) extends DatabaseObjectScala {
 
   def nextValidTime(base: TimePointScala): TimePointScala = {

@@ -61,7 +61,7 @@ object StationDatabaseManager {
   def getPathsForStation(station: StationScala, starttime: TimePointScala, maxdelta: TimeDeltaScala): List[StationWithRoute] = {
     databases.view
       .filter(_.isUp)
-      .filter(db => station.id.map(dbid => dbid.database == db.databaseName).getOrElse(db.servesPoint(station)))
+      .filter(db => db.servesPoint(station))
       .flatMap(_.getPathsForStation(station, starttime, maxdelta))
       .toList
   }
@@ -83,7 +83,7 @@ object StationDatabaseManager {
   def getArrivableStations(start: StationWithRoute, starttime: TimePointScala, maxDelta: TimeDeltaScala): List[StationWithRoute] = {
     databases.view
       .filter(_.isUp)
-      .find(db => start.route.id.map(dbid => dbid.database == db.databaseName).getOrElse(db.servesPoint(start.station)))
+      .find(db => db.servesPoint(start.station))
       .map(_.getArrivableStations(start, starttime, maxDelta))
       .getOrElse(List.empty)
   }
@@ -95,7 +95,7 @@ object StationDatabaseManager {
       if (remaining.isEmpty) {
         return rval.toMap
       }
-      val serviceable = remaining.filter(req => req._1.route.id.map(dbid => dbid.database == cache.databaseName).getOrElse(cache.servesPoint(req._1.station)))
+      val serviceable = remaining.filter(req => cache.servesPoint(req._1.station))
       rval ++= cache.getArrivableStationBulk(serviceable)
     })
     request.view.filter(req => rval.get(req._1).isEmpty).foreach(req => rval += (req._1 -> List.empty))
