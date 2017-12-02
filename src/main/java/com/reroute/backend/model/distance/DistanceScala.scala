@@ -1,6 +1,6 @@
 package com.reroute.backend.model.distance
 
-case class DistanceScala(distance: Double) extends AnyVal with Ordered[DistanceScala] {
+case class DistanceScala(distance: Double) extends Ordered[DistanceScala] {
 
   def in(units: DistanceUnitsScala): Double = distance / units.toMeters
 

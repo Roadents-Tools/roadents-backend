@@ -1,6 +1,6 @@
 package com.reroute.backend.model.distance
 
-case class DistanceUnitsScala(toMeters: Double) extends AnyVal
+case class DistanceUnitsScala(toMeters: Double)
 
 object DistanceUnitsScala {
   val METERS = DistanceUnitsScala(1)

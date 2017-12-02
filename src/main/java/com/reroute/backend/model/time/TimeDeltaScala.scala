@@ -1,6 +1,6 @@
 package com.reroute.backend.model.time
 
-case class TimeDeltaScala(unixdelta: Long) extends AnyVal {
+case class TimeDeltaScala(unixdelta: Long) {
 
   def +(other: TimeDeltaScala): TimeDeltaScala = TimeDeltaScala(unixdelta + other.unixdelta)
 
