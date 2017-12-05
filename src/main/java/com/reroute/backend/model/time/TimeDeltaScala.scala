@@ -1,5 +1,7 @@
 package com.reroute.backend.model.time
 
+import com.reroute.backend.model.distance.{DistanceScala, DistanceUnitsScala}
+
 case class TimeDeltaScala(unixdelta: Long) extends Ordered[TimeDeltaScala] {
 
   def +(other: TimeDeltaScala): TimeDeltaScala = TimeDeltaScala(unixdelta + other.unixdelta)
@@ -18,6 +20,8 @@ case class TimeDeltaScala(unixdelta: Long) extends Ordered[TimeDeltaScala] {
 
   def days: Double = unixdelta / (24 * (60 * (60 * 1000.0)))
 
+  def avgWalkDist: DistanceScala = TimeDeltaScala.AVG_WALK_SPEED_PER_MINUTE * this.minutes
+
   override def compare(that: TimeDeltaScala): Int = unixdelta.compareTo(that.unixdelta)
 }
 
@@ -28,4 +32,5 @@ object TimeDeltaScala {
   final val HOUR = TimeDeltaScala(3600000L)
   final val DAY = TimeDeltaScala(86400000L)
   final val WEEK = TimeDeltaScala(604800000L)
+  final val AVG_WALK_SPEED_PER_MINUTE = DistanceScala(5000.0 / 60, DistanceUnitsScala.METERS)
 }

@@ -1,5 +1,7 @@
 package com.reroute.backend.model.distance
 
+import com.reroute.backend.model.time.TimeDeltaScala
+
 case class DistanceScala(distance: Double) extends Ordered[DistanceScala] {
 
   def in(units: DistanceUnitsScala): Double = distance / units.toMeters
@@ -19,6 +21,8 @@ case class DistanceScala(distance: Double) extends Ordered[DistanceScala] {
   def aboutEquals(other: DistanceScala, margin: DistanceScala): Boolean = {
     (this.distance - other.distance).abs <= margin.distance
   }
+
+  def avgWalkTime = TimeDeltaScala((distance * 720).toLong)
 
   override def compare(that: DistanceScala): Int = this.distance.compare(that.distance)
 }
