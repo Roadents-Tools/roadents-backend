@@ -1,7 +1,6 @@
 package com.reroute.backend.locations.helpers;
 
 import com.reroute.backend.locations.interfaces.LocationCacheInstance;
-import com.reroute.backend.locations.memory.MemoryMapLocationCache;
 import com.reroute.backend.model.distance.Distance;
 import com.reroute.backend.model.location.DestinationLocation;
 import com.reroute.backend.model.location.LocationPoint;
@@ -25,7 +24,7 @@ public class LocationCacheHelper {
     }
 
     private static LocationCacheInstance[] initializeCacheInstanceList() {
-        return new LocationCacheInstance[]{new MemoryMapLocationCache()};
+        return new LocationCacheInstance[] {};
     }
 
     /**
@@ -60,7 +59,7 @@ public class LocationCacheHelper {
      * @param locations the locations meeting this query
      */
     public void cacheLocations(LocationPoint center, Distance range, LocationType type, List<DestinationLocation> locations) {
-        allInstances[0].cacheLocations(center, range, type, locations);
+        Arrays.stream(allInstances).forEach(c -> c.cacheLocations(center, range, type, locations));
     }
 
     /**
