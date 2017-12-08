@@ -223,9 +223,9 @@ public class LogicUtils {
 
         if (waitTime.getDeltaLong() >= maxDelta.getDeltaLong()) {
             return Collections.emptySet();
-        }
-
-        return StationRetriever.getArrivableStations(station.getChain(), trueStart, trueDelta)
+        } else if (waitTime.getDeltaLong() <= 10000) {
+            return Collections.emptySet();
+        } else return StationRetriever.getArrivableStations(station.getChain(), trueStart, trueDelta)
                 .entrySet().parallelStream()
                 .filter(entry -> !Arrays.equals(entry.getKey().getCoordinates(), station.getCoordinates()))
                 .filter(entry -> entry.getValue().getDeltaLong() <= trueDelta.getDeltaLong())
