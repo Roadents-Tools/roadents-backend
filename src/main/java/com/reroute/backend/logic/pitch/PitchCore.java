@@ -40,6 +40,7 @@ import java.util.stream.Stream;
 public class PitchCore implements LogicCore {
 
     public static final String TAG = "DEMO";
+    private static final boolean EnableCache = false;
     public static final Predicate<TravelRoute> isntDumbRoute = rt ->
             !(rt.getWalkDisp().inMeters() >= 5 + LocationUtils.distanceBetween(rt.getStart(), rt.getCurrentEnd())
                     .inMeters())
@@ -155,21 +156,26 @@ public class PitchCore implements LogicCore {
     private static Stream<TravelRoute> getDestRoutes(TravelRoute base, TimeDelta rawDelta, LocationType type) {
         LocationPoint center = base.getCurrentEnd();
         Distance range = LocationUtils.timeToWalkDistance(rawDelta.minus(base.getTime()));
-        List<DestinationLocation> dests = destCache.getUnchecked(type).asMap().entrySet().stream()
-                .filter(e -> LocationUtils.distanceBetween(e.getKey(), center).inMeters() < 5)
-                .map(Map.Entry::getValue)
-                .filter(ls -> ls.size() >= 50 || ls.stream()
-                        .anyMatch(d -> LocationUtils.distanceBetween(d, center).inMeters() >= range.inMeters()))
-                .findAny()
-                .map(dests1 -> dests1.stream()
-                        .filter(d -> LocationUtils.distanceBetween(d, center).inMeters() <= range.inMeters())
-                        .collect(Collectors.toList())
-                )
-                .orElse(Collections.emptyList());
+        List<DestinationLocation> dests;
+        if (EnableCache) {
+            dests = destCache.getUnchecked(type).asMap().entrySet().stream()
+                    .filter(e -> LocationUtils.distanceBetween(e.getKey(), center).inMeters() < 5)
+                    .map(Map.Entry::getValue)
+                    .filter(ls -> ls.size() >= 50 || ls.stream()
+                            .anyMatch(d -> LocationUtils.distanceBetween(d, center).inMeters() >= range.inMeters()))
+                    .findAny()
+                    .map(dests1 -> dests1.stream()
+                            .filter(d -> LocationUtils.distanceBetween(d, center).inMeters() <= range.inMeters())
+                            .collect(Collectors.toList())
+                    )
+                    .orElse(Collections.emptyList());
 
-        if (dests.isEmpty() || dests.stream().anyMatch(dest -> dest.getName().contains("TestPlace"))) {
+            if (dests.isEmpty()) {
+                dests = LocationRetriever.getLocations(center, range, type);
+                destCache.getUnchecked(type).put(center, dests);
+            }
+        } else {
             dests = LocationRetriever.getLocations(center, range, type);
-            destCache.getUnchecked(type).put(center, dests);
         }
 
         Stream<TravelRoute> baseRoutes = dests.stream()
