@@ -106,13 +106,13 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
 
             Stream<String> toParse;
             if (max - min >= 8390) {
-                toParse = jedis.zrange(key, 0, 500).stream();
+                toParse = jedis.zrange(key, 0, -1).stream();
             } else if (min < max) {
-                toParse = jedis.zrangeByScore(key, min, max, 0, 500).stream();
+                toParse = jedis.zrangeByScore(key, min, max).stream();
             } else {
                 toParse = Stream.concat(
-                        jedis.zrangeByScore(key, 0, max, 0, 500).stream(),
-                        jedis.zrangeByScore(key, min, 86400, 0, 500).stream()
+                        jedis.zrangeByScore(key, 0, max).stream(),
+                        jedis.zrangeByScore(key, min, 86400).stream()
                 );
             }
             toParse.forEach(p -> {
