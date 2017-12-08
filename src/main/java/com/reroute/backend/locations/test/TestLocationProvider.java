@@ -21,10 +21,10 @@ import java.util.stream.Collectors;
 public class TestLocationProvider implements LocationProvider {
 
     private static final double[][] MULTIPLIERS = new double[][]{
-            new double[] { .99, 0 },
-            new double[] { -.99, 0 },
-            new double[] { 0, .99 },
-            new double[] { 0, -.99 }
+            new double[] { .9, 0 },
+            new double[] { -.9, 0 },
+            new double[] { 0, .9 },
+            new double[] { 0, -.9 }
     };
     private static final int DEFAULT_POINTS_PER_QUERY = MULTIPLIERS.length;
     private static Collection<DestinationLocation> testLocations = null;
@@ -73,7 +73,7 @@ public class TestLocationProvider implements LocationProvider {
             Assert.assertTrue(LocationUtils.distanceBetween(new StartPoint(newCenter), center)
                     .inMeters() <= range.inMeters());
 
-            String name = String.format("%s Place %d", type.getVisibleName(), rng.nextInt(100));
+            String name = String.format("%s TestPlace %d", type.getVisibleName(), rng.nextInt(100));
 
             rval.add(new DestinationLocation(name, type, newCenter));
         }

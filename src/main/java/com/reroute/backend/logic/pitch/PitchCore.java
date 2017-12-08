@@ -167,7 +167,7 @@ public class PitchCore implements LogicCore {
                 )
                 .orElse(Collections.emptyList());
 
-        if (dests.isEmpty()) {
+        if (dests.isEmpty() || dests.stream().anyMatch(dest -> dest.getName().contains("TestPlace"))) {
             dests = LocationRetriever.getLocations(center, range, type);
             destCache.getUnchecked(type).put(center, dests);
         }
