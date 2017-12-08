@@ -213,7 +213,7 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
 
         String query = String.format(
                 "SELECT %s, %s, ST_X(%s::geometry) AS %s, ST_Y(%s::geometry) AS %s FROM %s " +
-                        "WHERE ST_DWITHIN(%s, ST_POINT(%f, %f)::geography, %f)",
+                        "WHERE ST_DWITHIN(%s, ST_POINT(%f, %f)::geography, %f) LIMIT 250",
                 PostgresqlContract.StationTable.ID_KEY, PostgresqlContract.StationTable.NAME_KEY,
                 PostgresqlContract.StationTable.LATLNG_KEY, LNG_KEY, PostgresqlContract.StationTable.LATLNG_KEY, LAT_KEY,
                 PostgresqlContract.StationTable.TABLE_NAME, PostgresqlContract.StationTable.LATLNG_KEY,
@@ -319,7 +319,7 @@ public class PostgresqlDonutDb implements StationDbInstance.DonutDb {
             return Collections.emptyMap();
         }
         String query = String.format(
-                "SELECT %s, %s, %s, %s, (%s - %d) AS %s FROM %s WHERE %s = %s AND %s",
+                "SELECT %s, %s, %s, %s, (%s - %d) AS %s FROM %s WHERE %s = %s AND %s LIMIT 250",
                 PostgresqlContract.StationsForChainsView.STATION_LAT_KEY,
                 PostgresqlContract.StationsForChainsView.STATION_LNG_KEY,
                 PostgresqlContract.StationsForChainsView.STATION_NAME_KEY,

@@ -15,6 +15,7 @@ import redis.clients.jedis.GeoCoordinate;
 import redis.clients.jedis.GeoRadiusResponse;
 import redis.clients.jedis.GeoUnit;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.params.geo.GeoRadiusParam;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -48,7 +49,8 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
                 center.getCoordinates()[1],
                 center.getCoordinates()[0],
                 range.inMeters(),
-                GeoUnit.M
+                GeoUnit.M,
+                GeoRadiusParam.geoRadiusParam().count(250)
         )
                 .parallelStream()
                 .map(GeoRadiusResponse::getMemberByString)
@@ -65,7 +67,7 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
 
             String key = RedisUtils.SCHEDULE_STATION_INDEX_PREFIX + RedisUtils.KEY_SPLITER + station.getID()
                     .getDatabaseName() + station.getID().getId();
-            Set<String> toParse = jedis.zrange(key, 0, -1);
+            Set<String> toParse = jedis.zrange(key, 0, 500);
             Map<TransChain, List<SchedulePoint>> rval = new ConcurrentHashMap<>();
             for (String p : toParse) {
                 String[] items = p.split(RedisUtils.ITEM_SPLITER);
@@ -104,13 +106,13 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
 
             Stream<String> toParse;
             if (max - min >= 8390) {
-                toParse = jedis.zrange(key, 0, -1).stream();
+                toParse = jedis.zrange(key, 0, 500).stream();
             } else if (min < max) {
-                toParse = jedis.zrangeByScore(key, min, max).stream();
+                toParse = jedis.zrangeByScore(key, min, max, 0, 500).stream();
             } else {
                 toParse = Stream.concat(
-                        jedis.zrangeByScore(key, 0, max).stream(),
-                        jedis.zrangeByScore(key, min, 86400).stream()
+                        jedis.zrangeByScore(key, 0, max, 0, 500).stream(),
+                        jedis.zrangeByScore(key, min, 86400, 0, 500).stream()
                 );
             }
             toParse.forEach(p -> {
@@ -141,9 +143,9 @@ public class RedisDonutCache implements StationCacheInstance.DonutCache {
         double max = startTime.plus(maxDelta).getPackedTime() + 1;
         Set<String> toParse;
         if (min < max) {
-            toParse = jedis.zrangeByScore(key, min, max);
+            toParse = jedis.zrangeByScore(key, min, max, 0, 250);
         } else {
-            toParse = jedis.zrange(key, 0, -1);
+            toParse = jedis.zrange(key, 0, 250);
         }
         Map<TransStation, TimeDelta> rval = new ConcurrentHashMap<>();
         for (String p : toParse) {
