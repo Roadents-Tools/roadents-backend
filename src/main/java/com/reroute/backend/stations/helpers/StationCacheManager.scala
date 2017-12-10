@@ -1,9 +1,10 @@
 package com.reroute.backend.stations.helpers
 
 import com.reroute.backend.model.distance.DistanceScala
-import com.reroute.backend.model.location.{StartScala, StationScala, StationWithRoute}
+import com.reroute.backend.model.location.{LocationPointScala, StartScala, StationScala, StationWithRoute}
 import com.reroute.backend.model.time.{TimeDeltaScala, TimePointScala}
 import com.reroute.backend.stations.interfaces.StationCacheScala
+import com.reroute.backend.stations.{ArrivableRequest, PathsRequest, TransferRequest}
 
 import scala.collection.mutable
 
@@ -16,66 +17,67 @@ object StationCacheManager {
   }
 
   def getStartingStations(start: StartScala, dist: DistanceScala): Option[List[StationScala]] = {
-    getFromCaches(_.getStartingStations(start, dist))
+    getFromCaches(_.getStartingStations(start, dist))(start, dist)
   }
 
   def getTransferStations(station: StationScala, range: DistanceScala): Option[List[StationScala]] = {
-    getFromCaches(_.getTransferStations(station, range))
+    getFromCaches(_.getTransferStations(station, range))(station, range)
   }
 
-  def getTransferStationsBulk(request: List[(StationScala, DistanceScala)]): Map[StationScala, List[StationScala]] = {
-    val rval = mutable.Map[StationScala, List[StationScala]]()
+  private def getFromCaches[T](func: StationCacheScala => Option[T])(center: LocationPointScala, range: DistanceScala): Option[T] = caches.view
+    .filter(_.isUp)
+    .filter(_.servesRange(center, range))
+    .map(func(_))
+    .find(_.isDefined)
+    .flatten
+
+  def getTransferStationsBulk(request: Seq[TransferRequest]): Map[TransferRequest, List[StationScala]] = {
+    val rval = mutable.Map[TransferRequest, List[StationScala]]()
     caches.view
-      .takeWhile(_ => request.exists(req => rval.get(req._1).isEmpty))
+      .takeWhile(_ => request.exists(req => rval.get(req).isEmpty))
       .filter(_.isUp)
-      .map(cache => cache.getTransferStationsBulk(request.filter(req => rval.get(req._1).isEmpty)))
+      .map(cache => cache.getTransferStationsBulk(request.filter(req => rval.get(req).isEmpty)))
       .foreach(rval ++= _)
     rval.toMap
   }
 
   def getPathsForStation(station: StationScala, starttime: TimePointScala, maxdelta: TimeDeltaScala): Option[List[StationWithRoute]] = {
-    getFromCaches(_.getPathsForStation(station, starttime, maxdelta))
+    getFromCaches(_.getPathsForStation(station, starttime, maxdelta))(station, DistanceScala.ERROR_MARGIN)
   }
 
-  def getPathsForStationBulk(request: List[(StationScala, TimePointScala, TimeDeltaScala)]): Map[StationScala, List[StationWithRoute]] = {
-    val rval = mutable.Map[StationScala, List[StationWithRoute]]()
+  def getPathsForStationBulk(request: Seq[PathsRequest]): Map[PathsRequest, List[StationWithRoute]] = {
+    val rval = mutable.Map[PathsRequest, List[StationWithRoute]]()
     caches.view
-      .takeWhile(_ => request.exists(req => rval.get(req._1).isEmpty))
+      .takeWhile(_ => request.exists(req => rval.get(req).isEmpty))
       .filter(_.isUp)
-      .map(cache => cache.getPathsForStationBulk(request.filter(req => rval.get(req._1).isEmpty)))
+      .map(cache => cache.getPathsForStationBulk(request.filter(req => rval.get(req).isEmpty)))
       .foreach(rval ++= _)
     rval.toMap
   }
 
   def getArrivableStations(start: StationWithRoute, starttime: TimePointScala, maxDelta: TimeDeltaScala): Option[List[StationWithRoute]] = {
-    getFromCaches(_.getArrivableStations(start, starttime, maxDelta))
+    getFromCaches(_.getArrivableStations(start, starttime, maxDelta))(start.station, maxDelta.avgWalkDist)
   }
 
-  private def getFromCaches[T](func: StationCacheScala => Option[T]): Option[T] = caches.view
-    .filter(_.isUp)
-    .map(func(_))
-    .find(_.isDefined)
-    .flatten
-
-  def getArrivableStationBulk(request: List[(StationWithRoute, TimePointScala, TimeDeltaScala)]): Map[StationWithRoute, List[StationWithRoute]] = {
-    val rval = mutable.Map[StationWithRoute, List[StationWithRoute]]()
+  def getArrivableStationBulk(request: Seq[ArrivableRequest]): Map[ArrivableRequest, List[StationWithRoute]] = {
+    val rval = mutable.Map[ArrivableRequest, List[StationWithRoute]]()
     caches.view
-      .takeWhile(_ => request.exists(req => rval.get(req._1).isEmpty))
+      .takeWhile(_ => request.exists(req => rval.get(req).isEmpty))
       .filter(_.isUp)
-      .map(cache => cache.getArrivableStationBulk(request.filter(req => rval.get(req._1).isEmpty)))
+      .map(cache => cache.getArrivableStationBulk(request.filter(req => rval.get(req).isEmpty)))
       .foreach(rval ++= _)
     rval.toMap
   }
 
   def putStartingStations(start: StartScala, dist: DistanceScala, stations: List[StationScala]): Boolean = {
-    anyWorks(_.putStartingStations(start, dist, stations))
+    anyWorks(cache => cache.servesRange(start, dist) && cache.putStartingStations(start, dist, stations))
   }
 
   def putTransferStations(station: StationScala, range: DistanceScala, stations: List[StationScala]): Boolean = {
-    anyWorks(_.putTransferStations(station, range, stations))
+    anyWorks(cache => cache.servesRange(station, range) && cache.putTransferStations(station, range, stations))
   }
 
-  def putTransferStationsBulk(request: List[(StationScala, DistanceScala, List[StationScala])]): Boolean = {
+  def putTransferStationsBulk(request: Seq[(TransferRequest, List[StationScala])]): Boolean = {
     anyWorks(_.putTransferStationsBulk(request))
   }
 
@@ -83,7 +85,7 @@ object StationCacheManager {
     anyWorks(_.putPathsForStation(station, starttime, maxdelta, results))
   }
 
-  def putPathsForStationBulk(request: List[(StationScala, TimePointScala, TimeDeltaScala, List[StationWithRoute])]): Boolean = {
+  def putPathsForStationBulk(request: Seq[(PathsRequest, List[StationWithRoute])]): Boolean = {
     anyWorks(_.putPathsForStationBulk(request))
   }
 
@@ -93,8 +95,10 @@ object StationCacheManager {
 
   private def anyWorks(pred: StationCacheScala => Boolean): Boolean = caches.filter(_.isUp).exists(pred(_))
 
-  def putArrivableStationBulk(request: List[(StationWithRoute, TimePointScala, TimeDeltaScala, List[StationWithRoute])]): Boolean = {
-    anyWorks(_.putArrivableStationBulk(request))
+  def putArrivableStationBulk(request: Seq[(ArrivableRequest, List[StationWithRoute])]): Boolean = {
+    anyWorks({
+      _.putArrivableStationBulk(request)
+    })
   }
 
   def close(): Unit = caches.foreach(_.close())

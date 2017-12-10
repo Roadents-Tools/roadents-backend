@@ -5,7 +5,7 @@ import com.reroute.backend.model.location.{StartScala, StationScala, StationWith
 import com.reroute.backend.model.time.{TimeDeltaScala, TimePointScala}
 import com.reroute.backend.stations.helpers.{StationCacheManager, StationDatabaseManager}
 
-class TransitDataRetriever {
+object TransitDataRetriever {
 
   def getStartingStations(start: StartScala, dist: DistanceScala): List[StationScala] = {
     val cached = StationCacheManager.getStartingStations(start, dist)
@@ -27,12 +27,12 @@ class TransitDataRetriever {
     }
   }
 
-  def getTransferStationsBulk(request: List[(StationScala, DistanceScala)]): Map[StationScala, List[StationScala]] = {
+  def getTransferStationsBulk(request: Seq[TransferRequest]): Map[TransferRequest, List[StationScala]] = {
     val cached = StationCacheManager.getTransferStationsBulk(request)
-    val remaining = request.filter(req => cached.get(req._1).isEmpty)
+    val remaining = request.filter(req => cached.get(req).isEmpty)
     if (remaining.isEmpty) return cached
     val dbres = StationDatabaseManager.getTransferStationsBulk(remaining)
-    StationCacheManager.putTransferStationsBulk(remaining.map(req => (req._1, req._2, dbres(req._1))))
+    StationCacheManager.putTransferStationsBulk(dbres.toSeq)
     cached ++ dbres
   }
 
@@ -46,12 +46,12 @@ class TransitDataRetriever {
     }
   }
 
-  def getPathsForStationBulk(request: List[(StationScala, TimePointScala, TimeDeltaScala)]): Map[StationScala, List[StationWithRoute]] = {
+  def getPathsForStationBulk(request: Seq[PathsRequest]): Map[PathsRequest, List[StationWithRoute]] = {
     val cached = StationCacheManager.getPathsForStationBulk(request)
-    val remaining = request.filter(req => cached.get(req._1).isEmpty)
+    val remaining = request.filter(req => cached.get(req).isEmpty)
     if (remaining.isEmpty) return cached
     val dbres = StationDatabaseManager.getPathsForStationBulk(remaining)
-    StationCacheManager.putPathsForStationBulk(remaining.map(req => (req._1, req._2, req._3, dbres(req._1))))
+    StationCacheManager.putPathsForStationBulk(dbres.toSeq)
     cached ++ dbres
   }
 
@@ -65,12 +65,12 @@ class TransitDataRetriever {
     }
   }
 
-  def getArrivableStationBulk(request: List[(StationWithRoute, TimePointScala, TimeDeltaScala)]): Map[StationWithRoute, List[StationWithRoute]] = {
+  def getArrivableStationBulk(request: Seq[ArrivableRequest]): Map[ArrivableRequest, List[StationWithRoute]] = {
     val cached = StationCacheManager.getArrivableStationBulk(request)
-    val remaining = request.filter(req => cached.get(req._1).isEmpty)
+    val remaining = request.filter(req => cached.get(req).isEmpty)
     if (remaining.isEmpty) return cached
     val dbres = StationDatabaseManager.getArrivableStationBulk(remaining)
-    StationCacheManager.putArrivableStationBulk(remaining.map(req => (req._1, req._2, req._3, dbres(req._1))))
+    StationCacheManager.putArrivableStationBulk(dbres.toSeq)
     cached ++ dbres
   }
 }

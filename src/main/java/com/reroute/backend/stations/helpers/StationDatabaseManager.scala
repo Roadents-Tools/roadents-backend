@@ -4,6 +4,7 @@ import com.reroute.backend.model.distance.DistanceScala
 import com.reroute.backend.model.location.{StartScala, StationScala, StationWithRoute}
 import com.reroute.backend.model.time.{TimeDeltaScala, TimePointScala}
 import com.reroute.backend.stations.interfaces.StationDatabaseScala
+import com.reroute.backend.stations.{ArrivableRequest, PathsRequest, TransferRequest}
 
 import scala.collection.mutable
 
@@ -33,17 +34,17 @@ object StationDatabaseManager {
       .getOrElse(List.empty)
   }
 
-  def getTransferStationsBulk(request: List[(StationScala, DistanceScala)]): Map[StationScala, List[StationScala]] = {
-    var rval = mutable.Map[StationScala, List[StationScala]]()
+  def getTransferStationsBulk(request: Seq[TransferRequest]): Map[TransferRequest, List[StationScala]] = {
+    var rval = mutable.Map[TransferRequest, List[StationScala]]()
     databases.view.filter(_.isUp).foreach(cache => {
-      val remaining = request.filter(req => rval.get(req._1).isEmpty)
+      val remaining = request.filter(req => rval.get(req).isEmpty)
       if (remaining.isEmpty) {
         return rval.toMap
       }
-      val serviceable = remaining.filter(req => cache.servesArea(req._1, req._2))
+      val serviceable = remaining.filter(req => cache.servesArea(req.station, req.distance))
       rval ++= cache.getTransferStationsBulk(serviceable)
     })
-    request.view.filter(req => rval.get(req._1).isEmpty).foreach(req => rval += (req._1 -> List.empty))
+    request.view.filter(req => rval.get(req).isEmpty).foreach(req => rval += (req -> List.empty))
     rval.toMap
   }
 
@@ -66,17 +67,17 @@ object StationDatabaseManager {
       .toList
   }
 
-  def getPathsForStationBulk(request: List[(StationScala, TimePointScala, TimeDeltaScala)]): Map[StationScala, List[StationWithRoute]] = {
-    val rval = mutable.Map[StationScala, List[StationWithRoute]]()
+  def getPathsForStationBulk(request: Seq[PathsRequest]): Map[PathsRequest, List[StationWithRoute]] = {
+    val rval = mutable.Map[PathsRequest, List[StationWithRoute]]()
     databases.view.filter(_.isUp).foreach(cache => {
-      val remaining = request.filter(req => rval.get(req._1).isEmpty)
+      val remaining = request.filter(req => rval.get(req).isEmpty)
       if (remaining.isEmpty) {
         return rval.toMap
       }
-      val serviceable = remaining.filter(req => cache.servesPoint(req._1))
+      val serviceable = remaining.filter(req => cache.servesPoint(req.station))
       rval ++= cache.getPathsForStationBulk(serviceable)
     })
-    request.view.filter(req => rval.get(req._1).isEmpty).foreach(req => rval += (req._1 -> List.empty))
+    request.view.filter(req => rval.get(req).isEmpty).foreach(req => rval += (req -> List.empty))
     rval.toMap
   }
 
@@ -88,17 +89,17 @@ object StationDatabaseManager {
       .getOrElse(List.empty)
   }
 
-  def getArrivableStationBulk(request: List[(StationWithRoute, TimePointScala, TimeDeltaScala)]): Map[StationWithRoute, List[StationWithRoute]] = {
-    val rval = mutable.Map[StationWithRoute, List[StationWithRoute]]()
+  def getArrivableStationBulk(request: Seq[ArrivableRequest]): Map[ArrivableRequest, List[StationWithRoute]] = {
+    val rval = mutable.Map[ArrivableRequest, List[StationWithRoute]]()
     databases.view.filter(_.isUp).foreach(cache => {
-      val remaining = request.filter(req => rval.get(req._1).isEmpty)
+      val remaining = request.filter(req => rval.get(req).isEmpty)
       if (remaining.isEmpty) {
         return rval.toMap
       }
-      val serviceable = remaining.filter(req => cache.servesPoint(req._1.station))
+      val serviceable = remaining.filter(req => cache.servesPoint(req.station.station))
       rval ++= cache.getArrivableStationBulk(serviceable)
     })
-    request.view.filter(req => rval.get(req._1).isEmpty).foreach(req => rval += (req._1 -> List.empty))
+    request.view.filter(req => rval.get(req).isEmpty).foreach(req => rval += (req -> List.empty))
     rval.toMap
   }
 
