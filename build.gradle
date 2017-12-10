@@ -47,6 +47,7 @@ dependencies {
     compile fileTree(include: ['*.jar'], dir: 'lib')
 
     testCompile 'junit:junit:4.12'
+    testCompile group: 'org.scalatest', name: 'scalatest_2.12', version: '3.0.4'
 
 }
 
