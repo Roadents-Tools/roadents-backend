@@ -10,7 +10,7 @@ trait LocationPointScala {
   def location: Array[Double] = Array(latitude, longitude)
 
   def overlaps(other: LocationPointScala): Boolean = {
-    this.distanceTo(other) <= DistanceScala.ERROR_MARGIN
+    Math.abs(this.latitude - other.latitude) <= 0.000001 && Math.abs(this.longitude - other.longitude) <= 0.000001
   }
 
   def distanceTo(other: LocationPointScala): DistanceScala = {
@@ -21,7 +21,7 @@ trait LocationPointScala {
     val sindLat = Math.sin(dLat / 2)
     val sindLng = Math.sin(dLng / 2)
 
-    val a = Math.pow(sindLat, 2) + Math.pow(sindLng, 2) * Math.cos(Math.toRadians(other.latitude) * Math.cos(Math.toRadians(this.latitude)))
+    val a = Math.pow(sindLat, 2) + Math.pow(sindLng, 2) * Math.cos(Math.toRadians(other.latitude)) * Math.cos(Math.toRadians(this.latitude))
 
     val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
     val ckm = c * LocationPointScala.EARTH_RADIUS_KM
@@ -30,18 +30,20 @@ trait LocationPointScala {
 }
 
 object LocationPointScala {
-  private final val EARTH_RADIUS_KM = 6367.449 //kilometers
+  final val EARTH_RADIUS_KM = 6367.449 //kilometers
 
-  private final val AVG_WALKING_PER_HOUR = DistanceScala(5.0, DistanceUnitsScala.KILOMETERS)
-  private final val MAX_TRANSIT_PER_HOUR = DistanceScala(65, DistanceUnitsScala.MILES)
-  private final val LENGTH_DEGREE_LAT = DistanceScala(111, DistanceUnitsScala.KILOMETERS)
-  private final val EQUATOR_LENGTH_DEGREE_LNG = DistanceScala(111.321, DistanceUnitsScala.KILOMETERS)
-  private final val SAFETY_FACTOR = 1
+  final val AVG_WALKING_PER_HOUR = DistanceScala(5.0, DistanceUnitsScala.KILOMETERS)
+  final val MAX_TRANSIT_PER_HOUR = DistanceScala(65, DistanceUnitsScala.MILES)
+  final val LENGTH_DEGREE_LAT = DistanceScala(111, DistanceUnitsScala.KILOMETERS)
+  final val EQUATOR_LENGTH_DEGREE_LNG = DistanceScala(111.321, DistanceUnitsScala.KILOMETERS)
+  final val SAFETY_FACTOR = 1
 
+  @inline
   def latitudeRange(center: LocationPointScala, range: DistanceScala): Double = range.distance / LENGTH_DEGREE_LAT.distance
 
+  @inline
   def longitudeRange(center: LocationPointScala, range: DistanceScala): Double = {
-    val unit = Math.cos(center.latitude) * EQUATOR_LENGTH_DEGREE_LNG.in(DistanceUnitsScala.KILOMETERS)
-    range.in(DistanceUnitsScala.KILOMETERS) / unit
+    range.distance / (Math.cos(center.latitude) * EQUATOR_LENGTH_DEGREE_LNG.distance)
   }
+
 }

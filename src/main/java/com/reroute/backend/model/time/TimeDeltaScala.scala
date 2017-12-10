@@ -2,25 +2,34 @@ package com.reroute.backend.model.time
 
 import com.reroute.backend.model.distance.{DistanceScala, DistanceUnitsScala}
 
-case class TimeDeltaScala(unixdelta: Long) extends Ordered[TimeDeltaScala] {
+case class TimeDeltaScala(unixdelta: Long) extends AnyVal with Ordered[TimeDeltaScala] {
 
+  @inline
   def +(other: TimeDeltaScala): TimeDeltaScala = TimeDeltaScala(unixdelta + other.unixdelta)
 
+  @inline
   def -(other: TimeDeltaScala): TimeDeltaScala = TimeDeltaScala(unixdelta - other.unixdelta)
 
+  @inline
   def *(scaler: Double): TimeDeltaScala = TimeDeltaScala((unixdelta * scaler).asInstanceOf[Long])
 
+  @inline
   def /(scaler: Double): TimeDeltaScala = TimeDeltaScala((unixdelta / scaler).asInstanceOf[Long])
 
+  @inline
   def seconds: Double = unixdelta / 1000.0
 
-  def minutes: Double = unixdelta / (60 * 1000.0)
-
+  @inline
   def hours: Double = unixdelta / (60 * (60 * 1000.0))
 
+  @inline
   def days: Double = unixdelta / (24 * (60 * (60 * 1000.0)))
 
+  @inline
   def avgWalkDist: DistanceScala = TimeDeltaScala.AVG_WALK_SPEED_PER_MINUTE * this.minutes
+
+  @inline
+  def minutes: Double = unixdelta / (60 * 1000.0)
 
   override def compare(that: TimeDeltaScala): Int = unixdelta.compareTo(that.unixdelta)
 }
