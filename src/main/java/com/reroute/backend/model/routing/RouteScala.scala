@@ -22,7 +22,7 @@ class RouteScala(val start: StartScala, val starttime: TimePointScala, val steps
     require(currentEnd == step.startpt, s"Route is discontinuous. Tried adding ${step.startpt} to $currentEnd")
     require(destOpt.isEmpty, s"Route is already finished!")
     require(!hasPoint(step.endpt), s"Already have location ${step.endpt} in the route.")
-    require((step.endpt distanceTo step.startpt) == DistanceScala.NULL || step.totaltime > TimeDeltaScala.NULL, s"Teleported from ${step.startpt} to ${step.endpt}")
+    require(step.totaltime > TimeDeltaScala.NULL || step.startpt.overlaps(step.endpt), s"Teleported from ${step.startpt} to ${step.endpt}")
     new RouteScala(start, starttime, step :: stepsList)
   }
 
@@ -35,11 +35,6 @@ class RouteScala(val start: StartScala, val starttime: TimePointScala, val steps
   def endTime: TimePointScala = starttime + totalTime
 
   def totalTime: TimeDeltaScala = stepsList.view.map(_.totaltime).fold(TimeDeltaScala.NULL)(_ + _)
-
-  def copyAt(index: Int): RouteScala = {
-    if (index >= stepsList.size + 1) this
-    else new RouteScala(start, starttime, stepsList.reverseIterator.take(index).toList)
-  }
 
   def endTimeAt(index: Int): TimePointScala = {
     starttime + totalTimeAt(index)
