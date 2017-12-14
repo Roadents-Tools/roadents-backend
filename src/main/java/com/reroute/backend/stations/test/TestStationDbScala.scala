@@ -29,16 +29,26 @@ class TestStationDbScala extends StationDatabaseScala {
   }
 
   @inline
-  private final def genRawStations(start: LocationPointScala, dist: DistanceScala): Seq[StationScala] = {
+  private final def genRawStations(inpstart: LocationPointScala, inpdist: DistanceScala): Seq[StationScala] = {
+    val start = StartScala(
+      inpstart.latitude - inpstart.latitude % ADDITIVE,
+      inpstart.longitude - inpstart.longitude % ADDITIVE
+    )
+    val dist = (inpstart distanceTo start) + inpdist
+
     val latrange = LocationPointScala.latitudeRange(start, dist)
-    val latstepmax = (latrange / ADDITIVE).toInt
+    val latsteprange = (latrange / ADDITIVE).toInt
+    val latmin = latsteprange / -2
+    val latmax = latsteprange / 2
+
     val lngrange = LocationPointScala.longitudeRange(start, dist)
-    val lngstepmax = (lngrange / ADDITIVE).toInt
-    val possible = (for (lataddstep <- latstepmax / -2 to latstepmax / 2; lngaddstep <- lngstepmax / -2 to lngstepmax / 2) yield {
+    val lngsteprange = (lngrange / ADDITIVE).toInt
+    val lngmin = lngsteprange / -2
+    val lngmax = lngsteprange / 2
+    val possible = for (lataddstep <- latmin to latmax; lngaddstep <- lngmin to lngmax) yield {
       buildFakeStation(start.latitude + lataddstep * ADDITIVE, start.longitude + lngaddstep * ADDITIVE)
-    }).toStream
-    val rval = possible.filter(st => (st distanceTo start) < dist)
-    rval
+    }
+    possible.filter(st => (st distanceTo inpstart) < inpdist)
   }
 
   override def getTransferStations(request: Seq[TransferRequest]): Map[TransferRequest, List[StationScala]] = {
