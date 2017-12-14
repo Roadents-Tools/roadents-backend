@@ -4,7 +4,7 @@ import com.reroute.backend.model.database.DatabaseIDScala
 import com.reroute.backend.model.distance.DistanceUnitsScala
 import com.reroute.backend.model.location.{StartScala, StationScala}
 import com.reroute.backend.model.time.{TimeDeltaScala, TimePointScala}
-import com.reroute.backend.stations.TransferRequest
+import com.reroute.backend.stations.{PathsRequest, TransferRequest}
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatest.junit.AssertionsForJUnit
@@ -20,12 +20,13 @@ class TestStationDbScalaTest extends AssertionsForJUnit {
     val range = Seq(StartScala(37.5, -123), StartScala(37.5, -121), StartScala(38, -122), StartScala(37, -122))
       .map(pt => pt distanceTo center)
       .min
+    val req = TransferRequest(center, range)
     val area = Math.PI * Math.pow(range.in(DistanceUnitsScala.KILOMETERS), 2)
 
     assertTrue(testdb.servesPoint(center))
     assertTrue(testdb.servesArea(center, range))
 
-    val res = testdb.getTransferStations(center, range)
+    val res = testdb.getTransferStations(List(req)).head._2
     assertTrue(res.nonEmpty)
     assertTrue(res.forall(st => (center distanceTo st) <= range))
     res.foreach(st => {
@@ -50,7 +51,7 @@ class TestStationDbScalaTest extends AssertionsForJUnit {
       TransferRequest(stat, range)
     }).filter(req => testdb.servesArea(req.station, req.distance) && req.distance.distance > 1000)
 
-    val resMap = testdb.getTransferStationsBulk(reqs)
+    val resMap = testdb.getTransferStations(reqs)
     for ((req, res) <- resMap) {
 
       assertTrue(s"Got empty req: $req", res.nonEmpty)
@@ -71,8 +72,9 @@ class TestStationDbScalaTest extends AssertionsForJUnit {
     val testdb = new TestStationDbScala()
     val center = StationScala("CENTER_OF_TESTDB", 37.5, -122, DatabaseIDScala("TEST", -1))
     val delta = TimeDeltaScala(15 * 60 * 1000)
-    val res = testdb.getPathsForStation(center, TimePointScala.now().withDayOfWeek(0).withPackedTime(0), delta)
-    assertTrue(res.size == 4)
-    assertTrue(res.forall(dt => dt.schedule.size == delta.minutes / 5))
+    val req = PathsRequest(center, TimePointScala.now().withDayOfWeek(0).withPackedTime(0), delta)
+    val res = testdb.getPathsForStation(List(req)).head._2
+    assertTrue(res.lengthCompare(4) == 0)
+    assertTrue(res.forall(dt => dt.schedule.lengthCompare((delta.minutes / 5).toInt) == 0))
   }
 }

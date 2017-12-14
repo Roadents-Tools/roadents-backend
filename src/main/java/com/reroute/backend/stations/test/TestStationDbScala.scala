@@ -5,43 +5,90 @@ import com.reroute.backend.model.distance.DistanceScala
 import com.reroute.backend.model.location._
 import com.reroute.backend.model.time.{SchedulePointScala, TimeDeltaScala, TimePointScala}
 import com.reroute.backend.stations.interfaces.StationDatabaseScala
+import com.reroute.backend.stations.{ArrivableRequest, PathsRequest, TransferRequest}
 
 class TestStationDbScala extends StationDatabaseScala {
-  private val stations = (for (latmult <- 0 to 50; lngmult <- 0 to 100) yield {
-    val lat = 37 + 0.02 * latmult
-    val lng = -123 +.02 * lngmult
-    buildFakeStation(lat, lng)
-  }).toList
+  override val databaseName: String = "TESTDB"
+  private val ADDITIVE = 0.01
+  private val TIME_DIFF = 150
+  private val LAT_START = 37
+  private val LAT_END = 38
+  private val LNG_START = -123
+  private val LNG_END = -121
+  private val stations = for (
+    latmult <- 0 to ((LAT_END - LAT_START) / ADDITIVE).toInt;
+    lngmult <- 0 to ((LNG_END - LNG_START) / ADDITIVE).toInt)
+    yield {
+      val lat = LAT_START + ADDITIVE * latmult
+      val lng = LNG_START + ADDITIVE * lngmult
+      buildFakeStation(lat, lng)
+    }
 
-  override def getStartingStations(start: StartScala, dist: DistanceScala): List[StationScala] = genRawStations(start, dist)
-
-  @inline
-  private final def genRawStations(start: LocationPointScala, dist: DistanceScala): List[StationScala] = {
-    stations.filter(st => (st distanceTo start) < dist)
+  override def getStartingStations(start: StartScala, dist: DistanceScala, limit: Int): List[StationScala] = {
+    genRawStations(start, dist).take(limit).toList
   }
 
-  override def getTransferStations(station: StationScala, range: DistanceScala): List[StationScala] = genRawStations(station, range)
+  @inline
+  private final def genRawStations(start: LocationPointScala, dist: DistanceScala): Seq[StationScala] = {
+    val latrange = LocationPointScala.latitudeRange(start, dist)
+    val latstepmax = (latrange / ADDITIVE).toInt
+    val lngrange = LocationPointScala.longitudeRange(start, dist)
+    val lngstepmax = (lngrange / ADDITIVE).toInt
+    val possible = (for (lataddstep <- latstepmax / -2 to latstepmax / 2; lngaddstep <- lngstepmax / -2 to lngstepmax / 2) yield {
+      buildFakeStation(start.latitude + lataddstep * ADDITIVE, start.longitude + lngaddstep * ADDITIVE)
+    }).toStream
+    val rval = possible.filter(st => (st distanceTo start) < dist)
+    rval
+  }
 
-  override def getPathsForStation(station: StationScala, starttime: TimePointScala, maxdelta: TimeDeltaScala): List[StationWithRoute] = {
-    val baseScheds = (0 to 86400 by 300).map(packed => {
-      SchedulePointScala(
-        packed,
-        255.toByte,
-        0,
-        packed / 300,
-        DatabaseIDScala(databaseName, packed * 31 * 31 + station.latitude.hashCode() * 31 + station.longitude.hashCode())
-      )
-    })
-      .filter(sched => {
-        val pdiff = sched.packedTime - starttime.packedTime
+  override def getTransferStations(request: Seq[TransferRequest]): Map[TransferRequest, List[StationScala]] = {
+    request
+      .map(req => req -> getTransferStations(req.station, req.distance, req.limit))
+      .toMap
+  }
+
+  def getTransferStations(station: StationScala, range: DistanceScala, limit: Int): List[StationScala] = {
+    genRawStations(station, range)
+      .filter(!station.overlaps(_))
+      .take(limit)
+      .toList
+  }
+
+  override def getPathsForStation(request: Seq[PathsRequest]): Map[PathsRequest, List[StationWithRoute]] = {
+    request
+      .map(req => req -> getPathsForStation(req.station, req.starttime, req.maxdelta, req.limit))
+      .toMap
+  }
+
+  def getPathsForStation(station: StationScala, starttime: TimePointScala, maxdelta: TimeDeltaScala, limit: Int): List[StationWithRoute] = {
+    val startPackedTime = if (starttime.packedTime % TIME_DIFF == 0) {
+      starttime.packedTime
+    } else {
+      starttime.packedTime - starttime.packedTime % TIME_DIFF + TIME_DIFF
+    }
+    val endPackedTime = startPackedTime + maxdelta.seconds.toInt - maxdelta.seconds.toInt % TIME_DIFF
+    val baseScheds = (startPackedTime to endPackedTime by TIME_DIFF)
+      .filter(secs => {
+        val pdiff = secs - starttime.packedTime
         pdiff > 0 && pdiff < maxdelta.seconds || pdiff < 0 && 86400 + pdiff < maxdelta.seconds
       })
-    val tstart = baseScheds.minBy(_.nextValidTime(starttime))
+      .map(packed => {
+        SchedulePointScala(
+          packed % 84000,
+          255.toByte,
+          0,
+          packed / TIME_DIFF,
+          DatabaseIDScala(databaseName, packed * 31 * 31 + station.latitude.hashCode() * 31 + station.longitude.hashCode())
+        )
+      })
+    if (baseScheds.isEmpty) {
+      return List.empty
+    }
     val routes = Seq(
-      TransitPathScala("Test Agency", "Lat " + station.latitude + " PLUS", tstart.packedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.latitude.hashCode())),
-      TransitPathScala("Test Agency", "Lat " + station.latitude + " MINUS", tstart.packedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.latitude.hashCode())),
-      TransitPathScala("Test Agency", "Lng " + station.longitude + " PLUS", tstart.packedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.longitude.hashCode())),
-      TransitPathScala("Test Agency", "Lng " + station.longitude + " MINUS", tstart.packedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.longitude.hashCode()))
+      TransitPathScala("Test Agency", "Lat " + station.latitude + " PLUS", startPackedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.latitude.hashCode())),
+      TransitPathScala("Test Agency", "Lat " + station.latitude + " MINUS", startPackedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.latitude.hashCode())),
+      TransitPathScala("Test Agency", "Lng " + station.longitude + " PLUS", startPackedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.longitude.hashCode())),
+      TransitPathScala("Test Agency", "Lng " + station.longitude + " MINUS", startPackedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.longitude.hashCode()))
     )
 
     routes
@@ -49,85 +96,92 @@ class TestStationDbScala extends StationDatabaseScala {
       .toList
   }
 
-  override def getArrivableStations(start: StationWithRoute, starttime: TimePointScala, maxDelta: TimeDeltaScala): List[StationWithRoute] = {
+  override def getArrivableStations(request: Seq[ArrivableRequest]): Map[ArrivableRequest, List[StationWithRoute]] = {
+    request
+      .map(req => req -> getArrivableStations(req.station, req.starttime, req.maxdelta, req.limit))
+      .toMap
+  }
+
+  def getArrivableStations(start: StationWithRoute, starttime: TimePointScala, maxDelta: TimeDeltaScala, limit: Int): List[StationWithRoute] = {
     val station = start.station
     val route = start.route
-    val usableScheds = (0 to 86400 by 300)
+    val baseSched = start.nextArrivalSched(starttime)
+
+    val usableScheds = (0 to 86399 by TIME_DIFF)
       .map(packed => {
         SchedulePointScala(
-          packed,
-          255.toByte,
-          0,
-          packed / 300,
-          DatabaseIDScala(databaseName, packed * 31 * 31 + station.latitude.hashCode() * 31 + station.longitude.hashCode())
+          packedTime = packed,
+          validDays = 255.toByte,
+          fuzz = 0,
+          index = packed / TIME_DIFF,
+          id = DatabaseIDScala(databaseName, packed * 31 * 31 + station.latitude.hashCode() * 31 + station.longitude.hashCode())
         )
       })
-      .filter(_.nextValidTime(starttime) <= starttime + maxDelta)
+      .filter(_.nextValidTime(starttime + TimeDeltaScala.SECOND) <= starttime + maxDelta)
 
+    val rval =
     if (route.route.contains("Lat") && route.route.contains("PLUS")) {
-      usableScheds
-        .zipWithIndex
-        .takeWhile({ case (_, ind) => station.latitude % .02 + (ind + 1) * .02 < 38 })
-        .map({ case (sched, ind) =>
-          val lat = station.latitude % 0.02 + (ind + 1) * 0.02
-          val lng = station.longitude
-          val id = lat.hashCode() * 31 + lng.hashCode()
-          val nstat = StationScala(s"Test Station $id", lat, lng, DatabaseIDScala(databaseName, id))
-          StationWithRoute(nstat, route, List(sched))
+      stations.view
+        .filter(st => st.longitude == start.station.longitude && st.latitude > start.station.latitude)
+        .filter(st => (st.latitude - start.station.latitude) / ADDITIVE * TIME_DIFF < maxDelta.seconds)
+        .take(limit)
+        .map(st => {
+          val stationsBetween = ((st.latitude - start.station.latitude) / ADDITIVE).toInt
+          val secondsBetween = stationsBetween * TIME_DIFF
+          val nsched = baseSched.copy(index = baseSched.index + stationsBetween, packedTime = (baseSched.packedTime + secondsBetween) % 86400)
+          StationWithRoute(st, route, List(nsched))
         })
         .toList
     }
     else if (route.route.contains("Lat") && route.route.contains("MINUS")) {
-      usableScheds
-        .zipWithIndex
-        .takeWhile({ case (_, ind) => station.latitude % .02 - (ind + 1) * .02 > 37 })
-        .map({ case (sched, ind) =>
-          val lat = station.latitude % 0.02 - (ind + 1) * 0.02
-          val lng = station.longitude
-          val id = lat.hashCode() * 31 + lng.hashCode()
-          val nstat = StationScala(s"Test Station $id", lat, lng, DatabaseIDScala(databaseName, id))
-          StationWithRoute(nstat, route, List(sched))
+      stations.view
+        .filter(st => st.longitude == start.station.longitude && st.latitude < start.station.latitude)
+        .filter(st => (start.station.latitude - st.latitude) / ADDITIVE * TIME_DIFF < maxDelta.seconds)
+        .take(limit)
+        .map(st => {
+          val stationsBetween = ((start.station.latitude - st.latitude) / ADDITIVE).toInt
+          val secondsBetween = stationsBetween * TIME_DIFF
+          val nsched = baseSched.copy(index = baseSched.index + stationsBetween, packedTime = (baseSched.packedTime + secondsBetween) % 86400)
+          StationWithRoute(st, route, List(nsched))
         })
         .toList
     }
     else if (route.route.contains("Lng") && route.route.contains("PLUS")) {
-      usableScheds
-        .zipWithIndex
-        .takeWhile({ case (_, ind) => station.longitude % .02 + (ind + 1) * .02 < -121 })
-        .map({ case (sched, ind) =>
-          val lat = station.latitude
-          val lng = station.longitude % 0.02 + (ind + 1) * 0.02
-          val id = lat.hashCode() * 31 + lng.hashCode()
-          val nstat = StationScala(s"Test Station $id", lat, lng, DatabaseIDScala(databaseName, id))
-          StationWithRoute(nstat, route, List(sched))
+      stations.view
+        .filter(st => st.latitude == start.station.latitude && st.longitude > start.station.longitude)
+        .filter(st => (st.longitude - start.station.longitude) / ADDITIVE * TIME_DIFF < maxDelta.seconds)
+        .take(limit)
+        .map(st => {
+          val stationsBetween = ((st.longitude - start.station.longitude) / ADDITIVE).toInt
+          val secondsBetween = stationsBetween * TIME_DIFF
+          val nsched = baseSched.copy(index = baseSched.index + stationsBetween, packedTime = (baseSched.packedTime + secondsBetween) % 86400)
+          StationWithRoute(st, route, List(nsched))
         })
         .toList
     }
     else if (route.route.contains("Lng") && route.route.contains("MINUS")) {
-      usableScheds
-        .zipWithIndex
-        .takeWhile({ case (_, ind) => station.longitude % .02 - (ind + 1) * .02 > -123 })
-        .map({ case (sched, ind) =>
-          val lat = station.latitude
-          val lng = station.longitude % 0.02 - (ind + 1) * 0.02
-          val id = lat.hashCode() * 31 + lng.hashCode()
-          val nstat = StationScala(s"Test Station $id", lat, lng, DatabaseIDScala(databaseName, id))
-          StationWithRoute(nstat, route, List(sched))
+      stations.view
+        .filter(st => st.latitude == start.station.latitude && st.longitude < start.station.longitude)
+        .filter(st => (start.station.longitude - st.longitude) / ADDITIVE * TIME_DIFF < maxDelta.seconds)
+        .take(limit)
+        .map(st => {
+          val stationsBetween = ((start.station.longitude - st.longitude) / ADDITIVE).toInt
+          val secondsBetween = stationsBetween * TIME_DIFF
+          val nsched = baseSched.copy(index = baseSched.index + stationsBetween, packedTime = (baseSched.packedTime + secondsBetween) % 86400)
+          StationWithRoute(st, route, List(nsched))
         })
         .toList
     }
     else List.empty
 
+    val expectedRange = maxDelta.seconds / TIME_DIFF * ADDITIVE
+    val actualRange = (start :: rval).map(dt => Math.max(Math.abs(dt.station.latitude - start.station.latitude), Math.abs(dt.station.longitude - start.station.longitude))).max
+    rval
   }
 
-  override def servesPoint(point: LocationPointScala): Boolean = point.latitude > 37 && point.latitude < 38 && point.longitude > -123 && point.longitude < -121
-
-  override def servesArea(point: LocationPointScala, range: DistanceScala): Boolean = {
-    val maxlat = point.latitude + LocationPointScala.latitudeRange(point, range / 2)
-    val minlat = point.latitude - LocationPointScala.latitudeRange(point, range / 2)
-    val maxlng = point.longitude + LocationPointScala.longitudeRange(point, range / 2)
-    val minlng = point.longitude - LocationPointScala.longitudeRange(point, range / 2)
-    maxlat < 38 && minlat > 37 && minlng > -123 && maxlng < -121
+  override def servesPoint(point: LocationPointScala): Boolean = {
+    //point.latitude > LAT_START && point.latitude < LAT_END && point.longitude > LNG_START && point.longitude < LNG_END
+    true
   }
 
   override def close(): Unit = {}
@@ -142,5 +196,12 @@ class TestStationDbScala extends StationDatabaseScala {
     StationScala("Test Station " + id, lat, lng, DatabaseIDScala(databaseName, id))
   }
 
-  override def databaseName: String = "TESTDB"
+  override def servesArea(point: LocationPointScala, range: DistanceScala): Boolean = {
+    val maxlat = point.latitude + LocationPointScala.latitudeRange(point, range / 2)
+    val minlat = point.latitude - LocationPointScala.latitudeRange(point, range / 2)
+    val maxlng = point.longitude + LocationPointScala.longitudeRange(point, range / 2)
+    val minlng = point.longitude - LocationPointScala.longitudeRange(point, range / 2)
+    //maxlat < LAT_END && minlat > LAT_START && minlng > LNG_START && maxlng < LNG_END
+    true
+  }
 }
