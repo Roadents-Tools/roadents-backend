@@ -4,50 +4,41 @@ import com.reroute.backend.model.distance.DistanceScala
 import com.reroute.backend.model.location.{DestinationScala, LocationPointScala, StartScala}
 import com.reroute.backend.model.time.{TimeDeltaScala, TimePointScala}
 
-import scala.collection.mutable
+class RouteScala(val start: StartScala, val starttime: TimePointScala, val stepsList: List[RouteStepScala] = List()) {
 
-class RouteScala(val start: StartScala, val starttime: TimePointScala) {
-
-  private val stepsList: mutable.MutableList[RouteStepScala] = mutable.MutableList[RouteStepScala]()
-  private var destOpt: Option[DestinationScala] = None
+  private val destOpt: Option[DestinationScala] = stepsList.collectFirst({
+    case stp if stp.endpt.isInstanceOf[DestinationScala] => stp.endpt.asInstanceOf[DestinationScala]
+  })
 
   def dest: Option[DestinationScala] = destOpt
 
   def distance: DistanceScala = start.distanceTo(currentEnd)
 
-  def travelDistance: DistanceScala = steps.view.map(step => step.startpt.distanceTo(step.endpt)).reduce(_ + _)
+  def travelDistance: DistanceScala = steps.view.map(step => step.startpt.distanceTo(step.endpt)).fold(DistanceScala.NULL)(_ + _)
 
-  def steps: List[RouteStepScala] = stepsList.toList
+  def steps: List[RouteStepScala] = stepsList
 
   def addStep(step: RouteStepScala): RouteScala = {
     require(currentEnd == step.startpt, s"Route is discontinuous. Tried adding ${step.startpt} to $currentEnd")
-    require(destOpt.isEmpty, s"Route already has destination node!")
-    require(!stepsList.exists(_.endpt.overlaps(step.endpt)), s"Already have location ${step.endpt} in the route.")
-    step.endpt match {
-      case ndest: DestinationScala => destOpt = Some(ndest)
-    }
-    stepsList += step
-    this
+    require(destOpt.isEmpty, s"Route is already finished!")
+    require(!hasPoint(step.endpt), s"Already have location ${step.endpt} in the route.")
+    require((step.endpt distanceTo step.startpt) == DistanceScala.NULL || step.totaltime > TimeDeltaScala.NULL, s"Teleported from ${step.startpt} to ${step.endpt}")
+    new RouteScala(start, starttime, step :: stepsList)
   }
 
-  def currentEnd: LocationPointScala = if (stepsList.nonEmpty) stepsList.last.endpt else start
+  def hasPoint(point: LocationPointScala): Boolean = stepsList.exists(_.endpt.overlaps(point))
+
+  def +(step: RouteStepScala): RouteScala = addStep(step)
+
+  def currentEnd: LocationPointScala = if (stepsList.nonEmpty) stepsList.head.endpt else start
 
   def endTime: TimePointScala = starttime + totalTime
 
-  def totalTime: TimeDeltaScala = stepsList.view.map(_.totaltime).reduce(_ + _)
+  def totalTime: TimeDeltaScala = stepsList.view.map(_.totaltime).fold(TimeDeltaScala.NULL)(_ + _)
 
   def copyAt(index: Int): RouteScala = {
-    if (index >= stepsList.size + 1) return copy()
-    val rval = new RouteScala(start, starttime)
-    stepsList.view.take(index).foreach(rval.stepsList += _)
-    rval
-  }
-
-  def copy(): RouteScala = {
-    val rval = new RouteScala(start, starttime)
-    rval.stepsList ++= stepsList
-    rval.destOpt = destOpt
-    rval
+    if (index >= stepsList.size + 1) this
+    else new RouteScala(start, starttime, stepsList.reverseIterator.take(index).toList)
   }
 
   def endTimeAt(index: Int): TimePointScala = {
@@ -90,4 +81,7 @@ class RouteScala(val start: StartScala, val starttime: TimePointScala) {
     case transit: TransitStepScala => transit.traveltime
     case _ => TimeDeltaScala.NULL
   }).fold(TimeDeltaScala.NULL)(_ + _)
+
+
+  override def toString = s"RouteScala($start, $starttime, $dest, $stepsList)"
 }

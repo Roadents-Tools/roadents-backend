@@ -2,7 +2,7 @@ package com.reroute.backend.model.routing
 
 import com.reroute.backend.model.distance.DistanceScala
 import com.reroute.backend.model.location._
-import com.reroute.backend.model.time.TimeDeltaScala
+import com.reroute.backend.model.time.{TimeDeltaScala, TimePointScala}
 
 trait RouteStepScala {
   type startType <: LocationPointScala
@@ -63,4 +63,24 @@ case class GeneralTransitStep(override val startpt: StationScala,
                               override val stops: Int
                              ) extends TransitStepScala {
   override val totaltime: TimeDeltaScala = waittime + traveltime
+}
+
+case class FromDataTransitStep(
+                                startData: StationWithRoute,
+                                endData: StationWithRoute,
+                                starttime: TimePointScala,
+                                override val waittime: TimeDeltaScala
+                              ) extends TransitStepScala {
+  private val startSched = startData.nextArrivalSched(starttime - TimeDeltaScala.SECOND)
+  private val endSched = endData.nextArrivalSched(starttime)
+  override val transitpath: TransitPathScala = startData.route
+  override val startpt: StationScala = startData.station
+  override val endpt: StationScala = endData.station
+  override val steptype: String = startData.route.transitType
+  override val traveltime: TimeDeltaScala = starttime timeUntil endSched.nextValidTime(starttime + waittime)
+  override val totaltime: TimeDeltaScala = waittime + traveltime
+  override val stops: Int = {
+    if (startSched.index < endSched.index) endSched.index - startSched.index
+    else endSched.index + startData.route.size - startSched.index
+  }
 }
