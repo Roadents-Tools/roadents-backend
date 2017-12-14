@@ -1,6 +1,5 @@
 package com.reroute.backend.locations.helpers;
 
-import com.reroute.backend.locations.foursquare.FoursquareLocationsProvider;
 import com.reroute.backend.locations.interfaces.LocationProvider;
 import com.reroute.backend.locations.test.TestLocationProvider;
 import com.reroute.backend.model.distance.Distance;
@@ -32,7 +31,7 @@ public class LocationProviderHelper {
             allProviders = new LocationProvider[]{new TestLocationProvider()};
             return;
         }
-        allProviders = new LocationProvider[]{new FoursquareLocationsProvider()};
+        allProviders = new LocationProvider[] { new TestLocationProvider() };
     }
 
     /**
