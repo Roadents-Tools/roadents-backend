@@ -27,7 +27,7 @@ final class TimePointScala private(
 
   def withSecond(second: Int): TimePointScala = {
     if (second < 0 || second > 60) throw new IllegalArgumentException("Second invalid.")
-    val secDiff = second - this.seconds
+    val secDiff = if (second >= this.seconds) second - this.seconds else 60 + second - this.seconds
     val milliDiff = secDiff * TimePointScala.SECONDS_TO_MILLIS
     this + TimeDeltaScala(milliDiff)
   }
@@ -36,7 +36,7 @@ final class TimePointScala private(
 
   def withMinute(minute: Int): TimePointScala = {
     if (minute < 0 || minute > 60) throw new IllegalArgumentException("Minute invalid.")
-    val minDiff = minute - this.minutes
+    val minDiff = if (minute >= this.minutes) minute - this.minutes else 60 + minute - this.minutes
     val milliDiff = minDiff * TimePointScala.MINUTES_TO_MILLIS
     this + TimeDeltaScala(milliDiff)
   }
@@ -45,7 +45,7 @@ final class TimePointScala private(
 
   def withHour(hour: Int): TimePointScala = {
     if (hour < 0 || hour > 23) throw new IllegalArgumentException("Hour invalid.")
-    val hourDiff = hour - this.hours
+    val hourDiff = if (hour >= this.hours) hour - this.hours else 24 + hour - this.hours
     val milliDiff = hourDiff * TimePointScala.HOURS_TO_MILLIS
     this + TimeDeltaScala(milliDiff)
   }
@@ -54,9 +54,9 @@ final class TimePointScala private(
 
   def +(delta: TimeDeltaScala): TimePointScala = TimePointScala(this.unixtime + delta.unixdelta, this.timezone, this.offset, this.calendar)
 
-  def withPackedTime(time: Int): TimePointScala = {
+  def withPackedTime(packedTime: Int): TimePointScala = {
     if (packedTime < 0 || packedTime >= 86400) throw new IllegalArgumentException("Packed time invalid.")
-    val seconddiff = packedTime - this.packedTime
+    val seconddiff = if (packedTime >= this.packedTime) packedTime - this.packedTime else 86400 + packedTime - this.packedTime
     val millidiff = seconddiff * TimePointScala.SECONDS_TO_MILLIS
     this + TimeDeltaScala(millidiff)
   }
@@ -65,7 +65,7 @@ final class TimePointScala private(
 
   def withDayOfWeek(dayOfWeek: Int): TimePointScala = {
     if (dayOfWeek < 0 || dayOfWeek > 7) throw new IllegalArgumentException("Day of week invalid.")
-    val dayDiff = dayOfWeek - this.dayOfWeek
+    val dayDiff = if (dayOfWeek >= this.dayOfWeek) dayOfWeek - this.dayOfWeek else 7 + dayOfWeek - this.dayOfWeek
     val milliDiff = dayDiff * TimePointScala.DAYS_TO_MILLIS
     this + TimeDeltaScala(milliDiff)
   }
