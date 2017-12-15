@@ -16,8 +16,8 @@ object StationRouteBuilderScala {
     val rval = mutable.LinkedHashMap[Int, RouteScala]()
     rval.put(locationTag(req.start), new RouteScala(req.start, req.starttime))
 
-    val seedRoutes = genStartRoutes(req).filter(routeWorks(req)).take(req.walklayerlimit)
-    val seedTransit = genTransitRoutes(seedRoutes, req).filter(routeWorks(req)).take(req.transitlimit)
+    val seedRoutes = genStartRoutes(req).filter(routeWorks(_, req)).take(req.walkLimit)
+    val seedTransit = genTransitRoutes(seedRoutes, req).filter(routeWorks(_, req)).take(req.transitlimit)
     seedTransit.foreach(elem => rval.put(locationTag(elem.currentEnd), elem))
     var layer = seedTransit
     while (layer.nonEmpty && rval.size < req.finallimit) {
@@ -46,7 +46,7 @@ object StationRouteBuilderScala {
 
   @inline
   private def getStartNodes(req: StationRouteBuildRequestScala): Seq[StartWalkStep] = {
-    TransitDataRetriever.getStartingStations(req.start, req.delta.avgWalkDist, req.walklayerlimit).map(stat => StartWalkStep(
+    TransitDataRetriever.getStartingStations(req.start, req.delta.total_max.avgWalkDist, req.walkLimit).map(stat => StartWalkStep(
       req.start, stat,
       TimeDeltaScala((req.start.distanceTo(stat).in(DistanceUnitsScala.AVG_WALK_MINUTES) * 60000).asInstanceOf[Long])
     ))
@@ -55,60 +55,65 @@ object StationRouteBuilderScala {
   @inline
   private def nextLayer(curlayer: Seq[RouteScala], req: StationRouteBuildRequestScala) = {
     val walklayerRaw = genTransferRoutes(curlayer, req)
-    val walklayer = walklayerRaw.toStream.filter(routeWorks(req)).take(req.walklayerlimit)
-    val transitlayer = genTransitRoutes(walklayer, req).toStream.filter(routeWorks(req)).take(req.transitlimit)
+    val walklayer = walklayerRaw.toStream.filter(routeWorks(_, req)).take(req.walkLimit)
+    val transitlayer = genTransitRoutes(walklayer, req).toStream.filter(routeWorks(_, req)).take(req.transitlimit)
     transitlayer
   }
 
   @inline
-  private def routeWorks(request: StationRouteBuildRequestScala): RouteScala => Boolean = route => {
-    if (route.distance / route.totalTime.hours < LocationPointScala.AVG_WALKING_PER_HOUR) false
+  private def stepWorks(step: RouteStepScala, request: StationRouteBuildRequestScala): Boolean = step match {
+    case stp: TransferWalkStep =>
+      if (stp.totaltime > request.transferTime.max) false
+      else if (stp.totaltime > request.walkTime.max) false
+      else if (stp.startpt.distanceTo(stp.endpt) > request.walkDistance.max) false
+      else true
+    case stp: WalkStepScala =>
+      if (stp.totaltime > request.walkTime.max) false
+      else if (stp.startpt.distanceTo(stp.endpt) > request.walkDistance.max) false
+      else true
+    case stp: TransitStepScala =>
+      if (stp.waittime > request.waitTime.max) false
+      else if (stp.traveltime > request.transitTime.max) false
+      else true
+    case _ => true
+  }
 
-    else if (route.steps.lengthCompare(request.stepcount) > 0) false
+  @inline
+  private def routeWorks(route: RouteScala, request: StationRouteBuildRequestScala): Boolean = {
+    if (route.distance / route.totalTime.hours < LocationPointScala.AVG_WALKING_PER_HOUR) return false
 
-    else {
-      var walktotal = TimeDeltaScala.NULL
-      var transfertotal = TimeDeltaScala.NULL
-      var transittotal = TimeDeltaScala.NULL
-      var total = TimeDeltaScala.NULL
-      var rval = true
-      route.steps.takeWhile(_ => rval).foreach({
+    else if (route.steps.lengthCompare(request.stepLimit) > 0) return false
+    else if (route.distance > request.distance.total_max) return false
+
+    var walktotal = TimeDeltaScala.NULL
+    var transfertotal = TimeDeltaScala.NULL
+    var transittotal = TimeDeltaScala.NULL
+    var waittotal = TimeDeltaScala.NULL
+    var total = TimeDeltaScala.NULL
+
+    for (step <- route.steps) {
+      if (!stepWorks(step, request)) return false
+      step match {
         case st: TransferWalkStep =>
-          if (st.totaltime > request.maxtransfertime) {
-            rval = false
-          }
           walktotal += st.totaltime
           transfertotal += st.totaltime
           total += st.totaltime
         case st: WalkStepScala =>
-          if (st.totaltime > request.maxwalktime) {
-            rval = false
-          }
           walktotal += st.totaltime
           total += st.totaltime
         case st: TransitStepScala =>
-          if (st.totaltime > request.maxtransittime) {
-            rval = false
-          }
           transittotal += st.totaltime
+          waittotal += st.waittime
           total += st.totaltime
-      })
-      if (!rval) false
-      else if (walktotal > request.totalwalktime) {
-        false
       }
-      else if (total > request.delta) {
-        false
-      }
-      else if (transfertotal > request.totaltransfertime) {
-        false
-      }
-      else if (transittotal > request.totaltransittime) {
-        false
-      }
-      else true
+      if (walktotal > request.walkTime.total_max) false
+      else if (total > request.delta.total_max) false
+      else if (transfertotal > request.transferTime.total_max) false
+      else if (transittotal > request.transitTime.total_max) false
     }
+    true
   }
+
 
   @inline
   private def genTransferRoutes(curlayer: Seq[RouteScala], req: StationRouteBuildRequestScala) = genTransferNodes(curlayer, req)
@@ -117,14 +122,14 @@ object StationRouteBuilderScala {
   @inline
   private def genTransferNodes(curlayer: Seq[RouteScala], req: StationRouteBuildRequestScala) = {
     val reqsMap = curlayer.map(rt => rt.currentEnd match {
-      case stp: StationScala => rt -> TransferRequest(stp, (req.maxtransfertime - rt.totalTime) avgWalkDist, req.walklayerlimit)
+      case stp: StationScala => rt -> TransferRequest(stp, (req.transferTime.max - rt.totalTime) avgWalkDist, req.walkLimit)
     }).toMap
     val res = TransitDataRetriever.getTransferStations(reqsMap.values.toSeq)
     val rval = curlayer
       .filter(rt => rt.currentEnd.isInstanceOf[StationScala])
       .map(rt => rt -> res(reqsMap(rt))
         .toStream
-        .filter(st => rt.currentEnd.distanceTo(st) < (req.delta - rt.totalTime).avgWalkDist && !rt.hasPoint(st))
+        .filter(st => rt.currentEnd.distanceTo(st) < (req.delta.total_max - rt.totalTime).avgWalkDist && !rt.hasPoint(st))
         .map(st => TransferWalkStep(rt.currentEnd.asInstanceOf[StationScala], st, rt.currentEnd.distanceTo(st).avgWalkTime))
       )
     rval
@@ -142,7 +147,7 @@ object StationRouteBuilderScala {
     val pathsLimit = if (req.pathslimit == Int.MaxValue) Int.MaxValue else (req.pathslimit * LimitScale / layersize).toInt
     val pathReqs = curlayer
       .withFilter(rt => rt.currentEnd.isInstanceOf[StationScala])
-      .map(rt => rt -> PathsRequest(rt.currentEnd.asInstanceOf[StationScala], rt.endTime + TimeDeltaScala.SECOND, req.delta - rt.totalTime - TimeDeltaScala(10000), pathsLimit))
+      .map(rt => rt -> PathsRequest(rt.currentEnd.asInstanceOf[StationScala], rt.endTime, req.delta.total_max - rt.totalTime, pathsLimit))
       .toMap
 
     val pathResults = TransitDataRetriever.getPathsForStation(pathReqs.values.toSeq)
@@ -168,7 +173,7 @@ object StationRouteBuilderScala {
   @inline
   private def buildArrivalReq(route: RouteScala, chaininfo: StationWithRoute, req: StationRouteBuildRequestScala, curlayer: Int): ArrivableRequest = {
     val trueStart = chaininfo.nextArrival(route.endTime)
-    val truedelta = req.delta - route.totalTime - route.endTime.timeUntil(trueStart)
+    val truedelta = req.delta.total_max - route.totalTime - route.endTime.timeUntil(trueStart)
     val limit = if (req.transitlimit == Int.MaxValue) Int.MaxValue else (req.transitlimit * LimitScale / curlayer).toInt
     ArrivableRequest(chaininfo, trueStart, truedelta, limit)
   }

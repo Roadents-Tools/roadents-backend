@@ -16,9 +16,9 @@ class StationRouteBuilderScalaTest extends AssertionsForJUnit {
     val req = StationRouteBuildRequestScala(
       start = StartScala(37.5, -122),
       starttime = TimePointScala(0, "GMT"),
-      delta = maxDelta,
+      delta = TimeDeltaLimit(total_max = maxDelta),
       finallimit = 100,
-      stepcount = 10
+      stepLimit = 10
     )
 
     val res = StationRouteBuilderScala.buildStationRouteList(req)
@@ -29,10 +29,10 @@ class StationRouteBuilderScalaTest extends AssertionsForJUnit {
 
   @inline
   private def checkRoute(route: RouteScala, req: StationRouteBuildRequestScala): Unit = {
-    assertTrue(route.totalTime <= req.delta)
-    assertTrue(route.walkTime <= req.totalwalktime)
-    assertTrue(route.travelTime <= req.totaltransittime)
-    assertTrue(route.steps.lengthCompare(req.stepcount) <= 0)
+    assertTrue(route.totalTime <= req.delta.total_max)
+    assertTrue(route.walkTime <= req.walkTime.total_max)
+    assertTrue(route.travelTime <= req.transitTime.total_max)
+    assertTrue(route.steps.lengthCompare(req.stepLimit) <= 0)
     assertTrue(route.start == req.start)
     assertTrue(route.starttime == req.starttime)
     val netspeed = (route.start distanceTo route.currentEnd) / route.totalTime.hours

@@ -14,7 +14,8 @@ case class GeneratorRequest(
                              maxtransfertime: TimeDeltaScala = TimeDeltaScala(900),
                              totaltransfertime: TimeDeltaScala = TimeDeltaScala.NULL,
                              maxtransittime: TimeDeltaScala = TimeDeltaScala.NULL,
-                             totaltransittime: TimeDeltaScala = TimeDeltaScala.NULL
+                             totaltransittime: TimeDeltaScala = TimeDeltaScala.NULL,
+                             limit: Int = 100
                            ) extends ApplicationRequestScala {
   override val tag: String = "DONUT"
 }
