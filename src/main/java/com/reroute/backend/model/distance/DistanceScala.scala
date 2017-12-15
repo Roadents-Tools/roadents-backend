@@ -36,6 +36,7 @@ case class DistanceScala(distance: Double) extends AnyVal with Ordered[DistanceS
 object DistanceScala {
   final val NULL = DistanceScala(0)
   final val ERROR_MARGIN = DistanceScala(1)
+  final val MAX_VALUE = DistanceScala(Double.MaxValue)
 
   def apply(distance: Double, units: DistanceUnitsScala): DistanceScala = new DistanceScala(distance * units.toMeters)
 }

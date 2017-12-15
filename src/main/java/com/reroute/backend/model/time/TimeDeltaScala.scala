@@ -42,4 +42,6 @@ object TimeDeltaScala {
   final val DAY = TimeDeltaScala(86400000L)
   final val WEEK = TimeDeltaScala(604800000L)
   final val AVG_WALK_SPEED_PER_MINUTE = DistanceScala(5000.0 / 60, DistanceUnitsScala.METERS)
+  final val MAX_SPEED_PER_MINUTE = DistanceScala(2500, DistanceUnitsScala.METERS)
+  final val MAX_VALUE = TimeDeltaScala(Long.MaxValue)
 }
