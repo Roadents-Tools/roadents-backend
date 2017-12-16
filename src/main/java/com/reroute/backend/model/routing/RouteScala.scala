@@ -6,9 +6,7 @@ import com.reroute.backend.model.time.{TimeDeltaScala, TimePointScala}
 
 class RouteScala(val start: StartScala, val starttime: TimePointScala, val steps: List[RouteStepScala] = List()) {
 
-  val dest: Option[DestinationScala] = steps.collectFirst({
-    case stp if stp.endpt.isInstanceOf[DestinationScala] => stp.endpt.asInstanceOf[DestinationScala]
-  })
+  val dest: Option[DestinationScala] = steps.map(_.endpt).collectFirst({ case pt: DestinationScala => pt })
 
   def distance: DistanceScala = start.distanceTo(currentEnd)
 
@@ -32,23 +30,7 @@ class RouteScala(val start: StartScala, val starttime: TimePointScala, val steps
 
   def totalTime: TimeDeltaScala = steps.view.map(_.totaltime).fold(TimeDeltaScala.NULL)(_ + _)
 
-  def endTimeAt(index: Int): TimePointScala = {
-    starttime + totalTimeAt(index)
-  }
-
-  def totalTimeAt(index: Int): TimeDeltaScala = {
-    steps.view
-      .take(index)
-      .map(_.totaltime)
-      .fold(TimeDeltaScala.NULL)(_ + _)
-  }
-
   def walkTime: TimeDeltaScala = steps.view.map({
-    case walking: WalkStepScala => walking.totaltime
-    case _ => TimeDeltaScala.NULL
-  }).fold(TimeDeltaScala.NULL)(_ + _)
-
-  def walkTimeAt(index: Int): TimeDeltaScala = steps.view.take(index).map({
     case walking: WalkStepScala => walking.totaltime
     case _ => TimeDeltaScala.NULL
   }).fold(TimeDeltaScala.NULL)(_ + _)
@@ -58,21 +40,15 @@ class RouteScala(val start: StartScala, val starttime: TimePointScala, val steps
     case _ => TimeDeltaScala.NULL
   }).fold(TimeDeltaScala.NULL)(_ + _)
 
-  def waitTimeAt(index: Int): TimeDeltaScala = steps.view.take(index).map({
-    case transit: TransitStepScala => transit.waittime
-    case _ => TimeDeltaScala.NULL
-  }).fold(TimeDeltaScala.NULL)(_ + _)
-
   def travelTime: TimeDeltaScala = steps.view.map({
     case transit: TransitStepScala => transit.traveltime
     case _ => TimeDeltaScala.NULL
   }).fold(TimeDeltaScala.NULL)(_ + _)
 
-  def travelTimeAt(index: Int): TimeDeltaScala = steps.view.take(index).map({
-    case transit: TransitStepScala => transit.traveltime
+  def transferTime: TimeDeltaScala = steps.view.map({
+    case transfer: TransferWalkStep => transfer.totaltime
     case _ => TimeDeltaScala.NULL
   }).fold(TimeDeltaScala.NULL)(_ + _)
-
 
   override def toString = s"RouteScala($start, $starttime, $dest, $steps)"
 }
