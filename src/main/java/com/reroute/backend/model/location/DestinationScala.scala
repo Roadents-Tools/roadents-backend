@@ -4,7 +4,7 @@ case class DestinationScala(
                              name: String,
                              override val latitude: Double,
                              override val longitude: Double,
-                             types: List[DestCategory]
+                             types: Seq[DestCategory]
                            ) extends LocationPointScala
 
 object DestinationScala {
