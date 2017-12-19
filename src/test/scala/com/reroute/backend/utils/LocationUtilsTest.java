@@ -11,7 +11,7 @@ import org.junit.Test;
 public class LocationUtilsTest {
 
     @Test
-    public void timeBetween() throws Exception {
+    public void timeBetween() {
         double[] p1 = { 43, -71 };
         double[] p2 = { 42, -70 };
         double distance = LocationUtils.distanceBetween(new StartPoint(p1), new StartPoint(p2)).inMeters();

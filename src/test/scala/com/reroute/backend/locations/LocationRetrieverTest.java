@@ -17,7 +17,7 @@ import java.util.List;
 public class LocationRetrieverTest {
 
     @Test
-    public void getLocations() throws Exception {
+    public void getLocations() {
 
 
         LocationPoint testPt = new StartPoint(new double[] { 37.3532801, -122.0052875 });

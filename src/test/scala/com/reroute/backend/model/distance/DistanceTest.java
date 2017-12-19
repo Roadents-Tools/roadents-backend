@@ -6,7 +6,7 @@ import org.junit.Test;
 public class DistanceTest {
 
     @Test
-    public void math() throws Exception {
+    public void math() {
         Distance a = new Distance(1, DistanceUnits.METERS);
         Distance b = new Distance(2, DistanceUnits.METERS);
         Assert.assertEquals(new Distance(3, DistanceUnits.METERS), a.plus(b));
@@ -16,7 +16,7 @@ public class DistanceTest {
     }
 
     @Test
-    public void comparisons() throws Exception {
+    public void comparisons() {
         Distance a = new Distance(1, DistanceUnits.METERS);
         Distance b = new Distance(1.01, DistanceUnits.METERS);
         Assert.assertTrue(a.deltaEqual(b, new Distance(.1, DistanceUnits.METERS)));
@@ -34,7 +34,7 @@ public class DistanceTest {
     }
 
     @Test
-    public void conversions() throws Exception {
+    public void conversions() {
         Distance ft = new Distance(1, DistanceUnits.FEET);
         Assert.assertEquals(1, ft.inFeet(), Distance.ERROR_MARGIN.inMeters());
         Assert.assertEquals(DistanceUnits.FEET.toMeters, ft.inMeters(), Distance.ERROR_MARGIN.inMeters());

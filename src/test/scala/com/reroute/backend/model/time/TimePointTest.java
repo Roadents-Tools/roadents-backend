@@ -8,7 +8,7 @@ public class TimePointTest {
     private static final long testMillis = 1000000000000000L;
 
     @Test
-    public void testTimeUntil() throws Exception {
+    public void testTimeUntil() {
         TimePoint t1 = TimePoint.NULL;
         TimePoint t2 = TimePoint.from(testMillis, "GMT");
         Assert.assertEquals(testMillis, t1.timeUntil(t2).getDeltaLong());

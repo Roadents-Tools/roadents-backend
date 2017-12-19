@@ -7,7 +7,7 @@ import org.junit.Test;
 public class TravelRouteNodeTest {
 
     @Test
-    public void typeCheckers() throws Exception {
+    public void typeCheckers() {
         TravelRouteNode walkNode = new TravelRouteNode.Builder()
                 .setWalkTime(100)
                 .setPoint(new StartPoint(new double[] { 0, 0 }))
@@ -39,7 +39,7 @@ public class TravelRouteNodeTest {
     }
 
     @Test
-    public void valueCheckers() throws Exception {
+    public void valueCheckers() {
 
         TravelRouteNode walkNode = new TravelRouteNode.Builder()
                 .setWalkTime(100)

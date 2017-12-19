@@ -31,7 +31,7 @@ public class SchedulePointTest {
     }
 
     @Test
-    public void nextValidTime() throws Exception {
+    public void nextValidTime() {
         TimePoint testTime = TimePoint.now();
         SchedulePoint testPoint = new SchedulePoint(
                 (testTime.getHour() + 1) % 24, testTime.getMinute(), testTime.getSecond(),
