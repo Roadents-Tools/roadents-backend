@@ -71,13 +71,13 @@ case class FromDataTransitStep(
                                 starttime: TimePointScala,
                                 override val waittime: TimeDeltaScala
                               ) extends TransitStepScala {
-  private val startSched = startData.nextArrivalSched(starttime - TimeDeltaScala.SECOND)
+  private val startSched = startData.nextDepartureSched(starttime - TimeDeltaScala.SECOND)
   private val endSched = endData.nextArrivalSched(starttime)
   override val transitpath: TransitPathScala = startData.route
   override val startpt: StationScala = startData.station
   override val endpt: StationScala = endData.station
   override val steptype: String = startData.route.transitType
-  override val traveltime: TimeDeltaScala = starttime timeUntil endSched.nextValidTime(starttime + waittime)
+  override val traveltime: TimeDeltaScala = starttime timeUntil endSched.nextValidTime(starttime + TimeDeltaScala.SECOND)
   override val totaltime: TimeDeltaScala = waittime + traveltime
   override val stops: Int = {
     if (startSched.index < endSched.index) endSched.index - startSched.index

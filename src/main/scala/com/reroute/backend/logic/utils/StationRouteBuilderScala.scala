@@ -30,7 +30,7 @@ object StationRouteBuilderScala {
       layer.filter(req.meetsMinimums).foreach(rt => rval.put(locationTag(rt.currentEnd), rt))
       println(s"FILTEREDLAYER OF SIZE ${layer.size}")
     }
-    rval.values.take(req.finallimit).toSeq
+    rval.values.toStream.sortBy(_.steps.size).take(req.finallimit)
   }
 
   @inline
@@ -119,20 +119,20 @@ object StationRouteBuilderScala {
     val arrivableres = TransitDataRetriever.getArrivableStation(arrivablereqs.values.toSeq)
 
     val rval = for (rt <- curlayer; startStation <- pathResults(pathReqs(rt))) yield {
-      val tstart = startStation.nextArrival(rt.endTime)
+      val tstart = startStation.nextDeparture(rt.endTime)
       val waittime = rt.endTime timeUntil tstart
-      require(waittime > TimeDeltaScala.NULL, s"Got no wait between ${rt.endTime.packedTime}, ${startStation.schedule.map(_.packedTime)}")
-      arrivableres(arrivablereqs(startStation))
+      if (waittime > TimeDeltaScala.NULL) arrivableres(arrivablereqs(startStation))
         .filter(st => !rt.hasPoint(st.station))
         .map(FromDataTransitStep(startStation, _, tstart, waittime))
         .map(rt + _)
+      else Seq.empty
     }
     rval.flatten
   }
 
   @inline
   private def buildArrivalReq(route: RouteScala, chaininfo: StationWithRoute, req: StationRouteBuildRequestScala, curlayer: Int): ArrivableRequest = {
-    val trueStart = chaininfo.nextArrival(route.endTime)
+    val trueStart = chaininfo.nextDeparture(route.endTime)
     val waitTime = route.endTime.timeUntil(trueStart)
     val truedelta = Seq(
       req.delta.total_max - route.totalTime - waitTime,

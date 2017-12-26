@@ -19,14 +19,11 @@ class GeneratorCoreScala extends LogicCoreScala[GeneratorRequest] {
   private final val BAD_DEST = DestinationScala("null", -360, -360, List())
 
   override def runLogic(request: GeneratorRequest): ApplicationResultScala = {
-    val pt = request.start
-    val startTime = request.starttime
-    val maxdelta = request.totaltime
 
     //Get the station routes
     val stroutesreq = StationRouteBuildRequestScala(
-      start = pt,
-      starttime = startTime,
+      start = request.start,
+      starttime = request.starttime,
       delta = TimeDeltaLimit(total_max = request.totaltime),
       finallimit = request.limit
     )
@@ -35,19 +32,19 @@ class GeneratorCoreScala extends LogicCoreScala[GeneratorRequest] {
 
     //Get the raw dest routes
     val destRoutes = stationRoutes
-      .filter(route => maxdelta >= route.totalTime)
-      .flatMap(route => getDestinationRoutes(route, maxdelta, request.desttype))
+      .filter(route => request.totaltime >= route.totalTime)
+      .flatMap(route => getDestinationRoutes(route, request))
       .toList
     printf("Got %d -> %d dest routes.\n", stationRoutes.size, destRoutes.size)
 
     val destToShortest = destRoutes
       .groupBy(_.dest.getOrElse(BAD_DEST))
       .mapValues(_.minBy(rt => rt.totalTime.unixdelta + rt.steps.size))
-    val rval = destToShortest.values.toList
-    printf("Got %d -> %d filtered routes. Of those, %d are nonzero degree.\n", destRoutes.size, destToShortest.size, rval.count(_.steps.lengthCompare(2) >= 0))
+    val rval = destToShortest.values.toStream.sortBy(_.totalTime).take(request.limit)
+    printf("Got %d -> %d filtered routes. Of those, %d are nonzero degree.\n", destRoutes.size, rval.size, rval.count(_.steps.lengthCompare(2) >= 0))
 
     //Build the output
-    ApplicationResultScala.Result(destToShortest.values.toList)
+    ApplicationResultScala.Result(rval)
   }
 
   override val tag: String = "DONUT"
@@ -65,7 +62,11 @@ class GeneratorCoreScala extends LogicCoreScala[GeneratorRequest] {
       })
   }
 
-  def getDestinationRoutes(route: RouteScala, delta: TimeDeltaScala, query: DestCategory): Seq[RouteScala] = {
-    getWalkableDestinations(route.currentEnd, delta - route.totalTime, query).map(node => route + node)
+  def getDestinationRoutes(route: RouteScala, generatorRequest: GeneratorRequest): Seq[RouteScala] = {
+    val usableTime = Seq(generatorRequest.maxwalktime, generatorRequest.totalwalktime - route.walkTime, generatorRequest.totaltime - route.totalTime)
+      .filter(_ > TimeDeltaScala.NULL)
+      .min
+    getWalkableDestinations(route.currentEnd, usableTime, generatorRequest.desttype).map(node => route + node)
+
   }
 }

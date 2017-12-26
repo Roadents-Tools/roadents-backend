@@ -95,14 +95,14 @@ class TestStationDbScala extends StationDatabaseScala {
       return List.empty
     }
     val routes = Seq(
-      TransitPathScala("Test Agency", "Lat " + station.latitude + " PLUS", startPackedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.latitude.hashCode())),
-      TransitPathScala("Test Agency", "Lat " + station.latitude + " MINUS", startPackedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.latitude.hashCode())),
-      TransitPathScala("Test Agency", "Lng " + station.longitude + " PLUS", startPackedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.longitude.hashCode())),
-      TransitPathScala("Test Agency", "Lng " + station.longitude + " MINUS", startPackedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.longitude.hashCode()))
+      TransitPathScala("Test Agency", "Lat " + station.latitude + " PLUS", "" + startPackedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.latitude.hashCode())),
+      TransitPathScala("Test Agency", "Lat " + station.latitude + " MINUS", "" + startPackedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.latitude.hashCode())),
+      TransitPathScala("Test Agency", "Lng " + station.longitude + " PLUS", "" + startPackedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.longitude.hashCode())),
+      TransitPathScala("Test Agency", "Lng " + station.longitude + " MINUS", "" + startPackedTime, 288, DatabaseIDScala(databaseName, "chain".hashCode * 31 + station.longitude.hashCode()))
     )
 
     routes
-      .map(rt => StationWithRoute(station, rt, baseScheds.filter(_.nextValidTime(starttime) < starttime + maxdelta).toList))
+      .map(rt => StationWithRoute(station, rt, baseScheds.filter(_.departsWithin(starttime, maxdelta)).toList))
       .toList
   }
 
@@ -115,7 +115,7 @@ class TestStationDbScala extends StationDatabaseScala {
   def getArrivableStations(start: StationWithRoute, starttime: TimePointScala, maxDelta: TimeDeltaScala, limit: Int): List[StationWithRoute] = {
     val station = start.station
     val route = start.route
-    val baseSched = start.nextArrivalSched(starttime)
+    val baseSched = start.nextDepartureSched(starttime)
 
     val usableScheds = (0 to 86399 by TIME_DIFF)
       .map(packed => {
@@ -127,7 +127,7 @@ class TestStationDbScala extends StationDatabaseScala {
           id = DatabaseIDScala(databaseName, packed * 31 * 31 + station.latitude.hashCode() * 31 + station.longitude.hashCode())
         )
       })
-      .filter(_.nextValidTime(starttime + TimeDeltaScala.SECOND) <= starttime + maxDelta)
+      .filter(_.arrivesWithin(starttime, maxDelta))
 
     val rval =
     if (route.route.contains("Lat") && route.route.contains("PLUS")) {
@@ -197,8 +197,6 @@ class TestStationDbScala extends StationDatabaseScala {
   override def close(): Unit = {}
 
   override def isUp: Boolean = true
-
-  override def loadData(data: Seq[StationWithRoute]): Boolean = false
 
   @inline
   private final def buildFakeStation(lat: Double, lng: Double): StationScala = {

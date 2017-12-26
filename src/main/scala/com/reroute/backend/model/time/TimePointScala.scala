@@ -55,7 +55,7 @@ final class TimePointScala private(
   def +(delta: TimeDeltaScala): TimePointScala = TimePointScala(this.unixtime + delta.unixdelta, this.timezone, this.offset, this.calendar)
 
   def withPackedTime(packedTime: Int): TimePointScala = {
-    if (packedTime < 0 || packedTime >= 86400) throw new IllegalArgumentException("Packed time invalid.")
+    if (packedTime < 0 || packedTime >= 86400) throw new IllegalArgumentException(s"Packed $packedTime time invalid.")
     val seconddiff = if (packedTime >= this.packedTime) packedTime - this.packedTime else 86400 + packedTime - this.packedTime
     val millidiff = seconddiff * TimePointScala.SECONDS_TO_MILLIS
     this + TimeDeltaScala(millidiff)
