@@ -4,11 +4,17 @@ import com.reroute.backend.model.distance.{DistanceScala, DistanceUnitsScala}
 import com.reroute.backend.model.location.{LocationPointScala, StartScala}
 import com.reroute.backend.model.routing.RouteScala
 import com.reroute.backend.model.time.{TimeDeltaScala, TimePointScala}
+import com.reroute.backend.stations.helpers.StationDatabaseManager
 import org.junit.Assert._
-import org.junit.Test
+import org.junit.{After, Before, Test}
 import org.scalatest.junit.AssertionsForJUnit
 
 class StationRouteBuilderScalaTest extends AssertionsForJUnit {
+
+  @Before
+  def initialize(): Unit = {
+    StationDatabaseManager.setTest(true)
+  }
 
   @Test
   def testForwardRouteBuilder(): Unit = {
@@ -61,5 +67,10 @@ class StationRouteBuilderScalaTest extends AssertionsForJUnit {
     assertTrue(route.starttime == req.starttime)
     val netspeed = (route.start distanceTo route.currentEnd) / route.totalTime.hours
     assertTrue(s"Speed ${netspeed.in(DistanceUnitsScala.KILOMETERS)} km/h too low!", netspeed >= LocationPointScala.AVG_WALKING_PER_HOUR)
+  }
+
+  @After
+  def untest(): Unit = {
+    StationDatabaseManager.setTest(false)
   }
 }
