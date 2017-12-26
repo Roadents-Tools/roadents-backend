@@ -75,7 +75,7 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
   private def runTransferQuery(con: Connection,
                                requests: Seq[TransferRequest]): Try[Map[TransferRequest, Seq[StationScala]]] = Try {
     val totalLimits = requests.map(_.limit).sum
-    val limit = totalLimits
+    val limit = if (totalLimits < 0) Int.MaxValue else totalLimits
     val begin =s"""SELECT agencyid || ';;' || id AS id, name, lon, lat FROM gtfs_stops WHERE """
     val end = " \nLIMIT " + limit
     val sql = requests
@@ -114,7 +114,7 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
   private def runPathsForStationQuery(con: Connection,
                                       request: Seq[PathsRequest]): Try[Map[PathsRequest, Seq[StationWithRoute]]] = Try {
     val totalLimits = request.map(_.limit).sum
-    val limit = totalLimits
+    val limit = if (totalLimits < 0) Int.MaxValue else totalLimits
 
     val service_level_schedule =
       s"""coalesce((
@@ -247,7 +247,7 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
   private def runArrivableStationQuery(con: Connection,
                                        request: Seq[ArrivableRequest]): Try[Map[ArrivableRequest, Seq[StationWithRoute]]] = Try {
     val totalLimits = request.map(_.limit).sum
-    val limit = totalLimits
+    val limit = if (totalLimits < 0) Int.MaxValue else totalLimits
 
     val service_level_schedule =
       s"""coalesce((
