@@ -5,7 +5,7 @@ import com.reroute.backend.model.database.{DatabaseIDScala, DatabaseObjectScala}
 case class TransitPathScala(
                              agency: String,
                              route: String,
-                             trip: Int,
+                             trip: String,
                              size: Int,
                              override val id: DatabaseIDScala,
                              transitType: String = "misc"

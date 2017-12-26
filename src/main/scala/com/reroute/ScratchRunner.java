@@ -11,6 +11,7 @@ import scala.util.Try;
 
 import java.net.URL;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -34,6 +35,10 @@ public class ScratchRunner {
                 }
                 if ("--loadNew".equals(arg)) {
                     loadZipsNew(args);
+                    return;
+                }
+                if ("--loadArea".equals(arg)) {
+                    loadInArea(args);
                     return;
                 }
             }
@@ -108,5 +113,44 @@ public class ScratchRunner {
         System.out.println("Build complete.");
     }
 
+    private static void loadInArea(String[] args) {
+        Distance range = new Distance(1, DistanceUnits.METERS);
+        Double lat = null;
+        Double lng = null;
+        String dbt = null;
+
+
+        for (int i = 0; i < args.length; i++) {
+            if ("--lat".equals(args[i]) && args.length > i + 1) {
+                lat = Double.parseDouble(args[i + 1]);
+            } else if ("--lng".equals(args[i]) && args.length > i + 1) {
+                lng = Double.parseDouble(args[i + 1]);
+            } else if ("--dist".equals(args[i]) && args.length > i + 1) {
+                range = new Distance(Double.parseDouble(args[i + 1]), DistanceUnits.METERS);
+            } else if ("--db".equals(args[i])) {
+                dbt = args[i + 1];
+            }
+        }
+
+        if (lat == null || lng == null || dbt == null) {
+            LoggingUtils.logError("ScratchRunner", "Args not passed correctly.");
+            return;
+        }
+
+        StartPoint center = new StartPoint(new double[] { lat, lng });
+        TransitlandApiDb apidb = new TransitlandApiDb();
+        Map<String, String> skipBad = new HashMap<>();
+        final String db = dbt;
+        List<URL> urls = apidb.getFeedsInArea(center, range, null, skipBad);
+        urls.parallelStream().forEach(zipurl -> {
+            GtfsPostgresLoader loader = new GtfsPostgresLoader(zipurl);
+            Try<Object> res = loader.load(db, "donut", "donutpass");
+            if (res.isFailure()) {
+                System.out.printf("Got args:\ndb = %s\nzip = %s\n", db, zipurl);
+                res.toEither().left().get().printStackTrace();
+            }
+            System.out.println("Build complete.");
+        });
+    }
 }
 

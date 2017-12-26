@@ -23,6 +23,4 @@ trait StationDatabaseScala {
   def close(): Unit
 
   def isUp: Boolean
-
-  def loadData(data: Seq[StationWithRoute]): Boolean
 }

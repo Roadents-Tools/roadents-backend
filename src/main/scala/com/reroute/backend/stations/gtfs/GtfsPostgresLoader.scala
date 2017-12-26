@@ -65,9 +65,18 @@ class GtfsPostgresLoader(val url: URL) {
       feedStatement.close()
 
       val updateStatements = con.createStatement()
-      updateStatements.addBatch(s"UPDATE gtfs_agencies SET metadata_id=$dataId WHERE metadata_id=NULL")
-      updateStatements.addBatch(s"UPDATE gtfs_feed_info SET metadata_id=$dataId WHERE metadata_id=NULL")
-      updateStatements.addBatch(s"UPDATE gtfs_stops SET latlng=ST_POINT(lon, lat)::geography")
+      updateStatements.addBatch(s"UPDATE gtfs_agencies SET metadata_id=$dataId WHERE metadata_id IS NULL")
+      updateStatements.addBatch(s"UPDATE gtfs_feed_info SET metadata_id=$dataId WHERE metadata_id IS NULL")
+      updateStatements.addBatch(s"UPDATE gtfs_stops SET latlng=ST_POINT(lon, lat)::geography WHERE latlng IS NULL")
+      updateStatements.addBatch(
+        s"""update gtfs_trips
+           set stop_time_count = (
+             select max(stopsequence) from gtfs_stop_times
+             where gtfs_stop_times.trip_id = id and gtfs_stop_times.trip_agencyid = agencyid
+             group by (gtfs_stop_times.trip_agencyid, gtfs_stop_times.trip_id)
+           )"""
+      )
+
       updateStatements.executeBatch()
       updateStatements.close()
       true
