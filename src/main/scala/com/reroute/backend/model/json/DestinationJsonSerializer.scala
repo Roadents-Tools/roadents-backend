@@ -6,11 +6,12 @@ import org.json.JSONObject
 object DestinationJsonSerializer extends JsonSerializer[DestinationScala] {
   override def serialize(inputObject: DestinationScala): String =
     s"""{
-       | "latitude" : ${inputObject.latitude},
-       | "longitude" : ${inputObject.longitude},
-       | "name" : ${inputObject.name},
-       | "categories" : [${inputObject.types.map("\"" + _.category + "\"").mkString(",")}]
-       |}""".stripMargin
+          "latitude" : ${inputObject.latitude},
+          "longitude" : ${inputObject.longitude},
+          "name" : "${inputObject.name}",
+          "type" : "returned",
+          "categories" : ${inputObject.types.map("\"" + _.category + "\"").mkString("[", ",", "]")}
+        }"""
 
   override def deserialize(jsonstr: String): DestinationScala = {
     val json = new JSONObject(jsonstr)
