@@ -20,7 +20,7 @@ object StationRouteBuilderScala {
     val seedTransit = genTransitRoutes(seedRoutes, req).filter(req.routeValid).take(req.transitlimit)
     seedTransit.filter(req.meetsMinimums).foreach(elem => rval.put(locationTag(elem.currentEnd), elem))
     var layer = seedTransit
-    while (layer.nonEmpty && rval.size < req.finallimit) {
+    while (layer.nonEmpty) {
       println(s"LAYER OF SIZE ${layer.size}")
       val rawlayer = nextLayer(layer, req)
       println(s"RAWLAYER OF SIZE ${rawlayer.size}")

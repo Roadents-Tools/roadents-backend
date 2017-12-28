@@ -42,8 +42,8 @@ object RouteStepJsonOutputer extends JsonOutputer[RouteStepScala] {
     s"""{
           "start_pt" : $startJson,
           "end_pt" : $endJson,
-          "total_time" : ${step.totaltime.seconds.round}
-          "walk_distance" : ${step.walkdistance.in(DistanceUnitsScala.METERS)}
+          "total_time" : ${step.totaltime.seconds.round},
+          "walk_distance" : ${step.walkdistance.in(DistanceUnitsScala.METERS)},
           "step_type" : "walk"
         }"""
   }

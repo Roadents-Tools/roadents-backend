@@ -25,6 +25,7 @@ case class SchedulePointScala(
   }
 
   def nextDeparture(base: TimePointScala): TimePointScala = {
+    if (validDays == 0) return base + TimeDeltaScala.WEEK * 52
     val generaldepart = packedTime + fuzz
     var rval = base.withPackedTime(generaldepart % 86400)
     if (rval.isBefore(base)) rval = rval + TimeDeltaScala.DAY
@@ -43,7 +44,6 @@ case class SchedulePointScala(
   def nextValidTime(base: TimePointScala): TimePointScala = {
     if (validDays == 0) return base + TimeDeltaScala.WEEK * 52
     if (isValidDay(base.dayOfWeek) && (base.packedTime >= this.packedTime && base.packedTime <= (this.packedTime + fuzz))) {
-      println(s"${base.packedTime} marked between ${this.packedTime}, ${this.packedTime + fuzz}")
       return base
     }
     var rval = base.withPackedTime(this.packedTime % 86400)
