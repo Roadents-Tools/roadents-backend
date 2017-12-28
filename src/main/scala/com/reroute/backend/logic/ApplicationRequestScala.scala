@@ -5,5 +5,5 @@ trait ApplicationRequestScala {
 }
 
 trait RequestMapper[T <: ApplicationRequestScala] {
-  def buildQuery(callArgs: Map[String, String]): Either[T, String]
+  def buildQuery(callArgs: Map[String, String]): Either[String, T]
 }

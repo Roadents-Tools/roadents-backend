@@ -116,26 +116,26 @@ object GeneratorRequest extends RequestMapper[GeneratorRequest] {
     )
   }
 
-  override def buildQuery(callArgs: Map[String, String]): Either[GeneratorRequest, String] = Try {
+  override def buildQuery(callArgs: Map[String, String]): Either[String, GeneratorRequest] = Try {
 
     //Parse required args
     val lat = callArgs.get(LAT_KEY) match {
       case Some(l) => l.toDouble
-      case None => return Right("Latitude not passed.")
+      case None => return Left("Latitude not passed.")
     }
     val lng = callArgs.get(LNG_KEY) match {
       case Some(l) => l.toDouble
-      case None => return Right("Longitude not passed.")
+      case None => return Left("Longitude not passed.")
     }
 
     val destQuery = callArgs.get(QUERY_KEY) match {
       case Some(q) => DestCategory(q)
-      case None => return Right("Destination not passed.")
+      case None => return Left("Destination not passed.")
     }
 
     val maxDelta = callArgs.get(DELTA_KEY) match {
       case Some(dt) => dt.toLong * TimeDeltaScala.SECOND
-      case None => return Right("Max delta not passed.")
+      case None => return Left("Max delta not passed.")
     }
 
     val inpTime = callArgs.get(TIME_KEY)
@@ -151,7 +151,7 @@ object GeneratorRequest extends RequestMapper[GeneratorRequest] {
     val stepLimit = callArgs.get(STEPS_KEY).map(_.toInt)
     val routeLimit = callArgs.get(LIMIT_KEY).map(_.toInt)
 
-    Left(GeneratorRequest(
+    Right(GeneratorRequest(
       startPoint = StartScala(lat, lng),
       desttype = destQuery,
       maxDelta = maxDelta,
@@ -166,7 +166,7 @@ object GeneratorRequest extends RequestMapper[GeneratorRequest] {
       inlimit = routeLimit
     ))
   } recoverWith {
-    case e: IllegalArgumentException => Try(Right(e.getMessage))
-  } getOrElse Right("Unknown error occurred. Please contact Reroute for help.")
+    case e: IllegalArgumentException => Try(Left(e.getMessage))
+  } getOrElse Left("Unknown error occurred. Please contact Reroute for help.")
 }
 
