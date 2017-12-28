@@ -44,4 +44,8 @@ object TimeDeltaScala {
   final val AVG_WALK_SPEED_PER_MINUTE = DistanceScala(5000.0 / 60, DistanceUnitsScala.METERS)
   final val MAX_SPEED_PER_MINUTE = DistanceScala(100.0 / 60, DistanceUnitsScala.KILOMETERS)
   final val MAX_VALUE = TimeDeltaScala(Long.MaxValue)
+
+  implicit class DecimalTimeDeltaMathWrapper(val n: Double) extends AnyVal {
+    def *(dt: TimeDeltaScala) = dt * n
+  }
 }

@@ -19,9 +19,9 @@ class GeneratorCoreScalaTest extends AssertionsForJUnit {
   def testGenerator(): Unit = {
     val maxDelta = TimeDeltaScala(10 * 60 * 1000)
     val req = GeneratorRequest(
-      start = StartScala(37.5, -122),
-      starttime = TimePointScala(0, "GMT"),
-      totaltime = maxDelta,
+      startPoint = StartScala(37.5, -122),
+      inpstarttime = Some(TimePointScala(0, "GMT")),
+      maxDelta = maxDelta,
       desttype = DestCategory("TEST")
     )
 
