@@ -10,15 +10,16 @@ import com.reroute.backend.model.routing._
 import com.reroute.backend.model.time.TimeDeltaScala
 
 import scala.collection.JavaConverters._
+import scala.util.{Success, Try}
 
 /**
   * Created by ilan on 7/10/16.
   */
-class GeneratorCoreScala extends LogicCoreScala[GeneratorRequest] {
+object GeneratorCoreScala extends LogicCoreScala[GeneratorRequest] {
 
   private final val BAD_DEST = DestinationScala("null", -360, -360, List())
 
-  override def runLogic(request: GeneratorRequest): ApplicationResultScala = {
+  override def runLogic(request: GeneratorRequest): ApplicationResultScala = Try {
 
     //Get the station routes
     val stroutesreq = StationRouteBuildRequestScala(
@@ -45,6 +46,10 @@ class GeneratorCoreScala extends LogicCoreScala[GeneratorRequest] {
 
     //Build the output
     ApplicationResultScala.Result(rval)
+  } recoverWith {
+    case e: Throwable => Success(ApplicationResultScala.Error(List(e.getMessage)))
+  } getOrElse {
+    ApplicationResultScala.Error(List("An unknown error occurred."))
   }
 
   override val tag: String = "DONUT"

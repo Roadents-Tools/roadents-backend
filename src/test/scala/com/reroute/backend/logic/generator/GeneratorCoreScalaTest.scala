@@ -25,7 +25,7 @@ class GeneratorCoreScalaTest extends AssertionsForJUnit {
       desttype = DestCategory("TEST")
     )
 
-    val res = new GeneratorCoreScala().runLogic(req)
+    val res = GeneratorCoreScala.runLogic(req)
 
     assertTrue(res.routes.exists(_.steps.exists(_.isInstanceOf[FullRouteWalkStep])))
     assertTrue(res.routes.exists(_.steps.lengthCompare(1) == 0))
