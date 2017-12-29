@@ -70,8 +70,10 @@ public class TestLocationProvider implements LocationProvider {
             double newLat = center.getCoordinates()[0] + LocationUtils.latitudeRange(center, range) * muliplier[0];
             double newLong = center.getCoordinates()[1] + LocationUtils.longitudeRange(center, range) * muliplier[1];
             double[] newCenter = new double[]{newLat, newLong};
-            Assert.assertTrue(LocationUtils.distanceBetween(new StartPoint(newCenter), center)
-                    .inMeters() <= range.inMeters());
+            Assert.assertTrue(
+                    "Failed in building test destinations.",
+                    LocationUtils.distanceBetween(new StartPoint(newCenter), center).inMeters() <= range.inMeters()
+            );
 
             String name = String.format("%s Place %d", type.getVisibleName(), rng.nextInt(100));
 

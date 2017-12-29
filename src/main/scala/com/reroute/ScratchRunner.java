@@ -4,9 +4,9 @@ import com.reroute.backend.model.distance.Distance;
 import com.reroute.backend.model.distance.DistanceUnits;
 import com.reroute.backend.model.location.StartPoint;
 import com.reroute.backend.stations.gtfs.GtfsPostgresLoader;
-import com.reroute.backend.stations.transitland.TransitlandApiDb;
+import com.reroute.backend.stations.transitland.TransitlandApi;
 import com.reroute.backend.utils.LoggingUtils;
-import com.reroute.displayers.restcontroller.SparkHandler;
+import com.reroute.displayers.restcontroller.SparkHandlerScala;
 import scala.util.Try;
 
 import java.net.URL;
@@ -49,7 +49,7 @@ public class ScratchRunner {
     }
 
     private static void runSpark(String[] args) {
-        SparkHandler.main(args);
+        SparkHandlerScala.main(args);
     }
 
     private static void listUrls(String[] args) {
@@ -74,7 +74,7 @@ public class ScratchRunner {
         }
 
         StartPoint center = new StartPoint(new double[] { lat, lng });
-        TransitlandApiDb apidb = new TransitlandApiDb();
+        TransitlandApi apidb = new TransitlandApi();
         Map<String, String> skipBad = new HashMap<>();
         skipBad.put("license_use_without_attribution", "no");
         apidb.getFeedsInArea(center, range, null, skipBad).forEach(System.out::println);
@@ -138,7 +138,7 @@ public class ScratchRunner {
         }
 
         StartPoint center = new StartPoint(new double[] { lat, lng });
-        TransitlandApiDb apidb = new TransitlandApiDb();
+        TransitlandApi apidb = new TransitlandApi();
         Map<String, String> skipBad = new HashMap<>();
         final String db = dbt;
         List<URL> urls = apidb.getFeedsInArea(center, range, null, skipBad);

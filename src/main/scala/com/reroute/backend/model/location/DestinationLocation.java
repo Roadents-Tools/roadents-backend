@@ -5,7 +5,6 @@ import com.reroute.backend.model.distance.DistanceUnits;
 import com.reroute.backend.utils.LocationUtils;
 
 import java.util.Arrays;
-import java.util.Optional;
 
 /**
  * A destination to a TravelRoute, or any location that is not a start
@@ -19,31 +18,17 @@ public class DestinationLocation implements LocationPoint {
     private final String name;
     private final LocationType type;
     private final double[] latLong;
-    private final Optional<String> address;
-
-    /**
-     * Constructs a new destination.
-     *
-     * @param name    the name of the destination
-     * @param type    the type of the destination
-     * @param latLong the latitude and longitude of the destination
-     */
-    public DestinationLocation(String name, LocationType type, double[] latLong) {
-        this(name, type, latLong, null);
-    }
 
     /**
      * Constructs a new destination.
      * @param name the name of the destination
      * @param type the type of the destination
      * @param latLong the latitude and longitude of the destination
-     * @param address the address of the destination
      */
-    public DestinationLocation(String name, LocationType type, double[] latLong, String address) {
+    public DestinationLocation(String name, LocationType type, double[] latLong) {
         this.name = name;
         this.type = type;
         this.latLong = latLong;
-        this.address = Optional.ofNullable(address);
     }
 
     /**
@@ -71,14 +56,6 @@ public class DestinationLocation implements LocationPoint {
     @Override
     public double[] getCoordinates() {
         return latLong;
-    }
-
-    /**
-     * Gets the address of the destination.
-     * @return an Optional containing the address
-     */
-    public Optional<String> getAddress() {
-        return address;
     }
 
     @Override
