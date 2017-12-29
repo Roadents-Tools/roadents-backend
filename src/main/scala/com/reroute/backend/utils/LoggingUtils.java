@@ -1,6 +1,6 @@
 package com.reroute.backend.utils;
 
-import com.reroute.backend.model.time.TimePointScala;
+import com.reroute.backend.model.time.TimePoint;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -22,7 +22,7 @@ public class LoggingUtils {
     /**
      * Prints the current log, clearing the in-memory queue.
      */
-    public static void printLog() {
+    private static void printLog() {
         for (String[] msg : log) {
             System.out.printf("%s:       %-7s %s: %s\n\n", msg[0], msg[1] + ",", msg[2], msg[3]);
         }
@@ -38,10 +38,6 @@ public class LoggingUtils {
         logError(new Exception(origin + ": " + message));
     }
 
-    /**
-     *
-     * @param e
-     */
     public static void logError(Exception e) {
         errors.add(e);
         log.add(errorToMessage(e));
@@ -49,7 +45,7 @@ public class LoggingUtils {
     }
 
     private static String[] errorToMessage(Exception e) {
-        TimePointScala now = TimePointScala.now();
+        TimePoint now = TimePoint.now();
         StringBuilder msg = new StringBuilder();
         if (e.getMessage() != null) msg.append(e.getMessage().replaceAll("\n\n", "\n"));
         else msg.append(e.getClass().getName());

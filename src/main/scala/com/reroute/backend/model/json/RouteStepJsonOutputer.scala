@@ -1,17 +1,17 @@
 package com.reroute.backend.model.json
 
-import com.reroute.backend.model.distance.DistanceUnitsScala
-import com.reroute.backend.model.location.{DestinationScala, StartScala, StationScala}
+import com.reroute.backend.model.distance.DistUnits
+import com.reroute.backend.model.location.{InputLocation, ReturnedLocation, Station}
 import com.reroute.backend.model.routing._
 
-object RouteStepJsonOutputer extends JsonOutputer[RouteStepScala] {
-  override def output(inputObject: RouteStepScala): String = inputObject match {
-    case stp: TransitStepScala => transitStepStringify(stp)
-    case stp: WalkStepScala => walkStepStringify(stp)
+object RouteStepJsonOutputer extends JsonOutputer[RouteStep] {
+  override def output(inputObject: RouteStep): String = inputObject match {
+    case stp: TransitStep => transitStepStringify(stp)
+    case stp: WalkStep => walkStepStringify(stp)
     case _ => "null"
   }
 
-  private def transitStepStringify(step: TransitStepScala): String = {
+  private def transitStepStringify(step: TransitStep): String = {
     s"""{
           "total_time": ${step.totaltime.seconds},
           "step_type": "transit",
@@ -26,24 +26,24 @@ object RouteStepJsonOutputer extends JsonOutputer[RouteStepScala] {
         }"""
   }
 
-  private def walkStepStringify(step: WalkStepScala): String = {
+  private def walkStepStringify(step: WalkStep): String = {
     val startJson = step.startpt match {
-      case st: StartScala => StartJsonSerializer.serialize(st)
-      case st: StationScala => StationJsonOutputer.output(st)
-      case st: DestinationScala => DestinationJsonSerializer.serialize(st)
+      case st: InputLocation => InputLocationJsonSerializer.serialize(st)
+      case st: Station => StationJsonOutputer.output(st)
+      case st: ReturnedLocation => ReturnedLocationJsonSerializer.serialize(st)
       case _ => "null"
     }
     val endJson = step.endpt match {
-      case st: StartScala => StartJsonSerializer.serialize(st)
-      case st: StationScala => StationJsonOutputer.output(st)
-      case st: DestinationScala => DestinationJsonSerializer.serialize(st)
+      case st: InputLocation => InputLocationJsonSerializer.serialize(st)
+      case st: Station => StationJsonOutputer.output(st)
+      case st: ReturnedLocation => ReturnedLocationJsonSerializer.serialize(st)
       case _ => "null"
     }
     s"""{
           "start_pt" : $startJson,
           "end_pt" : $endJson,
           "total_time" : ${step.totaltime.seconds.round},
-          "walk_distance" : ${step.walkdistance.in(DistanceUnitsScala.METERS)},
+          "walk_distance" : ${step.walkdistance.in(DistUnits.METERS)},
           "step_type" : "walk"
         }"""
   }

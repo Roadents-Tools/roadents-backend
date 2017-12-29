@@ -3,11 +3,11 @@ package com.reroute.backend.stations.postgresql
 import java.sql.{Connection, DriverManager, ResultSet}
 import java.util.Properties
 
-import com.reroute.backend.model.database.DatabaseIDScala
-import com.reroute.backend.model.distance.{DistanceScala, DistanceUnitsScala}
+import com.reroute.backend.model.database.DatabaseID
+import com.reroute.backend.model.distance.{DistUnits, Distance}
 import com.reroute.backend.model.location._
-import com.reroute.backend.model.time.{SchedulePointScala, TimeDeltaScala}
-import com.reroute.backend.stations.interfaces.StationDatabaseScala
+import com.reroute.backend.model.time.{SchedulePoint, TimeDelta}
+import com.reroute.backend.stations.interfaces.StationDatabase
 import com.reroute.backend.stations.{ArrivableRequest, PathsRequest, TransferRequest}
 
 import scala.collection.breakOut
@@ -18,7 +18,7 @@ import scala.util.{Failure, Success, Try}
  *
  * @param config the parameters for the connection to the database
  */
-class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDatabaseScala {
+class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDatabase {
 
   override val databaseName: String = {
     if (config.dbname != "") config.dbname
@@ -39,7 +39,7 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
     DriverManager.getConnection(config.dburl, props)
   }
 
-  override def getStartingStations(start: StartScala, dist: DistanceScala, limit: Int): Seq[StationScala] = {
+  override def getStartingStations(start: InputLocation, dist: Distance, limit: Int): Seq[Station] = {
     val res = conOpt.flatMap(runStartQuery(_, start, dist, limit))
     res match {
       case Success(out) => out
@@ -49,9 +49,9 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
     }
   }
 
-  private def runStartQuery(con: Connection, start: StartScala, dist: DistanceScala,
-                            limit: Int): Try[Seq[StationScala]] = Try {
-    val meters = dist.in(DistanceUnitsScala.METERS)
+  private def runStartQuery(con: Connection, start: InputLocation, dist: Distance,
+                            limit: Int): Try[Seq[Station]] = Try {
+    val meters = dist.in(DistUnits.METERS)
     val stm = con.createStatement()
     val sql =
       s"""SELECT agencyid || ';;' || id AS id, name, lon, lat
@@ -62,7 +62,7 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
     new ResultSetIterator(rs, extractStation).toStream
   }
 
-  override def getTransferStations(request: Seq[TransferRequest]): Map[TransferRequest, Seq[StationScala]] = {
+  override def getTransferStations(request: Seq[TransferRequest]): Map[TransferRequest, Seq[Station]] = {
     val res = conOpt.flatMap(runTransferQuery(_, request))
     res match {
       case Success(out) => out
@@ -73,14 +73,14 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
   }
 
   private def runTransferQuery(con: Connection,
-                               requests: Seq[TransferRequest]): Try[Map[TransferRequest, Seq[StationScala]]] = Try {
+                               requests: Seq[TransferRequest]): Try[Map[TransferRequest, Seq[Station]]] = Try {
     val totalLimits = requests.map(_.limit).sum
     val limit = if (totalLimits < 0) Int.MaxValue else totalLimits
     val begin =s"""SELECT agencyid || ';;' || id AS id, name, lon, lat FROM gtfs_stops WHERE """
     val end = " \nLIMIT " + limit
     val sql = requests
       .map(req => {
-        val meters = req.distance.in(DistanceUnitsScala.METERS)
+        val meters = req.distance.in(DistUnits.METERS)
         s"""ST_DWITHIN(ST_POINT(${req.station.longitude}, ${req.station.latitude})::geography, latlng, $meters)"""
       })
       .mkString(begin, " \nOR ", end)
@@ -93,12 +93,12 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
       .map(req => req -> fullResultSet.filter(_.distanceTo(req.station) <= req.distance).take(req.limit))(breakOut)
   }
 
-  private def extractStation(rs: ResultSet): StationScala = {
+  private def extractStation(rs: ResultSet): Station = {
     val name = rs.getString("name")
-    val id = DatabaseIDScala(databaseName, rs.getString("id"))
+    val id = DatabaseID(databaseName, rs.getString("id"))
     val lat = rs.getDouble("lat")
     val lon = rs.getDouble("lon")
-    StationScala(name, lat, lon, id)
+    Station(name, lat, lon, id)
   }
 
   override def getPathsForStation(request: Seq[PathsRequest]): Map[PathsRequest, Seq[StationWithRoute]] = {
@@ -187,7 +187,7 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
   }
 
   private def isValidPathInfo(req: PathsRequest,
-                              data: (DatabaseIDScala, TransitPathScala, SchedulePointScala)): Boolean = {
+                              data: (DatabaseID, TransitPath, SchedulePoint)): Boolean = {
     val (stid, _, sched) = data
     if (req.station.id != stid) false
     else if (!sched.departsWithin(req.starttime, req.maxdelta)) false
@@ -195,14 +195,14 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
   }
 
   private def mapPathInfo(req: PathsRequest,
-                          data: (DatabaseIDScala, TransitPathScala, SchedulePointScala)): StationWithRoute = {
+                          data: (DatabaseID, TransitPath, SchedulePoint)): StationWithRoute = {
     val (_, path, sched) = data
     StationWithRoute(req.station, path, Seq(sched))
   }
 
-  private def extractPathsInformation(rs: ResultSet): (DatabaseIDScala, TransitPathScala, SchedulePointScala) = {
-    val pathid = DatabaseIDScala(databaseName, rs.getString("tripid"))
-    val path = TransitPathScala(
+  private def extractPathsInformation(rs: ResultSet): (DatabaseID, TransitPath, SchedulePoint) = {
+    val pathid = DatabaseID(databaseName, rs.getString("tripid"))
+    val path = TransitPath(
       rs.getString("agname"),
       rs.getString("routename"),
       rs.getString("tripname"),
@@ -211,11 +211,11 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
       decodeTransitType(rs.getInt("typeind"))
     )
 
-    val schedid = DatabaseIDScala(databaseName, rs.getString("schedid"))
+    val schedid = DatabaseID(databaseName, rs.getString("schedid"))
     val baseValids = rs.getInt("ndats")
     val calMods = rs.getString("cdats")
     val validdays = (baseValids + calMods.split(";").map(decodeCalendarModifier).sum).toByte
-    val sched = SchedulePointScala(
+    val sched = SchedulePoint(
       rs.getInt("packedTime"),
       validdays,
       rs.getInt("fuzz"),
@@ -223,7 +223,7 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
       schedid
     )
 
-    val stid = DatabaseIDScala(databaseName, rs.getString("stationid"))
+    val stid = DatabaseID(databaseName, rs.getString("stationid"))
     (stid, path, sched)
   }
 
@@ -300,7 +300,7 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
         val tripId = tripAgencyAndId(1)
         val packedStart = req.starttime.packedTime + 1
         val packedEnd = req.starttime.packedTime + req.maxdelta.seconds.toInt
-        val minInd = req.station.nextDepartureSched(req.starttime - TimeDeltaScala(1000)).index
+        val minInd = req.station.nextDepartureSched(req.starttime - TimeDelta(1000)).index
         s""" (gtfs_stop_times.trip_agencyid = '$tripAgency' and gtfs_stop_times.trip_id = '$tripId'
            and gtfs_stop_times.stopsequence > $minInd and gtfs_stop_times.departuretime between $packedStart and $packedEnd) """
       })
@@ -317,22 +317,22 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
       )(breakOut)
   }
 
-  private def extractArrivableInformation(rs: ResultSet): (DatabaseIDScala, StationScala, SchedulePointScala) = {
-    val pathid = DatabaseIDScala(databaseName, rs.getString("tripid"))
+  private def extractArrivableInformation(rs: ResultSet): (DatabaseID, Station, SchedulePoint) = {
+    val pathid = DatabaseID(databaseName, rs.getString("tripid"))
 
-    val stationid = DatabaseIDScala(databaseName, rs.getString("stationid"))
-    val station = StationScala(
+    val stationid = DatabaseID(databaseName, rs.getString("stationid"))
+    val station = Station(
       rs.getString("stationname"),
       rs.getDouble("lat"),
       rs.getDouble("lon"),
       stationid
     )
 
-    val schedid = DatabaseIDScala(databaseName, rs.getString("schedid"))
+    val schedid = DatabaseID(databaseName, rs.getString("schedid"))
     val baseValids = rs.getInt("ndats")
     val calMods = rs.getString("cdats")
     val validdays = (baseValids + calMods.split(";").map(decodeCalendarModifier).sum).toByte
-    val sched = SchedulePointScala(
+    val sched = SchedulePoint(
       rs.getInt("packedTime"),
       validdays,
       rs.getInt("fuzz"),
@@ -356,7 +356,7 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
   }
 
   private def isValidArrivable(req: ArrivableRequest,
-                               data: (DatabaseIDScala, StationScala, SchedulePointScala)): Boolean = {
+                               data: (DatabaseID, Station, SchedulePoint)): Boolean = {
     val (tripid, _, sched) = data
     if (req.station.route.id != tripid) false
     else if (!sched.arrivesWithin(req.starttime, req.maxdelta)) false
@@ -364,16 +364,16 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
   }
 
   private def mapArrivable(req: ArrivableRequest,
-                           data: (DatabaseIDScala, StationScala, SchedulePointScala)): StationWithRoute = {
+                           data: (DatabaseID, Station, SchedulePoint)): StationWithRoute = {
     val (_, station, sched) = data
     StationWithRoute(station, req.station.route, Seq(sched))
   }
 
-  override def servesPoint(point: LocationPointScala): Boolean = config.area.forall({
+  override def servesPoint(point: LocationPoint): Boolean = config.area.forall({
     case (pt, dist) => pt.distanceTo(point) <= dist
   })
 
-  override def servesArea(point: LocationPointScala, range: DistanceScala): Boolean = config.area.forall({
+  override def servesArea(point: LocationPoint, range: Distance): Boolean = config.area.forall({
     case (pt, dist) => pt.distanceTo(point) + range <= dist
   })
 
@@ -396,5 +396,5 @@ case class PostgresGtfsDbConfig(
                                  dbname: String = "",
                                  user: String = "donut",
                                  pass: String = "donutpass",
-                                 area: Option[(LocationPointScala, DistanceScala)] = None
+                                 area: Option[(LocationPoint, Distance)] = None
                                )

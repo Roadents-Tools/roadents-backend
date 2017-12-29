@@ -1,6 +1,6 @@
 package com.reroute.backend.locations
 
-import com.reroute.backend.model.location.{DestCategory, LocationPointScala}
-import com.reroute.backend.model.time.TimeDeltaScala
+import com.reroute.backend.model.location.{DestCategory, LocationPoint}
+import com.reroute.backend.model.time.TimeDelta
 
-case class LocationsRequest(center: LocationPointScala, timeRange: TimeDeltaScala, searchquery: DestCategory)
+case class LocationsRequest(center: LocationPoint, timeRange: TimeDelta, searchquery: DestCategory)

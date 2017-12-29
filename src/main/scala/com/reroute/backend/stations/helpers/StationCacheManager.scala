@@ -1,21 +1,21 @@
 package com.reroute.backend.stations.helpers
 
-import com.reroute.backend.model.distance.DistanceScala
-import com.reroute.backend.model.location.{StartScala, StationScala, StationWithRoute}
-import com.reroute.backend.stations.interfaces.StationCacheScala
+import com.reroute.backend.model.distance.Distance
+import com.reroute.backend.model.location.{InputLocation, Station, StationWithRoute}
+import com.reroute.backend.stations.interfaces.StationCache
 import com.reroute.backend.stations.{ArrivableRequest, PathsRequest, TransferRequest}
 
 import scala.collection.mutable
 
 object StationCacheManager {
 
-  private var cachesInUse: Seq[StationCacheScala] = Nil
+  private var cachesInUse: Seq[StationCache] = Nil
 
   def setTest(test: Boolean): Unit = {
     cachesInUse = initializeCaches(test)
   }
 
-  def getStartingStations(start: StartScala, dist: DistanceScala, limit: Int = Int.MaxValue): Option[Seq[StationScala]] = {
+  def getStartingStations(start: InputLocation, dist: Distance, limit: Int = Int.MaxValue): Option[Seq[Station]] = {
     caches.view
       .filter(_.isUp)
       .filter(_.servesRange(start, dist))
@@ -24,8 +24,8 @@ object StationCacheManager {
       .flatten
   }
 
-  def getTransferStations(request: Seq[TransferRequest]): Map[TransferRequest, Seq[StationScala]] = {
-    val rval = mutable.Map[TransferRequest, Seq[StationScala]]()
+  def getTransferStations(request: Seq[TransferRequest]): Map[TransferRequest, Seq[Station]] = {
+    val rval = mutable.Map[TransferRequest, Seq[Station]]()
     caches.view
       .takeWhile(_ => request.exists(req => rval.get(req).isEmpty))
       .filter(_.isUp)
@@ -44,14 +44,14 @@ object StationCacheManager {
     rval.toMap
   }
 
-  private def caches: Seq[StationCacheScala] = {
+  private def caches: Seq[StationCache] = {
     if (cachesInUse == Nil) {
       cachesInUse = initializeCaches()
     }
     cachesInUse
   }
 
-  private def initializeCaches(test: Boolean = false): Seq[StationCacheScala] = {
+  private def initializeCaches(test: Boolean = false): Seq[StationCache] = {
     if (test) Seq.empty else Seq()
   }
 
@@ -65,13 +65,13 @@ object StationCacheManager {
     rval.toMap
   }
 
-  def putStartingStations(start: StartScala, dist: DistanceScala, stations: Seq[StationScala]): Boolean = {
+  def putStartingStations(start: InputLocation, dist: Distance, stations: Seq[Station]): Boolean = {
     anyWorks(cache => cache.servesRange(start, dist) && cache.putStartingStations(start, dist, stations))
   }
 
-  private def anyWorks(pred: StationCacheScala => Boolean): Boolean = caches.filter(_.isUp).exists(pred(_))
+  private def anyWorks(pred: StationCache => Boolean): Boolean = caches.filter(_.isUp).exists(pred(_))
 
-  def putTransferStations(request: Seq[(TransferRequest, Seq[StationScala])]): Boolean = {
+  def putTransferStations(request: Seq[(TransferRequest, Seq[Station])]): Boolean = {
     anyWorks(_.putTransferStations(request))
   }
 

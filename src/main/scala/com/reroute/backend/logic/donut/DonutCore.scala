@@ -1,12 +1,12 @@
 package com.reroute.backend.logic.donut
 
 import com.reroute.backend.locations.{LocationRetriever, LocationsRequest}
-import com.reroute.backend.logic.ApplicationResultScala
-import com.reroute.backend.logic.interfaces.LogicCoreScala
-import com.reroute.backend.logic.utils.{StationRouteBuildRequestScala, StationRouteBuilderScala, TimeDeltaLimit}
+import com.reroute.backend.logic.ApplicationResult
+import com.reroute.backend.logic.interfaces.LogicCore
+import com.reroute.backend.logic.utils.{StationRouteBuildRequestScala, StationRouteBuilder, TimeDeltaLimit}
 import com.reroute.backend.model.location._
 import com.reroute.backend.model.routing._
-import com.reroute.backend.model.time.TimeDeltaScala
+import com.reroute.backend.model.time.TimeDelta
 
 import scala.collection.breakOut
 import scala.util.{Success, Try}
@@ -14,11 +14,11 @@ import scala.util.{Success, Try}
 /**
   * Created by ilan on 7/10/16.
   */
-object DonutCore extends LogicCoreScala[DonutRequest] {
+object DonutCore extends LogicCore[DonutRequest] {
 
-  private final val BAD_DEST = DestinationScala("null", -360, -360, List())
+  private final val BAD_DEST = ReturnedLocation("null", -360, -360, List())
 
-  override def runLogic(request: DonutRequest): ApplicationResultScala = Try {
+  override def runLogic(request: DonutRequest): ApplicationResult = Try {
 
     //Get the station routes
     val stroutesreq = StationRouteBuildRequestScala(
@@ -27,11 +27,11 @@ object DonutCore extends LogicCoreScala[DonutRequest] {
       delta = TimeDeltaLimit(total_max = request.totaltime),
       finallimit = request.limit
     )
-    val stationRoutes = StationRouteBuilderScala.buildStationRouteList(stroutesreq)
+    val stationRoutes = StationRouteBuilder.buildStationRouteList(stroutesreq)
     printf("Got %d station routes.\n", stationRoutes.size)
 
     //Get the raw dest routes
-    val destReqs: Map[RouteScala, LocationsRequest] = stationRoutes
+    val destReqs: Map[Route, LocationsRequest] = stationRoutes
       .filter(route => request.totaltime > route.totalTime)
       .map(route => route -> LocationsRequest(
         route.currentEnd,
@@ -54,23 +54,23 @@ object DonutCore extends LogicCoreScala[DonutRequest] {
     rval.foreach(rt => assert(request.meetsRequest(rt), "Error building malformed route."))
 
     //Build the output
-    ApplicationResultScala.Result(rval)
+    ApplicationResult.Result(rval)
   } recoverWith {
-    case e: Throwable => Success(ApplicationResultScala.Error(List(e.getMessage)))
+    case e: Throwable => Success(ApplicationResult.Error(List(e.getMessage)))
   } getOrElse {
-    ApplicationResultScala.Error(List("An unknown error occurred."))
+    ApplicationResult.Error(List("An unknown error occurred."))
   }
 
   override val tag: String = "DONUT"
 
   override def isValid(request: DonutRequest): Boolean = {
-    request.tag == tag && request.totaltime > TimeDeltaScala.NULL
+    request.tag == tag && request.totaltime > TimeDelta.NULL
   }
 
-  private def buildDestRoutes(route: RouteScala, dests: Seq[DestinationScala]) = {
+  private def buildDestRoutes(route: Route, dests: Seq[ReturnedLocation]) = {
     val steps = route.currentEnd match {
-      case pt: StartScala => dests.map(d => FullRouteWalkStep(pt, d, pt.distanceTo(d).avgWalkTime))
-      case pt: StationScala => dests.map(d => DestinationWalkStep(pt, d, pt.distanceTo(d).avgWalkTime))
+      case pt: InputLocation => dests.map(d => FullRouteWalkStep(pt, d, pt.distanceTo(d).avgWalkTime))
+      case pt: Station => dests.map(d => DestinationWalkStep(pt, d, pt.distanceTo(d).avgWalkTime))
     }
     steps.map(route + _)
   }

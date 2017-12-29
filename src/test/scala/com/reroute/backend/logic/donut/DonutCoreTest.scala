@@ -1,8 +1,8 @@
 package com.reroute.backend.logic.donut
 
-import com.reroute.backend.model.location.{DestCategory, StartScala}
+import com.reroute.backend.model.location.{DestCategory, InputLocation}
 import com.reroute.backend.model.routing.FullRouteWalkStep
-import com.reroute.backend.model.time.{TimeDeltaScala, TimePointScala}
+import com.reroute.backend.model.time.{TimeDelta, TimePoint}
 import com.reroute.backend.stations.helpers.StationDatabaseManager
 import org.junit.Assert._
 import org.junit.{After, Before, Test}
@@ -17,10 +17,10 @@ class DonutCoreTest extends AssertionsForJUnit {
 
   @Test
   def testDonut(): Unit = {
-    val maxDelta = TimeDeltaScala(10 * 60 * 1000)
+    val maxDelta = TimeDelta(10 * 60 * 1000)
     val req = DonutRequest(
-      startPoint = StartScala(37.5, -122),
-      inpstarttime = Some(TimePointScala(0, "GMT")),
+      startPoint = InputLocation(37.5, -122),
+      inpstarttime = Some(TimePoint(0, "GMT")),
       maxDelta = maxDelta,
       desttype = DestCategory("TEST")
     )

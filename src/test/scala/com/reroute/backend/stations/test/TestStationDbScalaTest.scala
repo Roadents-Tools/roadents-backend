@@ -1,9 +1,9 @@
 package com.reroute.backend.stations.test
 
-import com.reroute.backend.model.database.DatabaseIDScala
-import com.reroute.backend.model.distance.DistanceUnitsScala
-import com.reroute.backend.model.location.{StartScala, StationScala}
-import com.reroute.backend.model.time.{TimeDeltaScala, TimePointScala}
+import com.reroute.backend.model.database.DatabaseID
+import com.reroute.backend.model.distance.DistUnits
+import com.reroute.backend.model.location.{InputLocation, Station}
+import com.reroute.backend.model.time.{TimeDelta, TimePoint}
 import com.reroute.backend.stations.{PathsRequest, TransferRequest}
 import org.junit.Assert._
 import org.junit.Test
@@ -15,13 +15,13 @@ class TestStationDbScalaTest extends AssertionsForJUnit {
 
   @Test
   def areasTest(): Unit = {
-    val testdb = new TestStationDbScala()
-    val center = StationScala("CENTER_OF_TESTDB", 37.5, -122, DatabaseIDScala("TEST", -1))
-    val range = Seq(StartScala(37.5, -123), StartScala(37.5, -121), StartScala(38, -122), StartScala(37, -122))
+    val testdb = new TestStationDb()
+    val center = Station("CENTER_OF_TESTDB", 37.5, -122, DatabaseID("TEST", -1))
+    val range = Seq(InputLocation(37.5, -123), InputLocation(37.5, -121), InputLocation(38, -122), InputLocation(37, -122))
       .map(pt => pt distanceTo center)
       .min * 0.1
     val req = TransferRequest(center, range)
-    val area = Math.PI * Math.pow(range.in(DistanceUnitsScala.KILOMETERS), 2)
+    val area = Math.PI * Math.pow(range.in(DistUnits.KILOMETERS), 2)
 
     assertTrue(testdb.servesPoint(center))
     assertTrue(testdb.servesArea(center, range))
@@ -38,14 +38,14 @@ class TestStationDbScalaTest extends AssertionsForJUnit {
 
   @Test
   def bulkAreaTest(): Unit = {
-    val testdb = new TestStationDbScala()
+    val testdb = new TestStationDb()
     val rng = new Random()
     val reqs = (0 to 4).map(_ => {
       val randlat = 37 + rng.nextDouble()
       val randlng = -123 * 2 * rng.nextDouble()
       val num = randlat.hashCode() * 31 + randlng.hashCode()
-      val stat = StationScala("Test stat:" + num, randlat, randlng, DatabaseIDScala("TEST", -1))
-      val range = Seq(StartScala(37.5, -123), StartScala(37.5, -121), StartScala(38, -122), StartScala(37, -122))
+      val stat = Station("Test stat:" + num, randlat, randlng, DatabaseID("TEST", -1))
+      val range = Seq(InputLocation(37.5, -123), InputLocation(37.5, -121), InputLocation(38, -122), InputLocation(37, -122))
         .map(pt => pt distanceTo stat)
         .min * rng.nextDouble() * 0.1
       TransferRequest(stat, range)
@@ -69,10 +69,10 @@ class TestStationDbScalaTest extends AssertionsForJUnit {
 
   @Test
   def pathsTest(): Unit = {
-    val testdb = new TestStationDbScala()
-    val center = StationScala("CENTER_OF_TESTDB", 37.5, -122, DatabaseIDScala("TEST", -1))
-    val delta = TimeDeltaScala(15 * 60 * 1000)
-    val req = PathsRequest(center, TimePointScala.now().withDayOfWeek(0).withPackedTime(0), delta)
+    val testdb = new TestStationDb()
+    val center = Station("CENTER_OF_TESTDB", 37.5, -122, DatabaseID("TEST", -1))
+    val delta = TimeDelta(15 * 60 * 1000)
+    val req = PathsRequest(center, TimePoint.now().withDayOfWeek(0).withPackedTime(0), delta)
     val res = testdb.getPathsForStation(List(req)).head._2
     assertTrue(res.lengthCompare(4) == 0)
     println(s"Min scheds: ${res.map(_.schedule.size).min}, max: ${res.map(_.schedule.size).max}")

@@ -1,12 +1,12 @@
 package com.reroute.backend.stations
 
-import com.reroute.backend.model.distance.DistanceScala
-import com.reroute.backend.model.location.{StartScala, StationScala, StationWithRoute}
+import com.reroute.backend.model.distance.Distance
+import com.reroute.backend.model.location.{InputLocation, Station, StationWithRoute}
 import com.reroute.backend.stations.helpers.{StationCacheManager, StationDatabaseManager}
 
 object TransitDataRetriever {
 
-  def getStartingStations(start: StartScala, dist: DistanceScala, limit: Int = Int.MaxValue): Seq[StationScala] = {
+  def getStartingStations(start: InputLocation, dist: Distance, limit: Int = Int.MaxValue): Seq[Station] = {
     val cached = StationCacheManager.getStartingStations(start, dist, limit)
     cached match {
       case Some(res) => res
@@ -16,7 +16,7 @@ object TransitDataRetriever {
     }
   }
 
-  def getTransferStations(request: Seq[TransferRequest]): Map[TransferRequest, Seq[StationScala]] = {
+  def getTransferStations(request: Seq[TransferRequest]): Map[TransferRequest, Seq[Station]] = {
     val cached = StationCacheManager.getTransferStations(request)
     val remaining = request.filter(req => cached.get(req).isEmpty)
     if (remaining.isEmpty) return cached

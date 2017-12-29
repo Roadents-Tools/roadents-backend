@@ -1,23 +1,23 @@
 package com.reroute.backend.stations.helpers
 
-import com.reroute.backend.model.distance.DistanceScala
-import com.reroute.backend.model.location.{StartScala, StationScala, StationWithRoute}
-import com.reroute.backend.stations.interfaces.StationDatabaseScala
+import com.reroute.backend.model.distance.Distance
+import com.reroute.backend.model.location.{InputLocation, Station, StationWithRoute}
+import com.reroute.backend.stations.interfaces.StationDatabase
 import com.reroute.backend.stations.postgresql.{PostgresGtfsDb, PostgresGtfsDbConfig}
-import com.reroute.backend.stations.test.TestStationDbScala
+import com.reroute.backend.stations.test.TestStationDb
 import com.reroute.backend.stations.{ArrivableRequest, PathsRequest, TransferRequest}
 
 import scala.collection.mutable
 
 object StationDatabaseManager {
 
-  private var databasesLoaded: Seq[StationDatabaseScala] = Nil
+  private var databasesLoaded: Seq[StationDatabase] = Nil
 
   def setTest(test: Boolean): Unit = {
     databasesLoaded = initializeDatabases(test)
   }
 
-  def getStartingStations(start: StartScala, dist: DistanceScala, limit: Int = Int.MaxValue): Seq[StationScala] = {
+  def getStartingStations(start: InputLocation, dist: Distance, limit: Int = Int.MaxValue): Seq[Station] = {
     databases.view
       .filter(_.isUp)
       .filter(_.servesPoint(start))
@@ -26,8 +26,8 @@ object StationDatabaseManager {
       .getOrElse(Seq.empty)
   }
 
-  def getTransferStations(request: Seq[TransferRequest]): Map[TransferRequest, Seq[StationScala]] = {
-    var rval = mutable.Map[TransferRequest, Seq[StationScala]]()
+  def getTransferStations(request: Seq[TransferRequest]): Map[TransferRequest, Seq[Station]] = {
+    var rval = mutable.Map[TransferRequest, Seq[Station]]()
     databases.view.filter(_.isUp).foreach(cache => {
       val remaining = request.filter(req => rval.get(req).isEmpty)
       if (remaining.isEmpty) {
@@ -42,18 +42,18 @@ object StationDatabaseManager {
     rval.toMap
   }
 
-  private def databases: Seq[StationDatabaseScala] = {
+  private def databases: Seq[StationDatabase] = {
     if (databasesLoaded == Nil) {
       databasesLoaded = initializeDatabases()
     }
     databasesLoaded
   }
 
-  private def initializeDatabases(test: Boolean = false): Seq[StationDatabaseScala] = {
+  private def initializeDatabases(test: Boolean = false): Seq[StationDatabase] = {
     if (!test) Seq(new PostgresGtfsDb(PostgresGtfsDbConfig(
       dbname = "localdb",
       dburl = "jdbc:postgresql://localhost:5432/Test_GTFS2"
-    ))) else Seq(new TestStationDbScala())
+    ))) else Seq(new TestStationDb())
   }
 
   def getPathsForStation(request: Seq[PathsRequest]): Map[PathsRequest, Seq[StationWithRoute]] = {
