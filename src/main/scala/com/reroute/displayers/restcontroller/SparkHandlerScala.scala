@@ -3,23 +3,15 @@ package com.reroute.displayers.restcontroller
 import com.reroute.backend.logic.ApplicationResultScala
 import com.reroute.backend.logic.generator.{GeneratorCoreScala, GeneratorRequest}
 import com.reroute.backend.model.json.RouteJsonOutputer
-import com.reroute.backend.utils.LoggingUtils
 import spark.{Request, Response, Spark}
 
 import scala.collection.JavaConverters._
 
 object SparkHandlerScala {
-  private val START_TIME_TAG = "starttime"
-  private val LAT_TAG = "latitude"
-  private val LONG_TAG = "longitude"
-  private val TYPE_TAG = "type"
-  private val TIME_DELTA_TAG = "timedelta"
-  private val TEST_TAG = "test"
 
   def main(args: Array[String]): Unit = {
-    LoggingUtils.setPrintImmediate(true)
     Spark.get("/generator", runGenerator)
-    Spark.before((request: Request, response: Response) => {
+    Spark.before((_, response) => {
       response.header("Access-Control-Allow-Origin", "*")
     })
   }
