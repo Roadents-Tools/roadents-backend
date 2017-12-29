@@ -3,7 +3,7 @@ package com.reroute.displayers.lambdacontroller
 import java.io._
 
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
-import com.reroute.backend.logic.generator.{GeneratorCoreScala, GeneratorRequest}
+import com.reroute.backend.logic.donut.{DonutCore, DonutRequest}
 import com.reroute.backend.logic.interfaces.LogicCoreScala
 import com.reroute.backend.logic.{ApplicationRequestScala, ApplicationResultScala, RequestMapper}
 import com.reroute.backend.model.json.RouteJsonOutputer
@@ -88,5 +88,5 @@ class LambdaHandlerScala[U <: ApplicationRequestScala](val core: LogicCoreScala[
   }
 }
 
-case class DonutLambdaHandlerScala() extends LambdaHandlerScala(GeneratorCoreScala, GeneratorRequest)
+case class DonutLambdaHandlerScala() extends LambdaHandlerScala(DonutCore, DonutRequest)
 

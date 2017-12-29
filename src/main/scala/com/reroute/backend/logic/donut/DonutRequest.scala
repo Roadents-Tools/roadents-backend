@@ -1,4 +1,4 @@
-package com.reroute.backend.logic.generator
+package com.reroute.backend.logic.donut
 
 import com.moodysalem.TimezoneMapper
 import com.reroute.backend.logic.{ApplicationRequestScala, RequestMapper}
@@ -9,7 +9,7 @@ import com.reroute.backend.model.time.{TimeDeltaScala, TimePointScala}
 
 import scala.util.Try
 
-class GeneratorRequest private(
+class DonutRequest private(
                                 val start: StartScala,
                                 val desttype: DestCategory,
                                 val totaltime: TimeDeltaScala,
@@ -29,20 +29,20 @@ class GeneratorRequest private(
     s"Coords (${start.latitude}, ${start.longitude}) are invalid."
   )
   require(
-    totaltime.seconds < GeneratorRequest.DELTA_VALUE_MAX && totaltime > TimeDeltaScala.NULL,
-    s"Total delta value ${totaltime.seconds} is out of range. Must be less than ${GeneratorRequest.DELTA_VALUE_MAX}."
+    totaltime.seconds < DonutRequest.DELTA_VALUE_MAX && totaltime > TimeDeltaScala.NULL,
+    s"Total delta value ${totaltime.seconds} is out of range. Must be less than ${DonutRequest.DELTA_VALUE_MAX}."
   )
   require(
-    maxwalktime.seconds < GeneratorRequest.WALK_MIN || maxwalktime.seconds < GeneratorRequest.WALK_MAX,
-    s"Max step walk time ${maxwalktime.seconds} out of range. Must be between ${GeneratorRequest.WALK_MIN} and ${GeneratorRequest.WALK_MAX}"
+    maxwalktime.seconds < DonutRequest.WALK_MIN || maxwalktime.seconds < DonutRequest.WALK_MAX,
+    s"Max step walk time ${maxwalktime.seconds} out of range. Must be between ${DonutRequest.WALK_MIN} and ${DonutRequest.WALK_MAX}"
   )
   require(
-    steps > GeneratorRequest.STEPS_MIN && steps < GeneratorRequest.STEPS_MAX,
-    s"Step count $steps out of range. Must be between ${GeneratorRequest.STEPS_MIN} and ${GeneratorRequest.STEPS_MAX}."
+    steps > DonutRequest.STEPS_MIN && steps < DonutRequest.STEPS_MAX,
+    s"Step count $steps out of range. Must be between ${DonutRequest.STEPS_MIN} and ${DonutRequest.STEPS_MAX}."
   )
   require(
-    limit > GeneratorRequest.LIMIT_MIN && limit < GeneratorRequest.LIMIT_MAX,
-    s"Limit $limit out of range. Must be between ${GeneratorRequest.LIMIT_MIN} and ${GeneratorRequest.LIMIT_MAX}."
+    limit > DonutRequest.LIMIT_MIN && limit < DonutRequest.LIMIT_MAX,
+    s"Limit $limit out of range. Must be between ${DonutRequest.LIMIT_MIN} and ${DonutRequest.LIMIT_MAX}."
   )
   override val tag: String = "DONUT"
 
@@ -57,7 +57,7 @@ class GeneratorRequest private(
   }
 }
 
-object GeneratorRequest extends RequestMapper[GeneratorRequest] {
+object DonutRequest extends RequestMapper[DonutRequest] {
   private final val LAT_KEY = "latitude"
   private final val LNG_KEY = "longitude"
   private final val QUERY_KEY = "query"
@@ -99,7 +99,7 @@ object GeneratorRequest extends RequestMapper[GeneratorRequest] {
              mindist: Option[DistanceScala] = None,
              insteps: Option[Int] = None,
              inlimit: Option[Int] = None
-           ): GeneratorRequest = {
+           ): DonutRequest = {
 
     val startTime = inpstarttime.getOrElse(TimePointScala.now(TimezoneMapper.tzNameAt(startPoint.latitude, startPoint.longitude)))
     val totalWalkMax = totalwalktime.getOrElse(maxDelta)
@@ -111,7 +111,7 @@ object GeneratorRequest extends RequestMapper[GeneratorRequest] {
     val steps = insteps.getOrElse(STEPS_DEFAULT)
     val limit = inlimit.getOrElse(LIMIT_DEFAULT)
 
-    new GeneratorRequest(
+    new DonutRequest(
       start = startPoint,
       starttime = startTime,
       desttype = desttype,
@@ -127,7 +127,7 @@ object GeneratorRequest extends RequestMapper[GeneratorRequest] {
     )
   }
 
-  override def buildQuery(callArgs: Map[String, String]): Either[String, GeneratorRequest] = Try {
+  override def buildQuery(callArgs: Map[String, String]): Either[String, DonutRequest] = Try {
 
     //Parse required args
     val lat = callArgs.get(LAT_KEY) match {
@@ -162,7 +162,7 @@ object GeneratorRequest extends RequestMapper[GeneratorRequest] {
     val stepLimit = callArgs.get(STEPS_KEY).map(_.toInt)
     val routeLimit = callArgs.get(LIMIT_KEY).map(_.toInt)
 
-    Right(GeneratorRequest(
+    Right(DonutRequest(
       startPoint = StartScala(lat, lng),
       desttype = destQuery,
       maxDelta = maxDelta,

@@ -1,4 +1,4 @@
-package com.reroute.backend.logic.generator
+package com.reroute.backend.logic.donut
 
 import com.reroute.backend.locations.{LocationRetriever, LocationsRequest}
 import com.reroute.backend.logic.ApplicationResultScala
@@ -14,11 +14,11 @@ import scala.util.{Success, Try}
 /**
   * Created by ilan on 7/10/16.
   */
-object GeneratorCoreScala extends LogicCoreScala[GeneratorRequest] {
+object DonutCore extends LogicCoreScala[DonutRequest] {
 
   private final val BAD_DEST = DestinationScala("null", -360, -360, List())
 
-  override def runLogic(request: GeneratorRequest): ApplicationResultScala = Try {
+  override def runLogic(request: DonutRequest): ApplicationResultScala = Try {
 
     //Get the station routes
     val stroutesreq = StationRouteBuildRequestScala(
@@ -63,7 +63,7 @@ object GeneratorCoreScala extends LogicCoreScala[GeneratorRequest] {
 
   override val tag: String = "DONUT"
 
-  override def isValid(request: GeneratorRequest): Boolean = {
+  override def isValid(request: DonutRequest): Boolean = {
     request.tag == tag && request.totaltime > TimeDeltaScala.NULL
   }
 

@@ -1,4 +1,4 @@
-package com.reroute.backend.logic.generator
+package com.reroute.backend.logic.donut
 
 import com.reroute.backend.model.location.{DestCategory, StartScala}
 import com.reroute.backend.model.routing.FullRouteWalkStep
@@ -8,7 +8,7 @@ import org.junit.Assert._
 import org.junit.{After, Before, Test}
 import org.scalatest.junit.AssertionsForJUnit
 
-class GeneratorCoreScalaTest extends AssertionsForJUnit {
+class DonutCoreTest extends AssertionsForJUnit {
 
   @Before
   def init(): Unit = {
@@ -16,16 +16,16 @@ class GeneratorCoreScalaTest extends AssertionsForJUnit {
   }
 
   @Test
-  def testGenerator(): Unit = {
+  def testDonut(): Unit = {
     val maxDelta = TimeDeltaScala(10 * 60 * 1000)
-    val req = GeneratorRequest(
+    val req = DonutRequest(
       startPoint = StartScala(37.5, -122),
       inpstarttime = Some(TimePointScala(0, "GMT")),
       maxDelta = maxDelta,
       desttype = DestCategory("TEST")
     )
 
-    val res = GeneratorCoreScala.runLogic(req)
+    val res = DonutCore.runLogic(req)
 
     assertTrue(s"Got errors: ${res.errors}", res.errors.isEmpty)
     assertTrue(res.routes.exists(_.steps.exists(_.isInstanceOf[FullRouteWalkStep])))
