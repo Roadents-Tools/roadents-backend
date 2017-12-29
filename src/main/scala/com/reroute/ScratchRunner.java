@@ -1,10 +1,8 @@
 package com.reroute;
 
-import com.reroute.backend.model.distance.Distance;
-import com.reroute.backend.model.distance.DistanceUnits;
-import com.reroute.backend.model.location.StartPoint;
+import com.reroute.backend.model.location.StartScala;
 import com.reroute.backend.stations.gtfs.GtfsPostgresLoader;
-import com.reroute.backend.stations.transitland.TransitlandApi;
+import com.reroute.backend.stations.transitland.TransitlandApiScala;
 import com.reroute.backend.utils.LoggingUtils;
 import com.reroute.displayers.restcontroller.SparkHandlerScala;
 import scala.util.Try;
@@ -53,7 +51,7 @@ public class ScratchRunner {
     }
 
     private static void listUrls(String[] args) {
-        Distance range = new Distance(1, DistanceUnits.METERS);
+        Double range = 1.0;
         Double lat = null;
         Double lng = null;
 
@@ -64,7 +62,7 @@ public class ScratchRunner {
             } else if ("-lng".equals(args[i]) && args.length > i + 1) {
                 lng = Double.parseDouble(args[i + 1]);
             } else if ("-d".equals(args[i]) && args.length > i + 1) {
-                range = new Distance(Double.parseDouble(args[i + 1]), DistanceUnits.METERS);
+                range = Double.parseDouble(args[i + 1]);
             }
         }
 
@@ -73,8 +71,8 @@ public class ScratchRunner {
             return;
         }
 
-        StartPoint center = new StartPoint(new double[] { lat, lng });
-        TransitlandApi apidb = new TransitlandApi();
+        StartScala center = new StartScala(lat, lng);
+        TransitlandApiScala apidb = new TransitlandApiScala();
         Map<String, String> skipBad = new HashMap<>();
         skipBad.put("license_use_without_attribution", "no");
         apidb.getFeedsInArea(center, range, null, skipBad).forEach(System.out::println);
@@ -114,7 +112,7 @@ public class ScratchRunner {
     }
 
     private static void loadInArea(String[] args) {
-        Distance range = new Distance(1, DistanceUnits.METERS);
+        Double range = -1.0;
         Double lat = null;
         Double lng = null;
         String dbt = null;
@@ -126,7 +124,7 @@ public class ScratchRunner {
             } else if ("--lng".equals(args[i]) && args.length > i + 1) {
                 lng = Double.parseDouble(args[i + 1]);
             } else if ("--dist".equals(args[i]) && args.length > i + 1) {
-                range = new Distance(Double.parseDouble(args[i + 1]), DistanceUnits.METERS);
+                range = Double.parseDouble(args[i + 1]);
             } else if ("--db".equals(args[i])) {
                 dbt = args[i + 1];
             }
@@ -137,8 +135,8 @@ public class ScratchRunner {
             return;
         }
 
-        StartPoint center = new StartPoint(new double[] { lat, lng });
-        TransitlandApi apidb = new TransitlandApi();
+        StartScala center = new StartScala(lat, lng);
+        TransitlandApiScala apidb = new TransitlandApiScala();
         Map<String, String> skipBad = new HashMap<>();
         final String db = dbt;
         List<URL> urls = apidb.getFeedsInArea(center, range, null, skipBad);

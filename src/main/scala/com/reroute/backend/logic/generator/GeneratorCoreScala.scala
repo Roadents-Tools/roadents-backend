@@ -1,15 +1,14 @@
 package com.reroute.backend.logic.generator
 
-import com.reroute.backend.locations.LocationRetriever
+import com.reroute.backend.locations.{LocationRetriever, LocationsRequest}
 import com.reroute.backend.logic.ApplicationResultScala
 import com.reroute.backend.logic.interfaces.LogicCoreScala
 import com.reroute.backend.logic.utils.{StationRouteBuildRequestScala, StationRouteBuilderScala, TimeDeltaLimit}
-import com.reroute.backend.model.distance.{Distance, DistanceUnits, DistanceUnitsScala}
 import com.reroute.backend.model.location._
 import com.reroute.backend.model.routing._
 import com.reroute.backend.model.time.TimeDeltaScala
 
-import scala.collection.JavaConverters._
+import scala.collection.breakOut
 import scala.util.{Success, Try}
 
 /**
@@ -32,9 +31,18 @@ object GeneratorCoreScala extends LogicCoreScala[GeneratorRequest] {
     printf("Got %d station routes.\n", stationRoutes.size)
 
     //Get the raw dest routes
+    val destReqs: Map[RouteScala, LocationsRequest] = stationRoutes
+      .filter(route => request.totaltime > route.totalTime)
+      .map(route => route -> LocationsRequest(
+        route.currentEnd,
+        Seq(request.totaltime - route.totalTime, request.totalwalktime - route.walkTime, request.maxwalktime).min,
+        request.desttype
+      ))(breakOut)
+    val destRes = LocationRetriever.getLocations(destReqs.values.toSeq)
+
     val destRoutes = stationRoutes
       .filter(route => request.totaltime >= route.totalTime)
-      .flatMap(route => getDestinationRoutes(route, request))
+      .flatMap(route => buildDestRoutes(route, destRes(destReqs(route))))
       .toList
     printf("Got %d -> %d dest routes.\n", stationRoutes.size, destRoutes.size)
 
@@ -58,20 +66,12 @@ object GeneratorCoreScala extends LogicCoreScala[GeneratorRequest] {
     request.tag == tag && request.totaltime > TimeDeltaScala.NULL
   }
 
-  def getWalkableDestinations(center: LocationPointScala, maxDelta: TimeDeltaScala, destquery: DestCategory): Seq[RouteStepScala] = {
-    LocationRetriever.getLocations(new StartPoint(center.latitude, center.longitude), new Distance(maxDelta.avgWalkDist in DistanceUnitsScala.METERS, DistanceUnits.METERS), new LocationType(destquery.category, destquery.category))
-      .asScala
-      .map(point => center match {
-        case pt: StartScala => FullRouteWalkStep(pt, DestinationScala.fromJava(point), (pt distanceTo DestinationScala.fromJava(point)).avgWalkTime)
-        case pt: StationScala => DestinationWalkStep(pt, DestinationScala.fromJava(point), (pt distanceTo DestinationScala.fromJava(point)).avgWalkTime)
-      })
+  private def buildDestRoutes(route: RouteScala, dests: Seq[DestinationScala]) = {
+    val steps = route.currentEnd match {
+      case pt: StartScala => dests.map(d => FullRouteWalkStep(pt, d, pt.distanceTo(d).avgWalkTime))
+      case pt: StationScala => dests.map(d => DestinationWalkStep(pt, d, pt.distanceTo(d).avgWalkTime))
+    }
+    steps.map(route + _)
   }
 
-  def getDestinationRoutes(route: RouteScala, generatorRequest: GeneratorRequest): Seq[RouteScala] = {
-    val usableTime = Seq(generatorRequest.maxwalktime, generatorRequest.totalwalktime - route.walkTime, generatorRequest.totaltime - route.totalTime)
-      .filter(_ > TimeDeltaScala.NULL)
-      .min
-    getWalkableDestinations(route.currentEnd, usableTime, generatorRequest.desttype).map(node => route + node)
-
-  }
 }
