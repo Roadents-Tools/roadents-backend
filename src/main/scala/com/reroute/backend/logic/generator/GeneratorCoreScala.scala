@@ -51,6 +51,7 @@ object GeneratorCoreScala extends LogicCoreScala[GeneratorRequest] {
       .mapValues(_.minBy(rt => rt.totalTime.unixdelta + rt.steps.size))
     val rval = destToShortest.values.toStream.sortBy(_.totalTime).take(request.limit)
     printf("Got %d -> %d filtered routes. Of those, %d are nonzero degree.\n", destRoutes.size, rval.size, rval.count(_.steps.lengthCompare(2) >= 0))
+    rval.foreach(rt => assert(request.meetsRequest(rt), "Error building malformed route."))
 
     //Build the output
     ApplicationResultScala.Result(rval)

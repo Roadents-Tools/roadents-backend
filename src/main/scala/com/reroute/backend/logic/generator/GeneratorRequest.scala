@@ -4,6 +4,7 @@ import com.moodysalem.TimezoneMapper
 import com.reroute.backend.logic.{ApplicationRequestScala, RequestMapper}
 import com.reroute.backend.model.distance.{DistanceScala, DistanceUnitsScala}
 import com.reroute.backend.model.location.{DestCategory, StartScala}
+import com.reroute.backend.model.routing.{RouteScala, TransitStepScala, WalkStepScala}
 import com.reroute.backend.model.time.{TimeDeltaScala, TimePointScala}
 
 import scala.util.Try
@@ -44,6 +45,16 @@ class GeneratorRequest private(
     s"Limit $limit out of range. Must be between ${GeneratorRequest.LIMIT_MIN} and ${GeneratorRequest.LIMIT_MAX}."
   )
   override val tag: String = "DONUT"
+
+  def meetsRequest(route: RouteScala): Boolean = {
+    route.start == start && route.starttime == starttime && route.dest.exists(_.types.contains(desttype)) &&
+      route.totalTime <= totaltime && route.walkTime <= totalwalktime && route.waitTime <= totalwaittime &&
+      route.distance >= mindist &&
+      !route.steps.exists({
+        case stp: WalkStepScala => stp.totaltime > maxwalktime
+        case stp: TransitStepScala => stp.waittime < minwaittime || stp.waittime > maxwaittime
+      })
+  }
 }
 
 object GeneratorRequest extends RequestMapper[GeneratorRequest] {
