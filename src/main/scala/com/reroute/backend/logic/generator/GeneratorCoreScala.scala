@@ -42,7 +42,7 @@ object GeneratorCoreScala extends LogicCoreScala[GeneratorRequest] {
 
     val destRoutes = stationRoutes
       .filter(route => request.totaltime >= route.totalTime)
-      .flatMap(route => buildDestRoutes(route, destRes(destReqs(route))))
+      .flatMap(route => destReqs.get(route).flatMap(destRes.get).map(buildDestRoutes(route, _)).getOrElse(Seq.empty))
       .toList
     printf("Got %d -> %d dest routes.\n", stationRoutes.size, destRoutes.size)
 

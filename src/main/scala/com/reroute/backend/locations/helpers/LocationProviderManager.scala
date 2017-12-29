@@ -2,6 +2,7 @@ package com.reroute.backend.locations.helpers
 
 import com.reroute.backend.locations.LocationsRequest
 import com.reroute.backend.locations.interfaces.LocationProviderScala
+import com.reroute.backend.locations.test.TestLocationProviderScala
 import com.reroute.backend.model.location.DestinationScala
 
 import scala.collection.mutable
@@ -16,7 +17,7 @@ object LocationProviderManager {
       loadedProviders = Seq()
     }
     else {
-      loadedProviders = Seq()
+      loadedProviders = Seq(new TestLocationProviderScala())
     }
   }
 
