@@ -17,11 +17,12 @@ class DonutCoreTest extends AssertionsForJUnit {
 
   @Test
   def testDonut(): Unit = {
-    val maxDelta = TimeDelta(10 * 60 * 1000)
+    val maxDelta = TimeDelta(120 * 60 * 1000)
     val req = DonutRequest(
       startPoint = InputLocation(37.5, -122),
       inpstarttime = Some(TimePoint(0, "GMT")),
       maxDelta = maxDelta,
+      inmaxwalktime = Some(15 * TimeDelta.MINUTE),
       desttype = DestCategory("TEST")
     )
 
@@ -31,6 +32,7 @@ class DonutCoreTest extends AssertionsForJUnit {
     assertTrue(res.routes.exists(_.steps.exists(_.isInstanceOf[FullRouteWalkStep])))
     assertTrue(res.routes.exists(_.steps.lengthCompare(1) == 0))
     assertTrue(res.routes.forall(_.steps.size % 2 == 1))
+    assertTrue(res.routes.lengthCompare(5) >= 0)
   }
 
   @After

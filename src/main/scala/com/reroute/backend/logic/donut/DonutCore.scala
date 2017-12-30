@@ -3,31 +3,99 @@ package com.reroute.backend.logic.donut
 import com.reroute.backend.locations.{LocationRetriever, LocationsRequest}
 import com.reroute.backend.logic.ApplicationResult
 import com.reroute.backend.logic.interfaces.LogicCore
-import com.reroute.backend.logic.utils.{StationRouteBuildRequestScala, StationRouteBuilder, TimeDeltaLimit}
+import com.reroute.backend.logic.stationroute.{StationQueryGenerator, StationRouteGenerator, StationRouteRequest}
 import com.reroute.backend.model.location._
 import com.reroute.backend.model.routing._
 import com.reroute.backend.model.time.TimeDelta
+import com.reroute.backend.stations.{ArrivableRequest, PathsRequest, TransferRequest}
 
 import scala.collection.breakOut
 import scala.util.{Success, Try}
 
 /**
-  * Created by ilan on 7/10/16.
-  */
+ * Created by ilan on 7/10/16.
+ */
 object DonutCore extends LogicCore[DonutRequest] {
+
+  private final val WALK_MODIFIER = 3.0
+  private final val PATHS_MODIFIER = 10.0
+  private final val ARRIVABLE_MODIFIER = 10.0
 
   private final val BAD_DEST = ReturnedLocation("null", -360, -360, List())
 
   override def runLogic(request: DonutRequest): ApplicationResult = Try {
 
     //Get the station routes
-    val stroutesreq = StationRouteBuildRequestScala(
-      start = request.start,
-      starttime = request.starttime,
-      delta = TimeDeltaLimit(total_max = request.totaltime),
-      finallimit = request.limit
+    println(s"Donut req got walk times: ${request.totaltime.hours}, ${request.totalwalktime.hours}, ${request.maxwalktime.hours}")
+    val queryGenerator = StationQueryGenerator(
+      genStartQuery = start => (
+        start,
+        Seq(request.maxwalktime, request.totalwalktime, request.totaltime).min.avgWalkDist,
+        (request.limit * WALK_MODIFIER).toInt
+      ),
+      genTransferQuery = (rt, curlayer) => TransferRequest(
+        rt.currentEnd.asInstanceOf[Station],
+        request.effectiveWalkLeft(rt).avgWalkDist,
+        (request.limit / curlayer * WALK_MODIFIER).toInt
+      ),
+      genArrivableQuery = (rt, data, curlayer) => ArrivableRequest(
+        data,
+        data.nextDeparture(rt.endTime),
+        data.nextDeparture(rt.endTime).timeUntil(request.endTime),
+        (request.limit / curlayer * ARRIVABLE_MODIFIER).toInt
+      ),
+      genPathsQuery = (rt, curlayer) => PathsRequest(
+        rt.currentEnd.asInstanceOf[Station],
+        rt.endTime,
+        request.effectiveWaitLeft(rt),
+        (request.limit / curlayer * PATHS_MODIFIER).toInt
+      )
     )
-    val stationRoutes = StationRouteBuilder.buildStationRouteList(stroutesreq)
+    val yieldFilter: Route => Boolean = (route: Route) => {
+      val totdt = route.totalTime <= request.totaltime
+      val notWalkEnd = !route.steps.headOption.exists(_.isInstanceOf[WalkStep])
+      val totwalkdt = route.walkTime <= request.totalwalktime
+      val totwaitdt = route.waitTime <= request.totalwalktime
+      val stepcnt = route.steps.lengthCompare(request.steps - 1) <= 0
+      val stepvalid = route.steps.forall({
+        case stp: WalkStep => stp.totaltime < request.maxwalktime
+        case stp: TransitStep => stp.waittime < request.maxwaittime && stp.waittime > request.minwaittime
+      })
+      if (!totdt) println(s"YA: ${route.totalTime.hours} VS ${request.totaltime.hours}")
+      if (!totwalkdt) println(s"YB: ${route.walkTime.hours} VS ${request.totalwalktime.hours}")
+      if (!totwaitdt) println(s"YC: ${route.waitTime.seconds} VS ${request.totalwaittime.seconds}")
+      if (!stepcnt) println(s"YD: ${route.steps.size} VS ${request.steps}")
+      if (!stepvalid) println(s"YE: ${route.steps.map(_.totaltime.seconds)}")
+      if (!notWalkEnd) println(s"YF: ${route.steps.headOption.map(_.getClass.getName)}")
+      totdt && notWalkEnd && totwalkdt && totwaitdt && stepcnt && stepvalid
+    }
+    val branchFilter: Route => Boolean = (route: Route) => {
+      val totdt = route.totalTime < request.totaltime
+      val totwalkdt = route.walkTime < request.totalwalktime
+      val totwaitdt = request.totalwaittime - route.waitTime > request.minwaittime
+      val stepcnt = route.steps.lengthCompare(request.steps - 2) <= 0
+      val stepvalid = route.steps.forall({
+        case stp: WalkStep => stp.totaltime < request.maxwalktime
+        case stp: TransitStep => stp.waittime < request.maxwaittime && stp.waittime > request.minwaittime
+      })
+      if (!totdt) println(s"A: ${route.totalTime.hours} VS ${request.totaltime.hours}")
+      if (!totwalkdt) println(s"B: ${route.walkTime.hours} VS ${request.totalwalktime.hours}")
+      if (!totwaitdt) println(s"C: ${route.waitTime.seconds} VS ${request.totalwaittime.seconds}")
+      if (!stepcnt) println(s"D: ${route.steps.size} VS ${request.steps}")
+      if (!stepvalid) println(s"E: ${route.steps.map(_.totaltime.seconds)}")
+      totdt && totwalkdt && totwaitdt && stepcnt && stepvalid
+    }
+    val stroutesreq = StationRouteRequest(
+      request.start,
+      request.starttime,
+      request.limit * 2,
+      request.limit * 4,
+      yieldFilter,
+      branchFilter,
+      queryGenerator
+    )
+
+    val stationRoutes = StationRouteGenerator.buildStationRouteList(stroutesreq)
     printf("Got %d station routes.\n", stationRoutes.size)
 
     //Get the raw dest routes

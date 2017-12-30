@@ -29,19 +29,19 @@ class DonutRequest private(
     s"Coords (${start.latitude}, ${start.longitude}) are invalid."
   )
   require(
-    totaltime.seconds < DonutRequest.DELTA_VALUE_MAX && totaltime > TimeDelta.NULL,
+    totaltime.seconds <= DonutRequest.DELTA_VALUE_MAX && totaltime > TimeDelta.NULL,
     s"Total delta value ${totaltime.seconds} is out of range. Must be less than ${DonutRequest.DELTA_VALUE_MAX}."
   )
   require(
-    maxwalktime.seconds < DonutRequest.WALK_MIN || maxwalktime.seconds < DonutRequest.WALK_MAX,
+    maxwalktime.seconds >= DonutRequest.WALK_MIN || maxwalktime.seconds <= DonutRequest.WALK_MAX,
     s"Max step walk time ${maxwalktime.seconds} out of range. Must be between ${DonutRequest.WALK_MIN} and ${DonutRequest.WALK_MAX}"
   )
   require(
-    steps > DonutRequest.STEPS_MIN && steps < DonutRequest.STEPS_MAX,
+    steps >= DonutRequest.STEPS_MIN && steps <= DonutRequest.STEPS_MAX,
     s"Step count $steps out of range. Must be between ${DonutRequest.STEPS_MIN} and ${DonutRequest.STEPS_MAX}."
   )
   require(
-    limit > DonutRequest.LIMIT_MIN && limit < DonutRequest.LIMIT_MAX,
+    limit >= DonutRequest.LIMIT_MIN && limit <= DonutRequest.LIMIT_MAX,
     s"Limit $limit out of range. Must be between ${DonutRequest.LIMIT_MIN} and ${DonutRequest.LIMIT_MAX}."
   )
   override val tag: String = "DONUT"
@@ -55,6 +55,16 @@ class DonutRequest private(
         case stp: TransitStep => stp.waittime < minwaittime || stp.waittime > maxwaittime
       })
   }
+
+  def effectiveWalkLeft(route: Route): TimeDelta = {
+    Seq(totaltime - route.totalTime, totalwalktime - route.walkTime, maxwalktime).min
+  }
+
+  def effectiveWaitLeft(route: Route): TimeDelta = {
+    Seq(totaltime - route.totalTime, totalwaittime - route.waitTime, maxwaittime).min
+  }
+
+  def endTime: TimePoint = starttime + totaltime
 }
 
 object DonutRequest extends RequestMapper[DonutRequest] {
