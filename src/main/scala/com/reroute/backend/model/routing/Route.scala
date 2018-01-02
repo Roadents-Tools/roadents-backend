@@ -10,7 +10,12 @@ class Route(val start: InputLocation, val starttime: TimePoint, val steps: List[
 
   def distance: Distance = start.distanceTo(currentEnd)
 
-  def travelDistance: Distance = steps.view.map(step => step.startpt.distanceTo(step.endpt)).fold(Distance.NULL)(_ + _)
+  def totalDistance: Distance = steps.map(step => step.startpt.distanceTo(step.endpt)).fold(Distance.NULL)(_ + _)
+
+  def walkDistance: Distance = steps.map({
+    case stp: WalkStep => stp.walkdistance
+    case _ => Distance.NULL
+  }).fold(Distance.NULL)(_ + _)
 
   def addStep(step: RouteStep): Route = {
     require(currentEnd == step.startpt, s"Route is discontinuous. Tried adding ${step.startpt} to $currentEnd")
