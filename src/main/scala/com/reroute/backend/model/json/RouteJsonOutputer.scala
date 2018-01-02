@@ -9,7 +9,7 @@ object RouteJsonOutputer extends JsonOutputer[Route] {
           "end_pt" : ${inputObject.dest.map(ReturnedLocationJsonSerializer.output).getOrElse("null")},
           "start_time" : ${inputObject.starttime.unixtime / 1000},
           "total_time" : ${inputObject.totalTime.seconds},
-          "steps" : ${inputObject.steps.map(RouteStepJsonOutputer.output).mkString("[", ",", "]")}
+          "steps" : ${inputObject.steps.reverse.map(RouteStepJsonOutputer.output).mkString("[", ",", "]")}
         }"""
   }
 }

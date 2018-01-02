@@ -9,7 +9,7 @@ object StationJsonOutputer extends JsonOutputer[Station] {
           "latitude" : ${inputObject.latitude},
           "longitude" : ${inputObject.longitude},
           "name" : "${inputObject.name}",
-          "type": station
+          "type": "station"
         }"""
   }
 }
