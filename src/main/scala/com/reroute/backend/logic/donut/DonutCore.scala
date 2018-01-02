@@ -17,6 +17,8 @@ import scala.util.{Success, Try}
  */
 object DonutCore extends LogicCore[DonutRequest] {
 
+  private final val BRANCH_MODIFIER = 5
+  private final val YIELD_MODIFIER = 2
   private final val WALK_MODIFIER = 3.0
   private final val PATHS_MODIFIER = 10.0
   private final val ARRIVABLE_MODIFIER = 10.0
@@ -61,13 +63,8 @@ object DonutCore extends LogicCore[DonutRequest] {
         case stp: WalkStep => stp.totaltime < request.maxwalktime
         case stp: TransitStep => stp.waittime < request.maxwaittime && stp.waittime > request.minwaittime
       })
-      if (!totdt) println(s"YA: ${route.totalTime.hours} VS ${request.totaltime.hours}")
-      if (!totwalkdt) println(s"YB: ${route.walkTime.hours} VS ${request.totalwalktime.hours}")
-      if (!totwaitdt) println(s"YC: ${route.waitTime.seconds} VS ${request.totalwaittime.seconds}")
-      if (!stepcnt) println(s"YD: ${route.steps.size} VS ${request.steps}")
-      if (!stepvalid) println(s"YE: ${route.steps.map(_.totaltime.seconds)}")
-      if (!notWalkEnd) println(s"YF: ${route.steps.headOption.map(_.getClass.getName)}")
-      totdt && notWalkEnd && totwalkdt && totwaitdt && stepcnt && stepvalid
+      val mindistvalid = route.distance + request.effectiveWalkLeft(route).avgWalkDist > request.mindist
+      totdt && notWalkEnd && totwalkdt && totwaitdt && stepcnt && stepvalid && mindistvalid
     }
     val branchFilter: Route => Boolean = (route: Route) => {
       val totdt = route.totalTime < request.totaltime
@@ -88,8 +85,8 @@ object DonutCore extends LogicCore[DonutRequest] {
     val stroutesreq = StationRouteRequest(
       request.start,
       request.starttime,
-      request.limit * 2,
-      request.limit * 4,
+      request.limit * YIELD_MODIFIER,
+      request.limit * BRANCH_MODIFIER,
       yieldFilter,
       branchFilter,
       queryGenerator
@@ -109,8 +106,8 @@ object DonutCore extends LogicCore[DonutRequest] {
     val destRes = LocationRetriever.getLocations(destReqs.values.toSeq)
 
     val destRoutes = stationRoutes
-      .filter(route => request.totaltime >= route.totalTime)
       .flatMap(route => destReqs.get(route).flatMap(destRes.get).map(buildDestRoutes(route, _)).getOrElse(Seq.empty))
+      .filter(request.meetsRequest)
       .toList
     printf("Got %d -> %d dest routes.\n", stationRoutes.size, destRoutes.size)
 
