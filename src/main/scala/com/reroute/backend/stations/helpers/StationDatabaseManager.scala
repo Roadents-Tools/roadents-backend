@@ -3,9 +3,10 @@ package com.reroute.backend.stations.helpers
 import com.reroute.backend.model.distance.Distance
 import com.reroute.backend.model.location.{InputLocation, Station, StationWithRoute}
 import com.reroute.backend.stations.interfaces.StationDatabase
-import com.reroute.backend.stations.postgresql.{PostgresGtfsDb, PostgresGtfsDbConfig}
+import com.reroute.backend.stations.postgresql.PostgresGtfsDb
 import com.reroute.backend.stations.test.TestStationDb
 import com.reroute.backend.stations.{ArrivableRequest, PathsRequest, TransferRequest}
+import com.reroute.backend.utils.postgres.PostgresConfig
 
 import scala.collection.mutable
 
@@ -50,7 +51,7 @@ object StationDatabaseManager {
   }
 
   private def initializeDatabases(test: Boolean = false): Seq[StationDatabase] = {
-    if (!test) Seq(new PostgresGtfsDb(PostgresGtfsDbConfig(
+    if (!test) Seq(new PostgresGtfsDb(PostgresConfig(
       dbname = "localdb",
       dburl = "jdbc:postgresql://localhost:5432/Test_GTFS2"
     ))) else Seq(new TestStationDb())

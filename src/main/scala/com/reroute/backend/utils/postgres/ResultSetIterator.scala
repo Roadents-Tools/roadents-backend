@@ -1,4 +1,4 @@
-package com.reroute.backend.stations.postgresql
+package com.reroute.backend.utils.postgres
 
 import java.sql.ResultSet
 

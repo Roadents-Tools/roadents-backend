@@ -9,6 +9,7 @@ import com.reroute.backend.model.location._
 import com.reroute.backend.model.time.{SchedulePoint, TimeDelta}
 import com.reroute.backend.stations.interfaces.StationDatabase
 import com.reroute.backend.stations.{ArrivableRequest, PathsRequest, TransferRequest}
+import com.reroute.backend.utils.postgres.{PostgresConfig, ResultSetIterator}
 
 import scala.collection.breakOut
 import scala.util.{Failure, Success, Try}
@@ -18,7 +19,7 @@ import scala.util.{Failure, Success, Try}
  *
  * @param config the parameters for the connection to the database
  */
-class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDatabase {
+class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase {
 
   override val databaseName: String = {
     if (config.dbname != "") config.dbname
@@ -381,20 +382,3 @@ class PostgresGtfsDb(private val config: PostgresGtfsDbConfig) extends StationDa
 
   override def isUp: Boolean = conOpt.toOption.exists(con => !con.isClosed)
 }
-
-/**
- * Parameters for connecting to a Postgresql database.
- *
- * @param dburl  the JDBC-style URL to connect to
- * @param dbname the unique "name" of the database; defaults to the URL
- * @param user   the username of the database user; defaults to "donut"
- * @param pass   the password of the database user; defaults to "donutpass"
- * @param area   the area that this database serves, or None if the database serves everywhere
- */
-case class PostgresGtfsDbConfig(
-                                 dburl: String,
-                                 dbname: String = "",
-                                 user: String = "donut",
-                                 pass: String = "donutpass",
-                                 area: Option[(LocationPoint, Distance)] = None
-                               )
