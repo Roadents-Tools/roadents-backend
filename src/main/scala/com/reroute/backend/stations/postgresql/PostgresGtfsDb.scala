@@ -26,7 +26,9 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
     else config.dburl.replace("jdbc:postgresql://", "")
   }
 
-  private val conOpt: Try[Connection] = Try {
+  private var con: Try[Connection] = Failure(new NoSuchElementException("Need to initialize connection."))
+
+  private def initConnection(): Try[Connection] = Try {
 
     Class.forName("org.postgresql.Driver")
 
@@ -39,6 +41,14 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
 
     DriverManager.getConnection(config.dburl, props)
   }
+
+  private def conOpt: Try[Connection] = con.filter(!_.isClosed).recoverWith({
+    case e =>
+      println(e.getMessage)
+      con = initConnection()
+      if (con.isFailure) println("New connection err:" + con.failed.get.getMessage)
+      con
+  })
 
   override def getStartingStations(start: InputLocation, dist: Distance, limit: Int): Seq[Station] = {
     val res = conOpt.flatMap(runStartQuery(_, start, dist, limit))
