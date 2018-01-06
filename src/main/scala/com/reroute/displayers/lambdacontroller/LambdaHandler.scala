@@ -17,6 +17,7 @@ object LambdaHandler {
   private def parseUrlArgs(inputStream: InputStream): Map[String, String] = {
     val reader = new BufferedReader(new InputStreamReader(inputStream))
     val inputStringBuilder = reader.lines.iterator().asScala.mkString
+    println(s"Got string $inputStringBuilder")
     val event = new JSONObject(inputStringBuilder.toString)
     val qps = Try(event.getJSONObject("queryStringParameters"))
     qps match {
@@ -32,13 +33,13 @@ object LambdaHandler {
     val responseJson = new JSONObject
     val headerJson = new JSONObject
     headerJson.put("content", "application/json")
+    headerJson.put("access-control-allow-origin", "*")
     responseJson.put("headers", headerJson)
     responseJson.put("statusCode", "200")
 
-    val parsed = Try(new JSONObject(rawOutputJson))
-    val outputData = parsed.getOrElse(rawOutputJson)
-    responseJson.put("body", outputData)
+    responseJson.put("body", rawOutputJson)
 
+    println(s"Outputting\n ${responseJson.toString(3)}")
     val writer = new OutputStreamWriter(outputStream)
     writer.write(responseJson.toString)
     writer.close()

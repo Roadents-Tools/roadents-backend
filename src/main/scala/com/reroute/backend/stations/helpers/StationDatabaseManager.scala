@@ -53,7 +53,7 @@ object StationDatabaseManager {
   private def initializeDatabases(test: Boolean = false): Seq[StationDatabase] = {
     if (!test) Seq(new PostgresGtfsDb(PostgresConfig(
       dbname = "localdb",
-      dburl = "jdbc:postgresql://localhost:5432/Test_GTFS2"
+      dburl = "jdbc:postgresql://debstop.dynamic.ucsd.edu:5433/Stations_GTFS"
     ))) else Seq(new TestStationDb())
   }
 

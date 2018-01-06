@@ -177,8 +177,6 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
       })
       .mkString(begin, " \nOR ", end)
 
-    println(sql)
-
     val stm = con.createStatement()
     val rs = stm.executeQuery(sql)
     val fullResultSet = new ResultSetIterator(rs, extractPathsInformation).toStream
@@ -306,8 +304,6 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
            and gtfs_stop_times.stopsequence > $minInd and gtfs_stop_times.departuretime between $packedStart and $packedEnd) """
       })
       .mkString(begin, " OR ", end)
-
-    println(sql)
 
     val stm = con.createStatement()
     val rs = stm.executeQuery(sql)
