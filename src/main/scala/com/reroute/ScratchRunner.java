@@ -140,15 +140,18 @@ public class ScratchRunner {
         Map<String, String> skipBad = new HashMap<>();
         final String db = dbt;
         List<URL> urls = apidb.getFeedsInArea(center, range, null, skipBad);
-        urls.parallelStream().forEach(zipurl -> {
-            GtfsPostgresLoader loader = new GtfsPostgresLoader(zipurl);
-            Try<Object> res = loader.load(db, "donut", "donutpass");
-            if (res.isFailure()) {
-                System.out.printf("Got args:\ndb = %s\nzip = %s\n", db, zipurl);
-                res.toEither().left().get().printStackTrace();
-            }
-            System.out.println("Build complete.");
-        });
+        urls.parallelStream().forEach(url -> System.out.printf("Got url: %s", url.toString()));
+        urls.parallelStream()
+                .peek(url -> System.out.printf("Loading url: %s", url.toString()))
+                .forEach(zipurl -> {
+                    GtfsPostgresLoader loader = new GtfsPostgresLoader(zipurl);
+                    Try<Object> res = loader.load(db, "donut", "donutpass");
+                    if (res.isFailure()) {
+                        System.out.printf("Got args:\ndb = %s\nzip = %s\n", db, zipurl);
+                        res.toEither().left().get().printStackTrace();
+                    }
+                    System.out.println("Build complete.");
+                });
     }
 }
 
