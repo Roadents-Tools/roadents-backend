@@ -5,6 +5,8 @@ import java.sql.DriverManager
 import java.util.Properties
 
 import com.reroute.backend.utils.postgres.PostgresConfig
+import net.sf.extjwnl.data.{POS, PointerUtils}
+import net.sf.extjwnl.dictionary.Dictionary
 import org.json.{JSONArray, JSONObject}
 
 import scala.collection.JavaConverters._
@@ -12,22 +14,44 @@ import scala.util.Try
 
 object PostgresModifiedOsmLoader {
 
-  private final val valueMappings: Map[String, Seq[String]] = Map(
-    "restaurant" -> Seq("food"),
-    "cafe" -> Seq("coffee", "food"),
-    "bar" -> Seq("pub", "alcohol", "drink"),
-    "bbq" -> Seq("food", "meat"),
-    "pub" -> Seq("bar", "alcohol", "drink"),
-    "deli" -> Seq("food", "meat")
+  private final val notTags = Set(
+    "height", "gnis:*",
+    "phone", "website", "building:*",
+    "addr:*", "fax", "capacity", "floor",
+    "wikidata", "wheelchair", "name:*",
+    "import_uuid", "wikipedia", "flags",
+    "contact:*", "source_ref", "route_ref", "opening_hours*",
+    "level*", "description", "attribution", "source*",
+    "is_in", "id", "toilets", "diet", "contact:*",
+    "layer", "email", "smoking"
   )
-
   private final val keyMappings: Map[String, Seq[String]] = Map(
-    "cuisine" -> Seq("food")
+    "cuisine" -> Seq("meal", "cuisine"),
+    "diet" -> Seq("meal", "diet")
   )
-
+  private final val vlMappings: Map[String, Seq[String]] = Map(
+    "bbq" -> Seq("barbecue", "meat", "food", "meal", "bbq"),
+    "restaurant" -> Seq("food", "restaurant", "meal"),
+    "cafe" -> Seq("cafe", "food", "coffee"),
+    "brewpub" -> Seq("alcohol", "food", "pub", "brewery", "brewpub")
+  )
   private final val bulkSize = 1000
+  private val dict = Dictionary.getDefaultResourceInstance
 
-  def loadObjs(sourceFile: String): Seq[JSONObject] = {
+  def getInserts(source: String): Seq[String] = {
+    getInsertValues(source)
+      .grouped(bulkSize)
+      .map(_.mkString("INSERT INTO locations VALUES ", ", \n", "\n\n"))
+      .toSeq
+  }
+
+  private def getInsertValues(source: String): Seq[String] = PostgresModifiedOsmLoader.loadObjs(source)
+    .par
+    .map(convertJson)
+    .map(createInsertValue)
+    .seq
+
+  private def loadObjs(sourceFile: String): Seq[JSONObject] = {
     Files.lines(Paths.get(sourceFile)).iterator().asScala
       .toStream
       .drop(5)
@@ -38,7 +62,7 @@ object PostgresModifiedOsmLoader {
       .filter(json => json.getJSONObject("properties").has("other_tags"))
   }
 
-  def convertJson(json: JSONObject): JSONObject = {
+  private def convertJson(json: JSONObject): JSONObject = {
     val rval = new JSONObject()
     rval.put("latitude", json.getJSONObject("geometry").getJSONArray("coordinates").getDouble(1))
     rval.put("longitude", json.getJSONObject("geometry").getJSONArray("coordinates").getDouble(0))
@@ -68,11 +92,16 @@ object PostgresModifiedOsmLoader {
     if (negFlags.nonEmpty) negFlags.foreach(objTags.remove)
     val extraKeyTags = objTags.keys().asScala
       .map(_.asInstanceOf[String])
-      .flatMap(ky => keyMappings.getOrElse(ky, Seq.empty))
+      .filter(isValidTag)
+      .flatMap(keyMappings.get)
+      .flatten
+      .flatMap(getExtraKeyTags)
     val extraValTags = objTags.keys().asScala
       .map(_.asInstanceOf[String])
-      .map(ky => objTags.get(ky).toString)
-      .flatMap(vl => valueMappings.getOrElse(vl, Seq.empty))
+      .filter(isValidTag)
+      .flatMap(ky => Seq(objTags.optString(ky)))
+      .flatMap(vl => vlMappings.getOrElse(vl, Seq(vl)))
+      .flatMap(getExtraValTags)
     val extraTags = (extraKeyTags ++ extraValTags).toSeq.distinct.foldLeft(new JSONArray())(_ put _)
     propsObj.put("other_tags", objTags)
     propsObj.put("extra_tags", extraTags)
@@ -80,7 +109,48 @@ object PostgresModifiedOsmLoader {
     rval
   }
 
-  def createInsertValue(json: JSONObject): String = {
+  private def isValidTag(tag: String) = {
+    !notTags.contains(tag) &&
+      notTags
+        .filter(_.endsWith("*"))
+        .map(_.replace("*", ""))
+        .forall(!tag.startsWith(_))
+  }
+
+  private def getExtraKeyTags(key: String): Seq[String] = getExtraTags(key)
+
+  private def getExtraTags(base: String): Seq[String] = {
+    val indWords = Stream(
+      Option(dict.getIndexWord(POS.ADJECTIVE, base)),
+      Option(dict.getIndexWord(POS.NOUN, base))
+    ).flatten
+    val syns = indWords.flatMap(_.getSenses.asScala)
+
+    val baseFromSyns = syns
+      .flatMap(_.getWords.asScala)
+      .map(_.getLemma)
+
+    val synonyms = syns
+      .flatMap(syn => PointerUtils.getSynonyms(syn).asScala)
+      .flatMap(_.getSynset.getWords.asScala)
+      .map(_.getLemma)
+
+    val holonyms = syns
+      .flatMap(syn => PointerUtils.getHolonyms(syn).asScala)
+      .flatMap(_.getSynset.getWords.asScala)
+      .map(_.getLemma)
+
+    val hypernyms = syns
+      .flatMap(syn => PointerUtils.getDirectHypernyms(syn).asScala)
+      .flatMap(_.getSynset.getWords.asScala)
+      .map(_.getLemma)
+
+    (baseFromSyns ++ synonyms ++ holonyms ++ hypernyms).distinct.filter(_.head.isLower)
+  }
+
+  private def getExtraValTags(vl: String): Seq[String] = getExtraTags(vl)
+
+  private def createInsertValue(json: JSONObject): String = {
     s"""(
       ${json.getLong("id")},
       $$name_tag$$${json.getString("name")}$$name_tag$$,
@@ -92,7 +162,7 @@ object PostgresModifiedOsmLoader {
 
   def runInserts(config: PostgresConfig, values: Seq[String]): Try[Int] = Try {
 
-    val conOpt = {
+    val connection = {
       Class.forName("org.postgresql.Driver")
       val props = new Properties()
       props.setProperty("user", config.user)
@@ -103,15 +173,14 @@ object PostgresModifiedOsmLoader {
       DriverManager.getConnection(config.dburl, props)
     }
 
-    val stm = conOpt.createStatement()
+    val stm = connection.createStatement()
     values
-      .grouped(bulkSize)
-      .map(_.mkString("INSERT INTO locations VALUES ", ", \n", "\n\n"))
-      .foreach(stm.addBatch)
+      .foreach(com => require(com.startsWith("INSERT") || com.startsWith("UPDATE"), s"Got malformed statement: $com"))
+    values.foreach(stm.addBatch)
     val rval = stm.executeBatch()
     stm.execute("UPDATE locations SET searchvector= setweight(to_tsvector(name), 'A') || setweight(to_tsvector(properties), 'B')")
     stm.close()
-    conOpt.close()
+    connection.close()
     rval.sum
   }
 }
