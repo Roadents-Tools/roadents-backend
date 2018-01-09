@@ -3,7 +3,6 @@ package com.reroute;
 import com.reroute.backend.model.location.InputLocation;
 import com.reroute.backend.stations.gtfs.GtfsPostgresLoader;
 import com.reroute.backend.stations.transitland.TransitlandApi;
-import com.reroute.backend.utils.LoggingUtils;
 import com.reroute.displayers.restcontroller.SparkHandler;
 import scala.util.Try;
 
@@ -20,7 +19,6 @@ public class ScratchRunner {
 
     public static void main(String[] args) {
 
-        LoggingUtils.setPrintImmediate(true);
         try {
             for (String arg : args) {
                 if ("--spark".equals(arg)) {
@@ -42,7 +40,7 @@ public class ScratchRunner {
             }
             System.out.println("ARGUMENT NOT FOUND, EXITING...");
         } catch (Exception e) {
-            LoggingUtils.logError(e);
+            e.printStackTrace();
         }
     }
 
@@ -67,7 +65,7 @@ public class ScratchRunner {
         }
 
         if (lat == null || lng == null) {
-            LoggingUtils.logError("ScratchRunner", "Coords not passed correctly.");
+            System.out.println("Coords not passed correctly.");
             return;
         }
 
@@ -131,7 +129,7 @@ public class ScratchRunner {
         }
 
         if (lat == null || lng == null || dbt == null) {
-            LoggingUtils.logError("ScratchRunner", "Args not passed correctly.");
+            System.out.println("Args not passed correctly.");
             return;
         }
 
