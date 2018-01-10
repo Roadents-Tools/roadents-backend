@@ -1,9 +1,12 @@
 package com.reroute;
 
+import com.reroute.backend.locations.osmpostgres.PostgresModifiedOsmLoader;
 import com.reroute.backend.model.location.InputLocation;
 import com.reroute.backend.stations.gtfs.GtfsPostgresLoader;
 import com.reroute.backend.stations.transitland.TransitlandApi;
+import com.reroute.backend.utils.postgres.PostgresConfig;
 import com.reroute.displayers.restcontroller.SparkHandler;
+import scala.collection.Seq;
 import scala.util.Try;
 
 import java.net.URL;
@@ -35,6 +38,10 @@ public class ScratchRunner {
                 }
                 if ("--loadArea".equals(arg)) {
                     loadInArea(args);
+                    return;
+                }
+                if ("--loadDests".equals(arg)) {
+                    loadOsmJson(args);
                     return;
                 }
             }
@@ -107,6 +114,39 @@ public class ScratchRunner {
             res.toEither().left().get().printStackTrace();
         }
         System.out.println("Build complete.");
+    }
+
+    private static void loadOsmJson(String[] args) {
+        String dbt = null;
+        String file = null;
+        for (int i = 0; i < args.length; i++) {
+            if ("--file".equals(args[i])) {
+                file = args[i + 1];
+            } else if ("--db".equals(args[i])) {
+                dbt = args[i + 1];
+            }
+        }
+        if (dbt == null || file == null) {
+            System.out.println("Couldnt get all args.");
+            return;
+        }
+        System.out.printf("Trying to load file %s into database %s.\n", file, dbt);
+        Seq<String> ins = PostgresModifiedOsmLoader.getInserts(file);
+        PostgresConfig conf = PostgresConfig.apply(
+                dbt,
+                PostgresConfig.apply$default$2(),
+                PostgresConfig.apply$default$3(),
+                PostgresConfig.apply$default$4(),
+                PostgresConfig.apply$default$5()
+        );
+        System.out.println("Got inserts. Now trying to run.");
+        Try<Object> status = PostgresModifiedOsmLoader.runInserts(conf, ins);
+        if (status.isFailure()) {
+            Throwable err = status.failed().get();
+            err.printStackTrace();
+        } else {
+            System.out.println("Success!");
+        }
     }
 
     private static void loadInArea(String[] args) {
