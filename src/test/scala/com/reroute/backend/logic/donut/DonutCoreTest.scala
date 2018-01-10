@@ -1,5 +1,6 @@
 package com.reroute.backend.logic.donut
 
+import com.reroute.backend.locations.helpers.LocationProviderManager
 import com.reroute.backend.model.location.{DestCategory, InputLocation}
 import com.reroute.backend.model.routing.FullRouteWalkStep
 import com.reroute.backend.model.time.{TimeDelta, TimePoint}
@@ -13,6 +14,7 @@ class DonutCoreTest extends AssertionsForJUnit {
   @Before
   def init(): Unit = {
     StationDatabaseManager.setTest(true)
+    LocationProviderManager.setTest(true)
   }
 
   @Test
@@ -38,5 +40,6 @@ class DonutCoreTest extends AssertionsForJUnit {
   @After
   def teardown(): Unit = {
     StationDatabaseManager.setTest(false)
+    LocationProviderManager.setTest(false)
   }
 }

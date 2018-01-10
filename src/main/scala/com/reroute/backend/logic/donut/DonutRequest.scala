@@ -47,7 +47,8 @@ class DonutRequest private(
   override val tag: String = "DONUT"
 
   def meetsRequest(route: Route): Boolean = {
-    route.start == start && route.starttime == starttime && route.dest.exists(_.types.contains(desttype)) &&
+    //TODO: Check categories if possible.
+    route.start == start && route.starttime == starttime &&
       route.totalTime <= totaltime && route.walkTime <= totalwalktime && route.waitTime <= totalwaittime &&
       route.distance >= mindist &&
       !route.steps.exists({

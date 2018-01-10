@@ -43,4 +43,9 @@ object LocationProviderManager {
       .foreach(rval.++=)
     rval.toMap
   }
+
+  def setTest(test: Boolean): Unit = {
+    this.isTest = test
+    initializeProvidersList()
+  }
 }
