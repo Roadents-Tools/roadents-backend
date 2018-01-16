@@ -31,6 +31,9 @@ case class TimeDelta(unixdelta: Long) extends AnyVal with Ordered[TimeDelta] {
   @inline
   def minutes: Double = unixdelta / (60 * 1000.0)
 
+  @inline
+  def abs: TimeDelta = TimeDelta(math.abs(unixdelta))
+
   override def compare(that: TimeDelta): Int = unixdelta.compareTo(that.unixdelta)
 }
 

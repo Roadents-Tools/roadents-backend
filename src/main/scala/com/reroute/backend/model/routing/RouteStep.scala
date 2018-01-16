@@ -80,10 +80,30 @@ case class FromDataTransitStep(
   override val startpt: Station = startData.station
   override val endpt: Station = endData.station
   override val steptype: String = startData.route.transitType
-  override val traveltime: TimeDelta = starttime timeUntil endSched.nextValidTime(starttime + TimeDelta.SECOND)
+  override val traveltime: TimeDelta = starttime timeUntil endSched.nextArrival(starttime + TimeDelta.SECOND)
   override val totaltime: TimeDelta = waittime + traveltime
   override val stops: Int = {
     if (startSched.index < endSched.index) endSched.index - startSched.index
     else endSched.index + startData.route.size - startSched.index
+  }
+}
+
+case class RevDataTransitStep(
+                               startData: StationWithRoute,
+                               endData: StationWithRoute,
+                               starttime: TimePoint,
+                               override val waittime: TimeDelta
+                             ) extends TransitStep {
+  private val startSched = startData.prevArrivalSched(starttime + TimeDelta.SECOND)
+  private val endSched = endData.prevDepartureSched(starttime - TimeDelta.SECOND)
+  override val transitpath: TransitPath = startData.route
+  override val startpt: Station = startData.station
+  override val endpt: Station = endData.station
+  override val steptype: String = startData.route.transitType
+  override val traveltime: TimeDelta = -1 * (endSched.prevDeparture(starttime - TimeDelta.SECOND) timeUntil starttime)
+  override val totaltime: TimeDelta = waittime + traveltime
+  override val stops: Int = {
+    if (endSched.index < startSched.index) endSched.index - startSched.index
+    else endSched.index + startSched.index - startData.route.size
   }
 }

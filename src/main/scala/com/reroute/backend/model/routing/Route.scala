@@ -21,7 +21,10 @@ class Route(val start: InputLocation, val starttime: TimePoint, val steps: List[
     require(currentEnd == step.startpt, s"Route is discontinuous. Tried adding ${step.startpt} to $currentEnd")
     require(dest.isEmpty, s"Route is already finished!")
     require(!hasPoint(step.endpt), s"Already have location ${step.endpt} in the route.")
-    require(step.totaltime > TimeDelta.NULL || step.startpt.overlaps(step.endpt), s"Teleported from ${step.startpt} to ${step.endpt}")
+    require(step.totaltime.abs > TimeDelta.SECOND || step.startpt.overlaps(step.endpt),
+            s"Teleported from ${step.startpt} to ${step.endpt}")
+    require(steps.forall(
+      stp => stp.totaltime == TimeDelta.NULL || (stp.totaltime < TimeDelta.NULL) == (step.totaltime < TimeDelta.NULL)))
     new Route(start, starttime, step :: steps)
   }
 
