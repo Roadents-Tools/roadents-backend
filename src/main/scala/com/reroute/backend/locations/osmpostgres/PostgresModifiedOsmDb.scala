@@ -125,11 +125,11 @@ class PostgresModifiedOsmDb(val config: PostgresConfig) extends LocationProvider
     }
     else {
       s"""SELECT id, name, ST_X(latlng::geometry) AS lng, ST_Y(latlng::geometry) AS lat, properties::text AS rawjson
-         FROM locations WHERE ${convertQueryClause(requests.head.searchquery)} AND """
+         FROM locations WHERE ${convertQueryClause(requests.head.searchquery)} AND ("""
     }
     val query = requests
       .map(convertRequestClause(_, addIndSearch))
-      .mkString(queryHead, " OR ", "\n\n")
+      .mkString(queryHead, " OR ", ")\n\n")
 
     val con = conOpt match {
       case Success(cn) => cn
