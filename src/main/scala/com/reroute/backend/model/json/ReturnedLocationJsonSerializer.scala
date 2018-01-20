@@ -9,13 +9,13 @@ object ReturnedLocationJsonSerializer extends JsonSerializer[ReturnedLocation] {
           "latitude" : ${inputObject.latitude},
           "longitude" : ${inputObject.longitude},
           "name" : "${inputObject.name}",
-          "type" : "returned",
-          "categories" : ${inputObject.types.map("\"" + _.category + "\"").mkString("[", ",", "]")}
+          "location_type" : "returned",
+          "tags" : ${inputObject.types.map("\"" + _.category + "\"").take(20).mkString("[", ",", "]")}
         }"""
 
   override def deserialize(jsonstr: String): ReturnedLocation = {
     val json = new JSONObject(jsonstr)
-    val categoriesJson = json.getJSONArray("categories")
+    val categoriesJson = json.getJSONArray("tags")
     val arrSize = categoriesJson.length()
     val categories = for (i <- 0 until arrSize) yield DestCategory(categoriesJson.getString(i))
 

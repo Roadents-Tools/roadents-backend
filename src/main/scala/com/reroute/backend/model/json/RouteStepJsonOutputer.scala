@@ -15,10 +15,10 @@ object RouteStepJsonOutputer extends JsonOutputer[RouteStep] {
     s"""{
           "total_time": ${step.totaltime.seconds},
           "step_type": "transit",
-          "start_pt": ${StationJsonOutputer.output(step.startpt)},
-          "end_pt": ${StationJsonOutputer.output(step.endpt)},
-          "wait_time": ${step.waittime.seconds},
-          "travel_time": ${step.traveltime.seconds},
+          "start_point": ${StationJsonOutputer.output(step.startpt)},
+          "end_point": ${StationJsonOutputer.output(step.endpt)},
+          "wait_time": ${step.waittime.seconds.toInt},
+          "travel_time": ${step.traveltime.seconds.toInt},
           "agency": "${step.transitpath.agency}",
           "route": "${step.transitpath.route}",
           "stops": ${step.stops},
@@ -40,9 +40,9 @@ object RouteStepJsonOutputer extends JsonOutputer[RouteStep] {
       case _ => "null"
     }
     s"""{
-          "start_pt" : $startJson,
-          "end_pt" : $endJson,
-          "total_time" : ${step.totaltime.seconds.round},
+          "start_point" : $startJson,
+          "end_point" : $endJson,
+          "total_time" : ${step.totaltime.seconds.toInt},
           "walk_distance" : ${step.walkdistance.in(DistUnits.METERS)},
           "step_type" : "walk"
         }"""

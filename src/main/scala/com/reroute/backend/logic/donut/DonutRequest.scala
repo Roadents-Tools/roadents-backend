@@ -138,6 +138,13 @@ object DonutRequest extends RequestMapper[DonutRequest] {
     )
   }
 
+  private def deltaMap(inp: String): TimeDelta = {
+    //Strips all digits after the decimal using a regex
+    val trunked = inp.replaceAll("\\..*", "")
+
+    TimeDelta.SECOND * trunked.toLong
+  }
+
   override def buildQuery(callArgs: Map[String, String]): Either[String, DonutRequest] = Try {
 
     //Parse required args
@@ -156,19 +163,19 @@ object DonutRequest extends RequestMapper[DonutRequest] {
     }
 
     val maxDelta = callArgs.get(DELTA_KEY) match {
-      case Some(dt) => dt.toLong * TimeDelta.SECOND
+      case Some(dt) => deltaMap(dt)
       case None => return Left("Max delta not passed.")
     }
 
     val inpTime = callArgs.get(TIME_KEY)
-      .map(_.toLong * 1000)
+      .map(_.replaceAll("\\..*", "").toLong * 1000)
       .map(TimePoint(_, TimezoneMapper.tzNameAt(lat, lng)))
 
-    val totalWalkMax = callArgs.get(TOTAL_WALK_KEY).map(wdt => wdt.toLong * TimeDelta.SECOND)
-    val stepWalkMax = callArgs.get(WALK_KEY).map(wdt => wdt.toLong * TimeDelta.SECOND)
-    val totalWaitMax = callArgs.get(WAIT_KEY).map(wdt => wdt.toLong * TimeDelta.SECOND)
-    val stepWaitMax = callArgs.get(STEP_WAIT_KEY).map(wdt => wdt.toLong * TimeDelta.SECOND)
-    val stepWaitMin = callArgs.get(MIN_STEP_WAIT_KEY).map(wdt => wdt.toLong * TimeDelta.SECOND)
+    val totalWalkMax = callArgs.get(TOTAL_WALK_KEY).map(deltaMap)
+    val stepWalkMax = callArgs.get(WALK_KEY).map(deltaMap)
+    val totalWaitMax = callArgs.get(WAIT_KEY).map(deltaMap)
+    val stepWaitMax = callArgs.get(STEP_WAIT_KEY).map(deltaMap)
+    val stepWaitMin = callArgs.get(MIN_STEP_WAIT_KEY).map(deltaMap)
     val minNetDist = callArgs.get(MIN_DIST_KEY).map(dx => Distance(dx.toDouble, DistUnits.METERS))
     val stepLimit = callArgs.get(STEPS_KEY).map(_.toInt)
     val routeLimit = callArgs.get(LIMIT_KEY).map(_.toInt)

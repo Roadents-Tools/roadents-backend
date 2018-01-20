@@ -8,7 +8,7 @@ object InputLocationJsonSerializer extends JsonSerializer[InputLocation] {
     s"""{
           "latitude" : ${inputObject.latitude},
           "longitude" : ${inputObject.longitude},
-          "type" : "input"
+          "location_type" : "input"
         }"""
   }
 
