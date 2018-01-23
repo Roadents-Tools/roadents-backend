@@ -1,12 +1,10 @@
 package com.reroute.backend.model.routing
 
 import com.reroute.backend.model.distance.Distance
-import com.reroute.backend.model.location.{InputLocation, LocationPoint, ReturnedLocation}
+import com.reroute.backend.model.location.LocationPoint
 import com.reroute.backend.model.time.{TimeDelta, TimePoint}
 
-class Route(val start: InputLocation, val starttime: TimePoint, val steps: List[RouteStep] = List()) {
-
-  val dest: Option[ReturnedLocation] = steps.map(_.endpt).collectFirst({ case pt: ReturnedLocation => pt })
+class Route(val start: LocationPoint, val starttime: TimePoint, val steps: List[RouteStep] = List()) {
 
   def distance: Distance = start.distanceTo(currentEnd)
 
@@ -19,7 +17,6 @@ class Route(val start: InputLocation, val starttime: TimePoint, val steps: List[
 
   def addStep(step: RouteStep): Route = {
     require(currentEnd == step.startpt, s"Route is discontinuous. Tried adding ${step.startpt} to $currentEnd")
-    require(dest.isEmpty, s"Route is already finished!")
     require(!hasPoint(step.endpt), s"Already have location ${step.endpt} in the route.")
     require(step.totaltime.abs > TimeDelta.SECOND || step.startpt.overlaps(step.endpt),
             s"Teleported from ${step.startpt} to ${step.endpt}")
@@ -58,5 +55,5 @@ class Route(val start: InputLocation, val starttime: TimePoint, val steps: List[
     case _ => TimeDelta.NULL
   }).fold(TimeDelta.NULL)(_ + _)
 
-  override def toString = s"Route($start, $starttime, $dest, $steps)"
+  override def toString = s"Route($start, $starttime, $currentEnd, $steps)"
 }

@@ -2,7 +2,6 @@ package com.reroute.backend.logic.donut
 
 import com.reroute.backend.locations.helpers.LocationProviderManager
 import com.reroute.backend.model.location.{DestCategory, InputLocation}
-import com.reroute.backend.model.routing.FullRouteWalkStep
 import com.reroute.backend.model.time.{TimeDelta, TimePoint}
 import com.reroute.backend.stations.helpers.StationDatabaseManager
 import org.junit.Assert._
@@ -31,7 +30,6 @@ class DonutCoreTest extends AssertionsForJUnit {
     val res = DonutCore.runLogic(req)
 
     assertTrue(s"Got errors: ${res.errors}", res.errors.isEmpty)
-    assertTrue(res.routes.exists(_.steps.exists(_.isInstanceOf[FullRouteWalkStep])))
     assertTrue(res.routes.exists(_.steps.lengthCompare(1) == 0))
     assertTrue(res.routes.forall(_.steps.size % 2 == 1))
     assertTrue(res.routes.lengthCompare(5) >= 0)

@@ -50,14 +50,14 @@ object RevStationRouteGenerator extends LogicCore[RevStationRouteRequest] {
   }
 
   @inline
-  private def getStartNodes(req: RevStationRouteRequest): Seq[StartWalkStep] = {
+  private def getStartNodes(req: RevStationRouteRequest): Seq[GeneralWalkStep] = {
     val params = req.queryGenerator.genStartQuery(req.start)
     println(s"Start params: ${params._1}, ${params._2.in(DistUnits.KILOMETERS)}, ${params._3}")
     TransitDataRetriever.getStartingStations(params._1, params._2, params._3)
       .map(stat => {
         val walkMinutes = -1 * req.start.distanceTo(stat).in(DistUnits.AVG_WALK_MINUTES)
         val walkTime = walkMinutes * TimeDelta.MINUTE
-        StartWalkStep(req.start, stat, walkTime)
+        GeneralWalkStep(req.start, stat, walkTime)
       })
   }
 

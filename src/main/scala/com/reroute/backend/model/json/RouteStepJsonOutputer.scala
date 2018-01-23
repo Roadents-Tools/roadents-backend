@@ -1,7 +1,6 @@
 package com.reroute.backend.model.json
 
 import com.reroute.backend.model.distance.DistUnits
-import com.reroute.backend.model.location.{InputLocation, ReturnedLocation, Station}
 import com.reroute.backend.model.routing._
 
 object RouteStepJsonOutputer extends JsonOutputer[RouteStep] {
@@ -15,8 +14,8 @@ object RouteStepJsonOutputer extends JsonOutputer[RouteStep] {
     s"""{
           "total_time": ${step.totaltime.seconds},
           "step_type": "transit",
-          "start_point": ${StationJsonOutputer.output(step.startpt)},
-          "end_point": ${StationJsonOutputer.output(step.endpt)},
+          "start_point": ${LocationJsonOutputer.output(step.startpt)},
+          "end_point": ${LocationJsonOutputer.output(step.endpt)},
           "wait_time": ${step.waittime.seconds.toInt},
           "travel_time": ${step.traveltime.seconds.toInt},
           "agency": "${step.transitpath.agency}",
@@ -27,18 +26,9 @@ object RouteStepJsonOutputer extends JsonOutputer[RouteStep] {
   }
 
   private def walkStepStringify(step: WalkStep): String = {
-    val startJson = step.startpt match {
-      case st: InputLocation => InputLocationJsonSerializer.serialize(st)
-      case st: Station => StationJsonOutputer.output(st)
-      case st: ReturnedLocation => ReturnedLocationJsonSerializer.serialize(st)
-      case _ => "null"
-    }
-    val endJson = step.endpt match {
-      case st: InputLocation => InputLocationJsonSerializer.serialize(st)
-      case st: Station => StationJsonOutputer.output(st)
-      case st: ReturnedLocation => ReturnedLocationJsonSerializer.serialize(st)
-      case _ => "null"
-    }
+    val startJson = LocationJsonOutputer.output(step.startpt)
+    val endJson = LocationJsonOutputer.output(step.endpt)
+
     s"""{
           "start_point" : $startJson,
           "end_point" : $endJson,
@@ -49,12 +39,7 @@ object RouteStepJsonOutputer extends JsonOutputer[RouteStep] {
   }
 
   private def pitstopStepStringify(step: PitstopStep): String = {
-    val startJson = step.startpt match {
-      case st: InputLocation => InputLocationJsonSerializer.serialize(st)
-      case st: Station => StationJsonOutputer.output(st)
-      case st: ReturnedLocation => ReturnedLocationJsonSerializer.serialize(st)
-      case _ => "null"
-    }
+    val startJson = LocationJsonOutputer.output(step.startpt)
     s"""{
           "start_point" : $startJson,
           "total_time" : ${step.totaltime.seconds.toInt},

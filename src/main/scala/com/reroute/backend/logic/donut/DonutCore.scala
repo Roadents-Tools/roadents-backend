@@ -112,7 +112,7 @@ object DonutCore extends LogicCore[DonutRequest] {
     printf("Got %d -> %d dest routes.\n", stationRoutes.size, destRoutes.size)
 
     val destToShortest = destRoutes
-      .groupBy(_.dest.getOrElse(BAD_DEST))
+      .groupBy(_.currentEnd)
       .mapValues(_.minBy(rt => rt.totalTime.unixdelta + rt.steps.size))
     val rval = destToShortest.values.toStream.sortBy(_.totalTime).take(request.limit)
     printf("Got %d -> %d filtered routes. Of those, %d are nonzero degree.\n", destRoutes.size, rval.size, rval.count(_.steps.lengthCompare(2) >= 0))
@@ -134,8 +134,8 @@ object DonutCore extends LogicCore[DonutRequest] {
 
   private def buildDestRoutes(route: Route, dests: Seq[ReturnedLocation]) = {
     val steps = route.currentEnd match {
-      case pt: InputLocation => dests.map(d => FullRouteWalkStep(pt, d, pt.distanceTo(d).avgWalkTime))
-      case pt: Station => dests.map(d => DestinationWalkStep(pt, d, pt.distanceTo(d).avgWalkTime))
+      case pt: InputLocation => dests.map(d => GeneralWalkStep(pt, d, pt.distanceTo(d).avgWalkTime))
+      case pt: Station => dests.map(d => GeneralWalkStep(pt, d, pt.distanceTo(d).avgWalkTime))
     }
     steps.map(route + _)
   }

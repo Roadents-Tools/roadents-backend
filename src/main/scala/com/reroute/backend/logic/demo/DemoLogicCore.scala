@@ -6,7 +6,7 @@ import com.reroute.backend.logic.ApplicationResult
 import com.reroute.backend.logic.interfaces.LogicCore
 import com.reroute.backend.logic.stationroute.{StationRouteGenerator, StationRouteRequest}
 import com.reroute.backend.model.location._
-import com.reroute.backend.model.routing.{DestinationWalkStep, FullRouteWalkStep, Route, WalkStep}
+import com.reroute.backend.model.routing.{GeneralWalkStep, Route, WalkStep}
 import com.reroute.backend.model.time.TimeDelta
 
 import scala.collection.{breakOut, mutable}
@@ -87,7 +87,7 @@ object DemoLogicCore extends LogicCore[DemoRequest] {
       .map(_.tag)
       .flatMap(bestDestRoutes(_))
       .toSeq
-    println(s"PITCH RVAL: ${rval.distinct.count(_.dest.isDefined)}")
+    println(s"PITCH RVAL: ${rval.map(_.currentEnd).distinct.size}")
     val dafuq = rval
       .map(isntDumbRoute(_, request))
       .filter(_.isDefined)
@@ -98,13 +98,13 @@ object DemoLogicCore extends LogicCore[DemoRequest] {
   private def buildDestRoutes(rt: Route, dests: Seq[ReturnedLocation]): Seq[Route] = {
     val basicRoute = new Route(rt.start, rt.starttime)
     val basicRoutes = dests
-      .map(dest => FullRouteWalkStep(rt.start, dest, dest.distanceTo(rt.start).avgWalkTime))
+      .map(dest => GeneralWalkStep(rt.start, dest, dest.distanceTo(rt.start).avgWalkTime))
       .map(basicRoute + _)
     val complexRoutes = dests.map(dest => {
       if (rt.steps.isEmpty) {
-        FullRouteWalkStep(rt.start, dest, dest.distanceTo(rt.currentEnd).avgWalkTime)
+        GeneralWalkStep(rt.start, dest, dest.distanceTo(rt.currentEnd).avgWalkTime)
       } else {
-        DestinationWalkStep(rt.currentEnd.asInstanceOf[Station], dest, dest.distanceTo(rt.currentEnd).avgWalkTime)
+        GeneralWalkStep(rt.currentEnd.asInstanceOf[Station], dest, dest.distanceTo(rt.currentEnd).avgWalkTime)
       }
     }).map(rt + _)
     basicRoutes ++ complexRoutes

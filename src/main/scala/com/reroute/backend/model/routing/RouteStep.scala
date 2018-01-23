@@ -16,31 +16,16 @@ trait WalkStep extends RouteStep {
   val walkdistance: Distance = startpt.distanceTo(endpt)
 }
 
-case class StartWalkStep(
-                          override val startpt: InputLocation,
-                          override val endpt: Station,
-                          override val totaltime: TimeDelta
-                        ) extends WalkStep {
-  override type startType = InputLocation
-  override type endType = Station
+case class GeneralWalkStep(override val startpt: LocationPoint, override val endpt: LocationPoint,
+                           override val totaltime: TimeDelta) extends WalkStep {
+  override type startType = LocationPoint
+  override type endType = LocationPoint
 }
 
 case class TransferWalkStep(override val startpt: Station, override val endpt: Station,
                             override val totaltime: TimeDelta) extends WalkStep {
   override type startType = Station
   override type endType = Station
-}
-
-case class DestinationWalkStep(override val startpt: Station, override val endpt: ReturnedLocation,
-                               override val totaltime: TimeDelta) extends WalkStep {
-  override type startType = Station
-  override type endType = ReturnedLocation
-}
-
-case class FullRouteWalkStep(override val startpt: InputLocation, override val endpt: ReturnedLocation,
-                             override val totaltime: TimeDelta) extends WalkStep {
-  override type startType = InputLocation
-  override type endType = ReturnedLocation
 }
 
 trait TransitStep extends RouteStep {
