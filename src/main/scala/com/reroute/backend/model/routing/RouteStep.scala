@@ -9,7 +9,6 @@ trait RouteStep {
   type endType <: LocationPoint
   val startpt: startType
   val endpt: endType
-  val steptype: String
   val totaltime: TimeDelta
 }
 
@@ -24,28 +23,24 @@ case class StartWalkStep(
                         ) extends WalkStep {
   override type startType = InputLocation
   override type endType = Station
-  override val steptype = "start_walk"
 }
 
 case class TransferWalkStep(override val startpt: Station, override val endpt: Station,
                             override val totaltime: TimeDelta) extends WalkStep {
   override type startType = Station
   override type endType = Station
-  override val steptype = "transfer_walk"
 }
 
 case class DestinationWalkStep(override val startpt: Station, override val endpt: ReturnedLocation,
                                override val totaltime: TimeDelta) extends WalkStep {
   override type startType = Station
   override type endType = ReturnedLocation
-  override val steptype = "destination_walk"
 }
 
 case class FullRouteWalkStep(override val startpt: InputLocation, override val endpt: ReturnedLocation,
                              override val totaltime: TimeDelta) extends WalkStep {
   override type startType = InputLocation
   override type endType = ReturnedLocation
-  override val steptype = "full_route_walk"
 }
 
 trait TransitStep extends RouteStep {
@@ -59,7 +54,6 @@ trait TransitStep extends RouteStep {
 
 case class GeneralTransitStep(override val startpt: Station,
                               override val endpt: Station,
-                              override val steptype: String = "misc_transit",
                               override val transitpath: TransitPath,
                               override val waittime: TimeDelta,
                               override val traveltime: TimeDelta,
@@ -79,7 +73,6 @@ case class FromDataTransitStep(
   override val transitpath: TransitPath = startData.route
   override val startpt: Station = startData.station
   override val endpt: Station = endData.station
-  override val steptype: String = startData.route.transitType
   override val traveltime: TimeDelta = starttime timeUntil endSched.nextArrival(starttime + TimeDelta.SECOND)
   override val totaltime: TimeDelta = waittime + traveltime
   override val stops: Int = {
@@ -99,11 +92,18 @@ case class RevDataTransitStep(
   override val transitpath: TransitPath = startData.route
   override val startpt: Station = startData.station
   override val endpt: Station = endData.station
-  override val steptype: String = startData.route.transitType
   override val traveltime: TimeDelta = -1 * (endSched.prevDeparture(starttime - TimeDelta.SECOND) timeUntil starttime)
   override val totaltime: TimeDelta = waittime + traveltime
   override val stops: Int = {
     if (endSched.index < startSched.index) endSched.index - startSched.index
     else endSched.index + startSched.index - startData.route.size
   }
+}
+
+case class PitstopStep(override val startpt: LocationPoint,
+                       override val totaltime: TimeDelta
+                      ) extends RouteStep {
+  override type endType = LocationPoint
+  override type startType = LocationPoint
+  override val endpt: LocationPoint = startpt
 }

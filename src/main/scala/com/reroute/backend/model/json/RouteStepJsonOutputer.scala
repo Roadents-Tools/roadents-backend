@@ -43,9 +43,22 @@ object RouteStepJsonOutputer extends JsonOutputer[RouteStep] {
           "start_point" : $startJson,
           "end_point" : $endJson,
           "total_time" : ${step.totaltime.seconds.toInt},
-          "walk_distance" : ${step.walkdistance.in(DistUnits.METERS)},
+          "walk_distance" : ${step.walkdistance.in(DistUnits.METERS).round},
           "step_type" : "walk"
         }"""
   }
 
+  private def pitstopStepStringify(step: PitstopStep): String = {
+    val startJson = step.startpt match {
+      case st: InputLocation => InputLocationJsonSerializer.serialize(st)
+      case st: Station => StationJsonOutputer.output(st)
+      case st: ReturnedLocation => ReturnedLocationJsonSerializer.serialize(st)
+      case _ => "null"
+    }
+    s"""{
+          "start_point" : $startJson,
+          "total_time" : ${step.totaltime.seconds.toInt},
+          "step_type" : "stop"
+        }"""
+  }
 }
