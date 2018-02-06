@@ -60,14 +60,14 @@ object DemoLogicCore extends LogicCore[DemoRequest] {
     }
     logger.info(s"Finished station sorts.")
     val stationRoutesToReqs: Map[Route, LocationsRequest] = bestStationRoutes.values.flatten.map(rt => rt -> {
-      LocationsRequest(rt.currentEnd, Seq(allowedWalkTime(rt, request), request.maxdelta - rt.totalTime).min, request.endquery)
+      LocationsRequest(rt.currentEnd, Seq(allowedWalkTime(rt, request), request.maxdelta - rt.totalTime).min, request.endquery, 20)
     })(breakOut)
     val allResults = LocationRetriever.getLocations(stationRoutesToReqs.values.toSeq)
-    val possibleDests = allResults.flatMap(_._2).toSeq
+    val possibleDests = allResults.flatMap(_._2).toStream.distinct
     logger.info(s"Got ${possibleDests.size} destinations.")
     var destRoutes: Seq[Route] = bestStationRoutes.values
       .flatten
-      .flatMap(rt => buildDestRoutes(rt, possibleDests))
+      .flatMap(rt => buildDestRoutes(rt, allResults(stationRoutesToReqs(rt))))
       .foldLeft(Map.empty[Long, Route])((map, rt) => {
         val loctag = locationTag(rt.currentEnd)
         val existing = map.get(loctag)

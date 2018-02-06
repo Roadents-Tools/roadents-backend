@@ -120,6 +120,9 @@ class PostgresModifiedOsmDb(val config: PostgresConfig) extends LocationProvider
     //TODO: Figure out how to query flags to test if each location matches each request's individual category
     require(requests.map(_.searchquery).distinct.lengthCompare(1) == 0, s"Got too many categories!")
 
+    val rawSize = requests.map(_.limit).sum
+    val limit = if (rawSize < 0) Int.MaxValue else rawSize
+
     val addIndSearch = requests.toStream.map(_.searchquery).distinct.lengthCompare(1) > 0
     val queryHead = if (addIndSearch) {
       """SELECT id, name, ST_X(latlng::geometry) AS lng, ST_Y(latlng::geometry) AS lat, properties::text AS rawjson
@@ -131,7 +134,7 @@ class PostgresModifiedOsmDb(val config: PostgresConfig) extends LocationProvider
     }
     val query = requests
       .map(convertRequestClause(_, addIndSearch))
-      .mkString(queryHead, " OR ", ")\n\n")
+      .mkString(queryHead, " OR ", s") LIMIT $limit\n\n")
 
     val con = conOpt match {
       case Success(cn) => cn
