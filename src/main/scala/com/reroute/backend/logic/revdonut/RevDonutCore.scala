@@ -8,6 +8,7 @@ import com.reroute.backend.model.location._
 import com.reroute.backend.model.routing._
 import com.reroute.backend.model.time.TimeDelta
 import com.reroute.backend.stations.{ArrivableRequest, PathsRequest, TransferRequest}
+import com.typesafe.scalalogging.Logger
 
 import scala.collection.breakOut
 import scala.util.{Success, Try}
@@ -23,10 +24,12 @@ object RevDonutCore extends LogicCore[RevDonutRequest] {
   private final val PATHS_MODIFIER = 10.0
   private final val ARRIVABLE_MODIFIER = 10.0
 
+  private final val logger = Logger[RevDonutCore.type]
+
   override def runLogic(request: RevDonutRequest): ApplicationResult = Try {
 
     //Get the station routes
-    println(s"RevDonut req got walk times: ${request.totaltime.hours}, ${request.totalwalktime.hours}, ${request.maxwalktime.hours}")
+    logger.info(s"RevDonut req got walk times: ${request.totaltime.hours}, ${request.totalwalktime.hours}, ${request.maxwalktime.hours}")
     val queryGenerator = RevStationQueryGenerator(
       genStartQuery = start => (
         start,
@@ -86,7 +89,7 @@ object RevDonutCore extends LogicCore[RevDonutRequest] {
     )
 
     val stationRoutes = RevStationRouteGenerator.buildStationRouteList(stroutesreq)
-    printf("Got %d station routes.\n", stationRoutes.size)
+    logger.info(s"Got ${stationRoutes.size} station routes.\n")
 
     //Get the raw dest routes
     val destReqs: Map[Route, LocationsRequest] = stationRoutes
@@ -103,13 +106,13 @@ object RevDonutCore extends LogicCore[RevDonutRequest] {
       .map(_.reverse(request.minwaittime))
       .filter(request.meetsRequest)
       .toList
-    printf("Got %d -> %d dest routes.\n", stationRoutes.size, destRoutes.size)
+    logger.info(s"Got ${stationRoutes.size} -> ${destRoutes.size} dest routes.\n")
 
     val destToShortest = destRoutes
       .groupBy(_.currentEnd)
       .mapValues(_.minBy(rt => rt.totalTime.unixdelta + rt.steps.size))
     val rval = destToShortest.values.toStream.sortBy(_.totalTime).take(request.limit)
-    printf("Got %d -> %d filtered routes. Of those, %d are nonzero degree.\n", destRoutes.size, rval.size, rval.count(_.steps.lengthCompare(2) >= 0))
+    logger.info(s"Got ${destRoutes.size} -> ${rval.size} filtered routes. Of those, ${rval.count(_.steps.lengthCompare(1) > 0)} are nonzero degree.\n")
     rval.foreach(rt => assert(request.meetsRequest(rt), "Error building malformed route."))
 
     //Build the output

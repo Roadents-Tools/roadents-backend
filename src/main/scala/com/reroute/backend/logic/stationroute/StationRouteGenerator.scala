@@ -7,11 +7,14 @@ import com.reroute.backend.model.location._
 import com.reroute.backend.model.routing._
 import com.reroute.backend.model.time.TimeDelta
 import com.reroute.backend.stations.{ArrivableRequest, TransitDataRetriever}
+import com.typesafe.scalalogging.Logger
 
 import scala.collection.{breakOut, mutable}
 import scala.util.{Success, Try}
 
 object StationRouteGenerator extends LogicCore[StationRouteRequest] {
+
+  private final val logger = Logger[StationRouteGenerator.type]
 
   def buildStationRouteList(req: StationRouteRequest): Seq[Route] = {
     val rval = mutable.LinkedHashMap[Int, Route]()
@@ -19,18 +22,18 @@ object StationRouteGenerator extends LogicCore[StationRouteRequest] {
     if (req.yieldFilter(baseRoute)) rval.put(locationTag(req.start), baseRoute)
 
     val seedRoutes = genStartRoutes(req).filter(req.branchFilter).take(req.branchLimit)
-    println(s"Got ${seedRoutes.size} walk seeds.")
+    logger.info(s"Got ${seedRoutes.size} walk seeds.")
     val seedTransit = genTransitRoutes(seedRoutes, req)
-    println(s"Got ${seedTransit.size} transit seeds.")
+    logger.info(s"Got ${seedTransit.size} transit seeds.")
     seedTransit
       .filter(!_.currentEnd.overlaps(req.start))
       .filter(req.yieldFilter)
       .foreach(elem => rval.put(locationTag(elem.currentEnd), elem))
     var layer = seedTransit.filter(req.branchFilter).take(req.branchLimit)
     while (layer.nonEmpty) {
-      println(s"LAYER OF SIZE ${layer.size}")
+      logger.info(s"LAYER OF SIZE ${layer.size}")
       val rawlayer = nextLayer(layer, req)
-      println(s"RAWLAYER OF SIZE ${rawlayer.size}")
+      logger.info(s"RAWLAYER OF SIZE ${rawlayer.size}")
       rawlayer
         .filter(req.yieldFilter)
         .filter(rt => {
@@ -38,7 +41,7 @@ object StationRouteGenerator extends LogicCore[StationRouteRequest] {
         })
         .foreach(rt => rval.put(locationTag(rt.currentEnd), rt))
       layer = rawlayer.filter(req.branchFilter).take(req.branchLimit)
-      println(s"FILTEREDLAYER OF SIZE ${layer.size}")
+      logger.info(s"FILTEREDLAYER OF SIZE ${layer.size}")
     }
     rval.values.toStream.sortBy(_.steps.size).take(req.yieldLimit)
   }
@@ -52,7 +55,7 @@ object StationRouteGenerator extends LogicCore[StationRouteRequest] {
   @inline
   private def getStartNodes(req: StationRouteRequest): Seq[GeneralWalkStep] = {
     val params = req.queryGenerator.genStartQuery(req.start)
-    println(s"Start params: ${params._1}, ${params._2.in(DistUnits.KILOMETERS)}, ${params._3}")
+    logger.info(s"Start params: ${params._1}, ${params._2.in(DistUnits.KILOMETERS)}, ${params._3}")
     TransitDataRetriever.getStartingStations(params._1, params._2, params._3)
       .map(stat => {
         val walkMinutes = req.start.distanceTo(stat).in(DistUnits.AVG_WALK_MINUTES)
@@ -100,9 +103,9 @@ object StationRouteGenerator extends LogicCore[StationRouteRequest] {
       .map(rt => rt -> req.queryGenerator.genPathsQuery(rt, layersize))
       .toMap
 
-    println(s"Got pathreq head: ${pathReqs.headOption.map(_._2)}")
+    logger.info(s"Got pathreq head: ${pathReqs.headOption.map(_._2)}")
     val pathResults = TransitDataRetriever.getPathsForStation(pathReqs.values.toSeq)
-    println(s"Got ${pathResults.values.map(_.size).sum} paths.")
+    logger.info(s"Got ${pathResults.values.map(_.size).sum} paths.")
 
     val arrivablereqs: Map[StationWithRoute, ArrivableRequest] = curlayer.flatMap(route => {
       if (!route.currentEnd.isInstanceOf[Station]) Seq.empty
@@ -111,7 +114,7 @@ object StationRouteGenerator extends LogicCore[StationRouteRequest] {
     })(breakOut)
 
     val arrivableres = TransitDataRetriever.getArrivableStation(arrivablereqs.values.toSeq)
-    println(s"Got ${arrivableres.values.map(_.size).sum} arrivables.")
+    logger.info(s"Got ${arrivableres.values.map(_.size).sum} arrivables.")
 
     val rval = for (rt <- curlayer; startStation <- pathResults(pathReqs(rt))) yield {
       val tstart = startStation.nextDeparture(rt.endTime)

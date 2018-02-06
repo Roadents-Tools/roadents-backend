@@ -10,6 +10,7 @@ import com.reroute.backend.model.time.{SchedulePoint, TimeDelta}
 import com.reroute.backend.stations.interfaces.StationDatabase
 import com.reroute.backend.stations.{ArrivableRequest, PathsRequest, TransferRequest}
 import com.reroute.backend.utils.postgres.{PostgresConfig, ResultSetIterator}
+import com.typesafe.scalalogging.Logger
 
 import scala.collection.breakOut
 import scala.util.{Failure, Success, Try}
@@ -20,6 +21,8 @@ import scala.util.{Failure, Success, Try}
  * @param config the parameters for the connection to the database
  */
 class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase {
+
+  private final val logger = Logger[PostgresGtfsDb]
 
   override val databaseName: String = {
     if (config.dbname != "") config.dbname
@@ -44,9 +47,9 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
 
   private def conOpt: Try[Connection] = con.filter(!_.isClosed).recoverWith({
     case e =>
-      println(e.getMessage)
+      logger.error(e.getMessage)
       con = initConnection()
-      if (con.isFailure) println("New connection err:" + con.failed.get.getMessage)
+      if (con.isFailure) logger.error("New connection err:" + con.failed.get.getMessage)
       con
   })
 
@@ -55,7 +58,7 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
     res match {
       case Success(out) => out
       case Failure(e) =>
-        e.printStackTrace()
+        logger.error(e.getMessage, e)
         List.empty
     }
   }
@@ -78,7 +81,7 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
     res match {
       case Success(out) => out
       case Failure(e) =>
-        e.printStackTrace()
+        logger.error(e.getMessage, e)
         Map.empty
     }
   }
@@ -117,7 +120,7 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
     res match {
       case Success(out) => out
       case Failure(e) =>
-        e.printStackTrace()
+        logger.error(e.getMessage, e)
         Map.empty
     }
   }
@@ -262,7 +265,7 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
     res match {
       case Success(out) => out
       case Failure(e) =>
-        e.printStackTrace()
+        logger.error(e.getMessage, e)
         Map.empty
     }
   }

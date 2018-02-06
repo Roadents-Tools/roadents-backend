@@ -8,11 +8,15 @@ import com.reroute.backend.logic.stationroute.{StationRouteGenerator, StationRou
 import com.reroute.backend.model.location._
 import com.reroute.backend.model.routing.{GeneralWalkStep, Route, WalkStep}
 import com.reroute.backend.model.time.TimeDelta
+import com.typesafe.scalalogging.Logger
 
 import scala.collection.{breakOut, mutable}
 
 object DemoLogicCore extends LogicCore[DemoRequest] {
   override val tag: String = "DEMO"
+
+  private final val logger = Logger[DemoLogicCore.type]
+
 
   override def runLogic(request: DemoRequest): ApplicationResult = {
     val numRoutesPer = request.limit / DemoSorter.VALUES.length
@@ -22,18 +26,21 @@ object DemoLogicCore extends LogicCore[DemoRequest] {
         yieldFilter = rtFilter(_, request),
         branchFilter = rtFilter(_, request)
       )
-    println(s"DEMO Req: $statreq")
+    logger.info(s"DEMO Req: $statreq")
     val shortreq = StationRouteRequest
       .maxDeltaOnly(request.start, request.starttime, Seq(request.maxdelta, 10 * TimeDelta.MINUTE).min, request.limit * 2)
       .copy(
         yieldFilter = rtFilter(_, request),
         branchFilter = rtFilter(_, request)
       )
-    println(s"DEMO Req: $shortreq")
+    logger.info(s"DEMO Req: $shortreq")
     val longRoutes = StationRouteGenerator.buildStationRouteList(statreq)
     val shortRoutes = StationRouteGenerator.buildStationRouteList(shortreq)
     val stationRoutes = shortRoutes ++ longRoutes
-    println(s"Got ${stationRoutes.count(isntDumbRoute(_, request).isDefined)} station dumbs.")
+    if (stationRoutes.exists(isntDumbRoute(_, request).isDefined)) {
+      logger.info(s"Got ${stationRoutes.groupBy(isntDumbRoute(_, request)).filterKeys(_.isDefined)} station dumbs.")
+    }
+    logger.info(s"Got ${stationRoutes.count(isntDumbRoute(_, request).isEmpty)} nondumbs.")
     val bestStationRoutes = mutable.Map[String, Seq[Route]]()
     if (stationRoutes.lengthCompare(numRoutesPer * DemoSorter.VALUES.length) >= 0) {
       for (compObj <- DemoSorter.VALUES) {
@@ -51,11 +58,13 @@ object DemoLogicCore extends LogicCore[DemoRequest] {
         bestStationRoutes.put(tag, sortRoutes)
       }
     }
+    logger.info(s"Finished station sorts.")
     val stationRoutesToReqs: Map[Route, LocationsRequest] = bestStationRoutes.values.flatten.map(rt => rt -> {
       LocationsRequest(rt.currentEnd, Seq(allowedWalkTime(rt, request), request.maxdelta - rt.totalTime).min, request.endquery)
     })(breakOut)
     val allResults = LocationRetriever.getLocations(stationRoutesToReqs.values.toSeq)
     val possibleDests = allResults.flatMap(_._2).toSeq
+    logger.info(s"Got ${possibleDests.size} destinations.")
     var destRoutes: Seq[Route] = bestStationRoutes.values
       .flatten
       .flatMap(rt => buildDestRoutes(rt, possibleDests))
@@ -87,11 +96,13 @@ object DemoLogicCore extends LogicCore[DemoRequest] {
       .map(_.tag)
       .flatMap(bestDestRoutes(_))
       .toSeq
-    println(s"PITCH RVAL: ${rval.map(_.currentEnd).distinct.size}")
+    logger.info(s"PITCH RVAL: ${rval.map(_.currentEnd).distinct.size}")
     val dafuq = rval
       .map(isntDumbRoute(_, request))
       .filter(_.isDefined)
-    println(s"PITCH Dafuq: ${dafuq.groupBy(_.get).mapValues(_.size)}")
+    if (dafuq.nonEmpty) {
+      logger.error(s"PITCH Dafuq: ${dafuq.groupBy(_.get).mapValues(_.size)}")
+    }
     ApplicationResult.Result(rval)
   }
 
@@ -119,7 +130,6 @@ object DemoLogicCore extends LogicCore[DemoRequest] {
     else if (rt.totalDistance > LocationPoint.MAX_TRANSIT_PER_HOUR * rt.totalTime.hours) Some("Flash")
     else if (rt.distance.avgWalkTime < rt.totalTime) Some("Sloth")
     else if (rt.totalDistance / rt.totalTime.hours < LocationPoint.AVG_WALKING_PER_HOUR) Some("Walkies")
-    else if (rt.steps.map(_.endpt).forall(pt => rt.steps.map(_.endpt).count(_.overlaps(pt)) != 1)) Some("Count")
     else None
   }
 

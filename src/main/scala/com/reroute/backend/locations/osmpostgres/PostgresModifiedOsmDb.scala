@@ -8,6 +8,7 @@ import com.reroute.backend.locations.interfaces.LocationProvider
 import com.reroute.backend.model.distance.DistUnits
 import com.reroute.backend.model.location.{DestCategory, ReturnedLocation}
 import com.reroute.backend.utils.postgres.{PostgresConfig, ResultSetIterator}
+import com.typesafe.scalalogging.Logger
 import org.json.{JSONArray, JSONObject}
 
 import scala.collection.JavaConverters._
@@ -16,6 +17,7 @@ import scala.util.{Failure, Random, Success, Try}
 
 class PostgresModifiedOsmDb(val config: PostgresConfig) extends LocationProvider {
 
+  private final val logger = Logger[PostgresModifiedOsmDb]
 
   private final val notTags = Set(
     "height", "gnis:*",
@@ -47,9 +49,9 @@ class PostgresModifiedOsmDb(val config: PostgresConfig) extends LocationProvider
 
   private def conOpt: Try[Connection] = con.filter(!_.isClosed).recoverWith({
     case e =>
-      println(e.getMessage)
+      logger.error(e.getMessage, e)
       con = initConnection()
-      if (con.isFailure) println("New connection err:" + con.failed.get.getMessage)
+      if (con.isFailure) logger.error("New connection err:" + con.failed.get.getMessage, con.failed.get)
       con
   })
 

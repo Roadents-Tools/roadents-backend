@@ -6,11 +6,14 @@ import java.nio.file.{Files, StandardCopyOption}
 import java.sql.{DriverManager, Statement}
 import java.util.Properties
 
+import com.typesafe.scalalogging.Logger
 import org.onebusaway.gtfs.GtfsDatabaseLoaderMain
 
 import scala.util.Try
 
 class GtfsPostgresLoader(val url: URL) {
+
+  private final val logger = Logger[GtfsPostgresLoader]
 
   val source: String = url.toString
   val zipFileOpt = Try {
@@ -21,14 +24,14 @@ class GtfsPostgresLoader(val url: URL) {
     System.setProperty("jsse.enableSNIExtension", "false")
     System.setProperty("sun.security.ssl.allowUnsafeRenegotiation", "true")
     val basecon = url.openConnection()
-    println("OPENED BASE!")
+    logger.info("OPENED BASE!")
     val trurl = if (basecon.getHeaderField("Location") == null) url else new URL(basecon.getHeaderField("Location"))
-    println("GOT TRUE!")
+    logger.info("GOT TRUE!")
     val con = if (trurl == url) basecon else trurl.openConnection()
     val inp = con.getInputStream
-    println("INPD")
+    logger.info("INPD")
     Files.copy(inp, zipFile.toPath, StandardCopyOption.REPLACE_EXISTING)
-    println("COPIED!")
+    logger.info("COPIED!")
     zipFile
   }
 
