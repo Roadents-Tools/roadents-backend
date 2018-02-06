@@ -136,8 +136,12 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
           and gtfs_calendars.serviceid_id = gtfs_trips.serviceid_id
           ), 0) as ndats"""
 
-    val minStart = request.map(_.starttime.unixtime / 1000).min
-    val maxEnd = request.map(req => (req.starttime + req.maxdelta).unixtime / 1000).min
+    val referenceTimes = request.map(_.starttime.unixtime / 1000)
+    val borderTimes = request.map(req => (req.starttime + req.maxdelta).unixtime / 1000)
+    val allRanges = referenceTimes ++ borderTimes
+
+    val minTime = allRanges.min
+    val maxTime = allRanges.max
 
     val service_level_exception_format =
       s"""coalesce((
@@ -146,7 +150,7 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
 	        from gtfs_calendar_dates
           where gtfs_calendar_dates.serviceid_agencyid = gtfs_trips.serviceid_agencyid
           and gtfs_calendar_dates.serviceid_id = gtfs_trips.serviceid_id
-	        and gtfs_calendar_dates.tdate between abstime($minStart)::date and abstime($maxEnd)::date + 1
+	        and gtfs_calendar_dates.tdate between abstime($minTime)::date and abstime($maxTime)::date + 1
 	        ), '') as cdats"""
 
     val begin =
@@ -177,14 +181,7 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
         """
     val end = ")\n LIMIT " + limit
     val sql = request
-      .map(req => {
-        val agencyAndId = req.station.id.id.split(";;")
-        val agency = agencyAndId(0)
-        val id = agencyAndId(1)
-        val minTime = req.starttime.packedTime + 1
-        val maxTime = minTime + req.maxdelta.seconds.toInt
-        s""" (gtfs_stop_times.stop_agencyid = '$agency' and gtfs_stop_times.stop_id = '$id' and gtfs_stop_times.departureTime between $minTime and $maxTime)"""
-      })
+      .map(pathRequestClause)
       .mkString(begin, " \nOR ", end)
 
     val stm = con.createStatement()
@@ -193,6 +190,23 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
     request.map(
       req => req -> fullResultSet.filter(isValidPathInfo(req, _)).map(mapPathInfo(req, _)).take(req.limit)
     )(breakOut)
+  }
+
+  private def pathRequestClause(req: PathsRequest): String = {
+    val agencyAndId = req.station.id.id.split(";;")
+    val agency = agencyAndId(0)
+    val id = agencyAndId(1)
+    val refTime = req.starttime.packedTime + 1
+    val rangeBorder = refTime + req.maxdelta.seconds.toInt
+
+    if (refTime < rangeBorder) {
+      s""" (gtfs_stop_times.stop_agencyid = '$agency' and gtfs_stop_times.stop_id = '$id'
+         and gtfs_stop_times.departureTime between $refTime and $rangeBorder)"""
+    }
+    else {
+      s""" (gtfs_stop_times.stop_agencyid = '$agency' and gtfs_stop_times.stop_id = '$id'
+         and gtfs_stop_times.arrivalTime between $rangeBorder and $refTime)"""
+    }
   }
 
   private def isValidPathInfo(req: PathsRequest,
@@ -303,16 +317,7 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
         """
     val end = ") LIMIT " + limit
     val sql = request
-      .map(req => {
-        val tripAgencyAndId = req.station.route.id.id.split(";;")
-        val tripAgency = tripAgencyAndId(0)
-        val tripId = tripAgencyAndId(1)
-        val packedStart = req.starttime.packedTime + 1
-        val packedEnd = req.starttime.packedTime + req.maxdelta.seconds.toInt
-        val minInd = req.station.nextDepartureSched(req.starttime - TimeDelta(1000)).index
-        s""" (gtfs_stop_times.trip_agencyid = '$tripAgency' and gtfs_stop_times.trip_id = '$tripId'
-           and gtfs_stop_times.stopsequence > $minInd and gtfs_stop_times.departuretime between $packedStart and $packedEnd) """
-      })
+      .map(arrivableRequestClause)
       .mkString(begin, " OR ", end)
 
     val stm = con.createStatement()
@@ -322,6 +327,32 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
       .map(
         req => req -> fullResultSet.filter(isValidArrivable(req, _)).map(mapArrivable(req, _)).take(req.limit)
       )(breakOut)
+  }
+
+  private def arrivableRequestClause(req: ArrivableRequest): String = {
+    val isNeg = req.maxdelta.unixdelta < 0
+    val tripAgencyAndId = req.station.route.id.id.split(";;")
+    val tripAgency = tripAgencyAndId(0)
+    val tripId = tripAgencyAndId(1)
+    val packedBase = req.starttime.packedTime + (if (isNeg) -1 else 1)
+    val packedEdge = packedBase + req.maxdelta.seconds.toInt
+
+    if (isNeg) {
+      val edgeInd = req.station.prevArrivalSched(req.starttime + TimeDelta.SECOND).index
+      s""" (gtfs_stop_times.trip_agencyid = '$tripAgency'
+           and gtfs_stop_times.trip_id = '$tripId'
+           and gtfs_stop_times.stopsequence < $edgeInd
+           and gtfs_stop_times.departuretime between $packedEdge and $packedBase) """
+
+    }
+    else {
+      val edgeInd = req.station.nextDepartureSched(req.starttime - TimeDelta.SECOND).index
+      s""" (gtfs_stop_times.trip_agencyid = '$tripAgency'
+           and gtfs_stop_times.trip_id = '$tripId'
+           and gtfs_stop_times.stopsequence > $edgeInd
+           and gtfs_stop_times.arrivaltime between $packedBase and $packedEdge) """
+    }
+
   }
 
   private def extractArrivableInformation(rs: ResultSet): (DatabaseID, Station, SchedulePoint) = {

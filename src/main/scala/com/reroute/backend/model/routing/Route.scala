@@ -25,9 +25,32 @@ class Route(val start: LocationPoint, val starttime: TimePoint, val steps: List[
     new Route(start, starttime, step :: steps)
   }
 
+  def reverse(minWait: TimeDelta): Route = {
+
+    val base = new Route(currentEnd, endTime)
+    var availableWaits: List[TimeDelta] = minWait :: steps.flatMap({
+      case stp: TransitStep => Some(stp.waittime)
+      case _ => None
+    })
+    val nsteps = steps.map({
+      case stp: GeneralWalkStep => GeneralWalkStep(stp.endpt, stp.startpt, stp.totaltime * -1)
+      case stp: TransferWalkStep => TransferWalkStep(stp.endpt, stp.startpt, stp.totaltime * -1)
+      case stp: PitstopStep => PitstopStep(stp.startpt, stp.totaltime * -1)
+      case stp: TransitStep =>
+        val nwait = availableWaits.head
+        availableWaits = availableWaits.tail
+        GeneralTransitStep(stp.endpt, stp.startpt, stp.transitpath, nwait * -1, stp.traveltime * -1, stp.stops)
+    })
+    base ++ nsteps
+  }
+
   def hasPoint(point: LocationPoint): Boolean = steps.exists(_.endpt.overlaps(point))
 
   def +(step: RouteStep): Route = addStep(step)
+
+  def ++(steps: Seq[RouteStep]): Route = {
+    steps.foldLeft(this)({ case (rt, stp) => rt + stp })
+  }
 
   def currentEnd: LocationPoint = if (steps.nonEmpty) steps.head.endpt else start
 
