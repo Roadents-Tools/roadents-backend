@@ -5,16 +5,19 @@ import com.reroute.backend.logic.donut.{DonutCore, DonutRequest}
 import com.reroute.backend.logic.interfaces.LogicCore
 import com.reroute.backend.logic.{ApplicationRequest, ApplicationResult, RequestMapper}
 import com.reroute.backend.model.json.RouteJsonOutputer
+import com.typesafe.scalalogging.Logger
 import spark.{Request, Response, Spark}
 
 import scala.collection.JavaConverters._
 
 object SparkHandler {
 
+  private final val logger = Logger[SparkHandler.type]
+
   val paths: Seq[SparkArg[_ <: ApplicationRequest]] = Seq(
     SparkArg("/generator", DonutCore, DonutRequest),
-    SparkArg("/demo", DemoLogicCore, DemoRequest)
-  )
+    SparkArg("/demo", DemoLogicCore, DemoRequest),
+    )
 
   def main(args: Array[String]): Unit = {
     paths.foreach(arg => Spark.get(arg.path, runPath(arg, _, _)))
@@ -30,6 +33,7 @@ object SparkHandler {
       case Right(good) => good
       case Left(err) =>
         res.status(400)
+        logger.error(s"Got error: $err")
         return s"""{ "error" : 400, "message" : "${err.replace("\"", "\\\"")}" }"""
     }
     arg.core.runLogic(logicReq) match {
@@ -38,6 +42,7 @@ object SparkHandler {
         items.map(RouteJsonOutputer.output).mkString("[", ", ", "]")
       case ApplicationResult.Error(errs) =>
         res.status(500)
+        logger.error(s"Got errors: ${errs.mkString("\n>>>   ")}")
         errs.mkString("""{ "error" : 500, "message" : " """, ",  ", " \"} ")
     }
   }
