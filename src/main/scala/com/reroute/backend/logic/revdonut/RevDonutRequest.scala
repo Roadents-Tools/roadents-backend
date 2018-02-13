@@ -48,19 +48,18 @@ class RevDonutRequest private(
 
   def meetsRequest(route: Route): Boolean = {
     //TODO: Check categories if possible.
-    route.start == start && route.starttime == starttime &&
-      route.totalTime.abs >= totaltime.abs &&
+    route.totalTime.abs <= totaltime.abs &&
       route.walkTime.abs <= totalwalktime.abs &&
       route.waitTime.abs <= totalwaittime.abs &&
-      route.distance >= mindist &&
-      !route.steps.exists({
-        case stp: WalkStep => stp.totaltime.abs > maxwalktime.abs
-        case stp: TransitStep => stp.waittime.abs < minwaittime.abs || stp.waittime.abs > maxwaittime.abs
+      route.distance > mindist &&
+      route.steps.exists({
+        case stp: WalkStep => stp.totaltime.abs < maxwalktime.abs
+        case stp: TransitStep => stp.waittime.abs > minwaittime.abs || stp.waittime.abs < maxwaittime.abs
       })
   }
 
   def effectiveWalkLeft(route: Route): TimeDelta = {
-    Seq(totaltime - route.totalTime, totalwalktime - route.walkTime, maxwalktime).max
+    Seq(totaltime - route.totalTime, totalwalktime - route.walkTime, maxwalktime).minBy(_.abs)
   }
 
   def effectiveWaitLeft(route: Route): TimeDelta = {

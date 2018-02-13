@@ -215,9 +215,10 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
   private def isValidPathInfo(req: PathsRequest,
                               data: (DatabaseID, TransitPath, SchedulePoint)): Boolean = {
     val (stid, _, sched) = data
-    if (req.station.id != stid) false
-    else if (!sched.departsWithin(req.starttime, req.maxdelta)) false
-    else true
+    if (req.station.id != stid) return false
+    val posWorks = req.maxdelta > TimeDelta.NULL && sched.departsWithin(req.starttime, req.maxdelta)
+    val negWorks = req.maxdelta < TimeDelta.NULL && sched.arrivesWithin(req.starttime, req.maxdelta)
+    posWorks || negWorks
   }
 
   private def mapPathInfo(req: PathsRequest,

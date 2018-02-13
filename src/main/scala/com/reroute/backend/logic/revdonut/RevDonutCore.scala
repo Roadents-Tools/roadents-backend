@@ -29,11 +29,11 @@ object RevDonutCore extends LogicCore[RevDonutRequest] {
   override def runLogic(request: RevDonutRequest): ApplicationResult = Try {
 
     //Get the station routes
-    logger.info(s"RevDonut req got walk times: ${request.totaltime.hours}, ${request.totalwalktime.hours}, ${request.maxwalktime.hours}")
+    logger.info(s"Got revreq $request.")
     val queryGenerator = RevStationQueryGenerator(
       genStartQuery = start => (
         start,
-        Seq(request.maxwalktime, request.totalwalktime, request.totaltime).min.avgWalkDist,
+        request.effectiveWalkLeft(new Route(start, request.starttime)).avgWalkDist,
         (request.limit * WALK_MODIFIER).toInt
       ),
       genTransferQuery = (rt, curlayer) => TransferRequest(
@@ -41,40 +41,40 @@ object RevDonutCore extends LogicCore[RevDonutRequest] {
         request.effectiveWalkLeft(rt).avgWalkDist,
         (request.limit / curlayer * WALK_MODIFIER).toInt
       ),
-      genDepartableQuery = (rt, data, curlayer) => ArrivableRequest(
-        data,
-        data.nextDeparture(rt.endTime),
-        data.nextDeparture(rt.endTime).timeUntil(request.endTime),
-        (request.limit / curlayer * ARRIVABLE_MODIFIER).toInt
-      ),
       genPathsQuery = (rt, curlayer) => PathsRequest(
         rt.currentEnd.asInstanceOf[Station],
         rt.endTime,
         request.effectiveWaitLeft(rt),
         (request.limit / curlayer * PATHS_MODIFIER).toInt
+      ),
+      genDepartableQuery = (rt, data, curlayer) => ArrivableRequest(
+        data,
+        data.prevArrival(rt.endTime),
+        request.totaltime + data.prevArrival(rt.endTime).timeUntil(rt.endTime),
+        (request.limit / curlayer * ARRIVABLE_MODIFIER).toInt
       )
     )
     val yieldFilter: Route => Boolean = (route: Route) => {
-      val totdt = route.totalTime <= request.totaltime
+      val totdt = route.totalTime >= request.totaltime
       val notWalkEnd = !route.steps.headOption.exists(_.isInstanceOf[WalkStep])
-      val totwalkdt = route.walkTime <= request.totalwalktime
-      val totwaitdt = route.waitTime <= request.totalwalktime
+      val totwalkdt = route.walkTime >= request.totalwalktime
+      val totwaitdt = route.waitTime >= request.totalwalktime
       val stepcnt = route.steps.lengthCompare(request.steps - 1) <= 0
       val stepvalid = route.steps.forall({
-        case stp: WalkStep => stp.totaltime < request.maxwalktime
-        case stp: TransitStep => stp.waittime < request.maxwaittime && stp.waittime > request.minwaittime
+        case stp: WalkStep => stp.totaltime > request.maxwalktime
+        case stp: TransitStep => stp.waittime > request.maxwaittime && stp.waittime < request.minwaittime
       })
       val mindistvalid = route.distance + request.effectiveWalkLeft(route).avgWalkDist > request.mindist
       totdt && notWalkEnd && totwalkdt && totwaitdt && stepcnt && stepvalid && mindistvalid
     }
     val branchFilter: Route => Boolean = (route: Route) => {
-      val totdt = route.totalTime < request.totaltime
-      val totwalkdt = route.walkTime < request.totalwalktime
-      val totwaitdt = request.totalwaittime - route.waitTime > request.minwaittime
+      val totdt = route.totalTime > request.totaltime
+      val totwalkdt = route.walkTime > request.totalwalktime
+      val totwaitdt = request.totalwaittime - route.waitTime < request.minwaittime
       val stepcnt = route.steps.lengthCompare(request.steps - 2) <= 0
       val stepvalid = route.steps.forall({
-        case stp: WalkStep => stp.totaltime < request.maxwalktime
-        case stp: TransitStep => stp.waittime < request.maxwaittime && stp.waittime > request.minwaittime
+        case stp: WalkStep => stp.totaltime > request.maxwalktime
+        case stp: TransitStep => stp.waittime > request.maxwaittime && stp.waittime < request.minwaittime
       })
       totdt && totwalkdt && totwaitdt && stepcnt && stepvalid
     }
@@ -93,10 +93,10 @@ object RevDonutCore extends LogicCore[RevDonutRequest] {
 
     //Get the raw dest routes
     val destReqs: Map[Route, LocationsRequest] = stationRoutes
-      .filter(route => request.totaltime > route.totalTime)
+      .filter(route => request.totaltime < route.totalTime)
       .map(route => route -> LocationsRequest(
         route.currentEnd,
-        Seq(request.totaltime - route.totalTime, request.totalwalktime - route.walkTime, request.maxwalktime).map(_.abs).min,
+        request.effectiveWalkLeft(route).abs,
         request.desttype
       ))(breakOut)
     val destRes = LocationRetriever.getLocations(destReqs.values.toSeq)
@@ -109,7 +109,7 @@ object RevDonutCore extends LogicCore[RevDonutRequest] {
     logger.info(s"Got ${stationRoutes.size} -> ${destRoutes.size} dest routes.\n")
 
     val destToShortest = destRoutes
-      .groupBy(_.currentEnd)
+      .groupBy(_.start)
       .mapValues(_.minBy(rt => rt.totalTime.unixdelta + rt.steps.size))
     val rval = destToShortest.values.toStream.sortBy(_.totalTime).take(request.limit)
     logger.info(s"Got ${destRoutes.size} -> ${rval.size} filtered routes. Of those, ${rval.count(_.steps.lengthCompare(1) > 0)} are nonzero degree.\n")

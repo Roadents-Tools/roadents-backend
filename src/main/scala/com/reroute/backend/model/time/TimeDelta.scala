@@ -26,7 +26,7 @@ case class TimeDelta(unixdelta: Long) extends AnyVal with Ordered[TimeDelta] {
   def days: Double = unixdelta / (24 * (60 * (60 * 1000.0)))
 
   @inline
-  def avgWalkDist: Distance = TimeDelta.AVG_WALK_SPEED_PER_MINUTE * this.minutes
+  def avgWalkDist: Distance = TimeDelta.AVG_WALK_SPEED_PER_MINUTE * this.minutes.abs
 
   @inline
   def minutes: Double = unixdelta / (60 * 1000.0)
