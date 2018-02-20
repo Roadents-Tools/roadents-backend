@@ -15,41 +15,43 @@ case class DemoRequest(
   override val tag: String = "DEMO"
 }
 
-object DemoRequest extends RequestMapper[DemoRequest] {
+object DemoRequest extends {
   private final val LAT_KEY = "latitude"
   private final val LNG_KEY = "longitude"
   private final val QUERY_KEY = "type"
   private final val DELTA_KEY = "timedelta"
   private final val TIME_KEY = "starttime"
 
-  override def buildQuery(callArgs: Map[String, String]): Either[String, DemoRequest] = {
+  implicit object ReqMapper extends RequestMapper[DemoRequest] {
+    override def buildQuery(callArgs: Map[String, String]): Either[String, DemoRequest] = {
 
-    //Parse required args
-    val lat = callArgs.get(LAT_KEY) match {
-      case Some(l) => l.toDouble
-      case None => return Left("Latitude not passed.")
+      //Parse required args
+      val lat = callArgs.get(LAT_KEY) match {
+        case Some(l) => l.toDouble
+        case None => return Left("Latitude not passed.")
+      }
+      val lng = callArgs.get(LNG_KEY) match {
+        case Some(l) => l.toDouble
+        case None => return Left("Longitude not passed.")
+      }
+
+      val destQuery = callArgs.get(QUERY_KEY) match {
+        case Some(q) => DestCategory(q)
+        case None => return Left("ReturnedLocation not passed.")
+      }
+
+      val maxDelta = callArgs.get(DELTA_KEY) match {
+        case Some(dt) => dt.toLong * TimeDelta.SECOND
+        case None => return Left("Max delta not passed.")
+      }
+
+      val timeZone = TimezoneMapper.tzNameAt(lat, lng)
+      val inpTime = callArgs.get(TIME_KEY)
+        .map(_.toLong * 1000)
+        .map(TimePoint(_, timeZone))
+        .getOrElse(TimePoint.now(timeZone))
+
+      Right(DemoRequest(InputLocation(lat, lng), inpTime, maxDelta, destQuery))
     }
-    val lng = callArgs.get(LNG_KEY) match {
-      case Some(l) => l.toDouble
-      case None => return Left("Longitude not passed.")
-    }
-
-    val destQuery = callArgs.get(QUERY_KEY) match {
-      case Some(q) => DestCategory(q)
-      case None => return Left("ReturnedLocation not passed.")
-    }
-
-    val maxDelta = callArgs.get(DELTA_KEY) match {
-      case Some(dt) => dt.toLong * TimeDelta.SECOND
-      case None => return Left("Max delta not passed.")
-    }
-
-    val timeZone = TimezoneMapper.tzNameAt(lat, lng)
-    val inpTime = callArgs.get(TIME_KEY)
-      .map(_.toLong * 1000)
-      .map(TimePoint(_, timeZone))
-      .getOrElse(TimePoint.now(timeZone))
-
-    Right(DemoRequest(InputLocation(lat, lng), inpTime, maxDelta, destQuery))
   }
 }

@@ -3,8 +3,8 @@ package com.reroute.displayers.lambdacontroller
 import java.io._
 
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
-import com.reroute.backend.logic.demo.{DemoLogicCore, DemoRequest}
-import com.reroute.backend.logic.donut.{DonutCore, DonutRequest}
+import com.reroute.backend.logic.demo.DemoLogicCore
+import com.reroute.backend.logic.donut.DonutCore
 import com.reroute.backend.logic.interfaces.LogicCore
 import com.reroute.backend.logic.{ApplicationRequest, ApplicationResult, RequestMapper}
 import com.reroute.backend.model.json.RouteJsonOutputer
@@ -69,7 +69,7 @@ object LambdaHandler {
   }
 }
 
-class LambdaHandler[U <: ApplicationRequest](val core: LogicCore[U], val mapper: RequestMapper[U])
+class LambdaHandler[U <: ApplicationRequest](val core: LogicCore[U])(implicit val mapper: RequestMapper[U])
   extends RequestStreamHandler {
 
   @throws[IOException]
@@ -93,7 +93,7 @@ class LambdaHandler[U <: ApplicationRequest](val core: LogicCore[U], val mapper:
   }
 }
 
-case class DonutLambdaHandler() extends LambdaHandler(DonutCore, DonutRequest)
+case class DonutLambdaHandler() extends LambdaHandler(DonutCore)
 
-case class DemoLambdaHandler() extends LambdaHandler(DemoLogicCore, DemoRequest)
+case class DemoLambdaHandler() extends LambdaHandler(DemoLogicCore)
 

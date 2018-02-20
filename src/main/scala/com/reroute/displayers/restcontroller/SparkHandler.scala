@@ -1,9 +1,9 @@
 package com.reroute.displayers.restcontroller
 
-import com.reroute.backend.logic.demo.{DemoLogicCore, DemoRequest}
-import com.reroute.backend.logic.donut.{DonutCore, DonutRequest}
+import com.reroute.backend.logic.demo.DemoLogicCore
+import com.reroute.backend.logic.donut.DonutCore
 import com.reroute.backend.logic.interfaces.LogicCore
-import com.reroute.backend.logic.revdonut.{RevDonutCore, RevDonutRequest}
+import com.reroute.backend.logic.revdonut.RevDonutCore
 import com.reroute.backend.logic.{ApplicationRequest, ApplicationResult, RequestMapper}
 import com.reroute.backend.model.json.RouteJsonOutputer
 import com.typesafe.scalalogging.Logger
@@ -16,9 +16,9 @@ object SparkHandler {
   private final val logger = Logger[SparkHandler.type]
 
   val paths: Seq[SparkArg[_ <: ApplicationRequest]] = Seq(
-    SparkArg("/generator", DonutCore, DonutRequest),
-    SparkArg("/demo", DemoLogicCore, DemoRequest),
-    SparkArg("/funnel", RevDonutCore, RevDonutRequest)
+    SparkArg("/generator", DonutCore),
+    SparkArg("/demo", DemoLogicCore),
+    SparkArg("/funnel", RevDonutCore)
   )
 
   def main(args: Array[String]): Unit = {
@@ -50,4 +50,4 @@ object SparkHandler {
   }
 }
 
-case class SparkArg[T <: ApplicationRequest](path: String, core: LogicCore[T], parser: RequestMapper[T])
+case class SparkArg[T <: ApplicationRequest](path: String, core: LogicCore[T])(implicit val parser: RequestMapper[T])

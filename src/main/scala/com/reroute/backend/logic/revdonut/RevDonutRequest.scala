@@ -69,7 +69,7 @@ class RevDonutRequest private(
   def endTime: TimePoint = starttime + totaltime
 }
 
-object RevDonutRequest extends RequestMapper[RevDonutRequest] {
+object RevDonutRequest {
   private final val LAT_KEY = "latitude"
   private final val LNG_KEY = "longitude"
   private final val QUERY_KEY = "query"
@@ -139,64 +139,67 @@ object RevDonutRequest extends RequestMapper[RevDonutRequest] {
     )
   }
 
-  private def deltaMap(inp: String): TimeDelta = {
-    //Strips all digits after the decimal using a regex
-    val trunked = inp.replaceAll("\\..*", "")
+  implicit object ReqMapper extends RequestMapper[RevDonutRequest] {
 
-    TimeDelta.SECOND * trunked.toLong.abs * -1
+    private def deltaMap(inp: String): TimeDelta = {
+      //Strips all digits after the decimal using a regex
+      val trunked = inp.replaceAll("\\..*", "")
+
+      TimeDelta.SECOND * trunked.toLong.abs * -1
+    }
+
+    override def buildQuery(callArgs: Map[String, String]): Either[String, RevDonutRequest] = Try {
+
+      //Parse required args
+      val lat = callArgs.get(LAT_KEY) match {
+        case Some(l) => l.toDouble
+        case None => return Left("Latitude not passed.")
+      }
+      val lng = callArgs.get(LNG_KEY) match {
+        case Some(l) => l.toDouble
+        case None => return Left("Longitude not passed.")
+      }
+
+      val destQuery = callArgs.get(QUERY_KEY) match {
+        case Some(q) => DestCategory(q)
+        case None => return Left("ReturnedLocation not passed.")
+      }
+
+      val maxDelta = callArgs.get(DELTA_KEY) match {
+        case Some(dt) => deltaMap(dt)
+        case None => return Left("Max delta not passed.")
+      }
+
+      val inpTime = callArgs.get(TIME_KEY)
+        .map(_.replaceAll("\\..*", "").toLong * 1000)
+        .map(TimePoint(_, TimezoneMapper.tzNameAt(lat, lng)))
+
+      val totalWalkMax = callArgs.get(TOTAL_WALK_KEY).map(deltaMap)
+      val stepWalkMax = callArgs.get(WALK_KEY).map(deltaMap)
+      val totalWaitMax = callArgs.get(WAIT_KEY).map(deltaMap)
+      val stepWaitMax = callArgs.get(STEP_WAIT_KEY).map(deltaMap)
+      val stepWaitMin = callArgs.get(MIN_STEP_WAIT_KEY).map(deltaMap)
+      val minNetDist = callArgs.get(MIN_DIST_KEY).map(dx => Distance(dx.toDouble, DistUnits.METERS))
+      val stepLimit = callArgs.get(STEPS_KEY).map(_.toInt)
+      val routeLimit = callArgs.get(LIMIT_KEY).map(_.toInt)
+
+      Right(RevDonutRequest(
+        startPoint = InputLocation(lat, lng),
+        desttype = destQuery,
+        maxDelta = maxDelta,
+        inpstarttime = inpTime,
+        totalwalktime = totalWalkMax,
+        inmaxwalktime = stepWalkMax,
+        totalwaittime = totalWaitMax,
+        maxwaittime = stepWaitMax,
+        inminwaittime = stepWaitMin,
+        mindist = minNetDist,
+        insteps = stepLimit,
+        inlimit = routeLimit
+      ))
+    } recoverWith {
+      case e: IllegalArgumentException => Try(Left(e.getMessage))
+    } getOrElse Left("Unknown error occurred. Please contact Reroute for help.")
   }
-
-  override def buildQuery(callArgs: Map[String, String]): Either[String, RevDonutRequest] = Try {
-
-    //Parse required args
-    val lat = callArgs.get(LAT_KEY) match {
-      case Some(l) => l.toDouble
-      case None => return Left("Latitude not passed.")
-    }
-    val lng = callArgs.get(LNG_KEY) match {
-      case Some(l) => l.toDouble
-      case None => return Left("Longitude not passed.")
-    }
-
-    val destQuery = callArgs.get(QUERY_KEY) match {
-      case Some(q) => DestCategory(q)
-      case None => return Left("ReturnedLocation not passed.")
-    }
-
-    val maxDelta = callArgs.get(DELTA_KEY) match {
-      case Some(dt) => deltaMap(dt)
-      case None => return Left("Max delta not passed.")
-    }
-
-    val inpTime = callArgs.get(TIME_KEY)
-      .map(_.replaceAll("\\..*", "").toLong * 1000)
-      .map(TimePoint(_, TimezoneMapper.tzNameAt(lat, lng)))
-
-    val totalWalkMax = callArgs.get(TOTAL_WALK_KEY).map(deltaMap)
-    val stepWalkMax = callArgs.get(WALK_KEY).map(deltaMap)
-    val totalWaitMax = callArgs.get(WAIT_KEY).map(deltaMap)
-    val stepWaitMax = callArgs.get(STEP_WAIT_KEY).map(deltaMap)
-    val stepWaitMin = callArgs.get(MIN_STEP_WAIT_KEY).map(deltaMap)
-    val minNetDist = callArgs.get(MIN_DIST_KEY).map(dx => Distance(dx.toDouble, DistUnits.METERS))
-    val stepLimit = callArgs.get(STEPS_KEY).map(_.toInt)
-    val routeLimit = callArgs.get(LIMIT_KEY).map(_.toInt)
-
-    Right(RevDonutRequest(
-      startPoint = InputLocation(lat, lng),
-      desttype = destQuery,
-      maxDelta = maxDelta,
-      inpstarttime = inpTime,
-      totalwalktime = totalWalkMax,
-      inmaxwalktime = stepWalkMax,
-      totalwaittime = totalWaitMax,
-      maxwaittime = stepWaitMax,
-      inminwaittime = stepWaitMin,
-      mindist = minNetDist,
-      insteps = stepLimit,
-      inlimit = routeLimit
-    ))
-  } recoverWith {
-    case e: IllegalArgumentException => Try(Left(e.getMessage))
-  } getOrElse Left("Unknown error occurred. Please contact Reroute for help.")
 }
 
