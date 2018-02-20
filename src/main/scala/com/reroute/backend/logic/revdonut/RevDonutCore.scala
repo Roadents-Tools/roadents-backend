@@ -6,7 +6,6 @@ import com.reroute.backend.logic.interfaces.LogicCore
 import com.reroute.backend.logic.revstationroute.{RevStationQueryBuilder, RevStationRouteGenerator, RevStationRouteRequest}
 import com.reroute.backend.model.location._
 import com.reroute.backend.model.routing._
-import com.reroute.backend.model.time.TimeDelta
 import com.typesafe.scalalogging.Logger
 
 import scala.collection.breakOut
@@ -99,10 +98,6 @@ object RevDonutCore extends LogicCore[RevDonutRequest] {
   }
 
   override val tag: String = "DONUT"
-
-  override def isValid(request: RevDonutRequest): Boolean = {
-    request.tag == tag && request.totaltime > TimeDelta.NULL
-  }
 
   private def buildDestRoutes(route: Route, dests: Seq[ReturnedLocation]) = {
     val end = route.currentEnd

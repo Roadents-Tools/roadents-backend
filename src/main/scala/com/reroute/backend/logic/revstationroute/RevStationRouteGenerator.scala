@@ -139,7 +139,4 @@ object RevStationRouteGenerator extends LogicCore[RevStationRouteRequest] {
     case e: Throwable => Success(ApplicationResult.Error(Seq(e.getMessage)))
   } getOrElse ApplicationResult.Error(Seq("An unknown error occurred."))
 
-  override def isValid(request: RevStationRouteRequest): Boolean = {
-    request.tag == this.tag
-  }
 }

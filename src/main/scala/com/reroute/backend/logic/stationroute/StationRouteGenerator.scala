@@ -135,8 +135,4 @@ object StationRouteGenerator extends LogicCore[StationRouteRequest] {
   } recoverWith {
     case e: Throwable => Success(ApplicationResult.Error(Seq(e.getMessage)))
   } getOrElse ApplicationResult.Error(Seq("An unknown error occurred."))
-
-  override def isValid(request: StationRouteRequest): Boolean = {
-    request.tag == this.tag
-  }
 }

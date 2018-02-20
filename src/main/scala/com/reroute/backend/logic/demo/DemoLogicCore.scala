@@ -143,10 +143,6 @@ object DemoLogicCore extends LogicCore[DemoRequest] {
     maxPercent * request.maxdelta
   }
 
-  override def isValid(request: DemoRequest): Boolean = {
-    request.tag == tag && request.limit % DemoSorter.VALUES.length == 0
-  }
-
   @inline
   private def locationTag(loc: LocationPoint): Long = {
     loc.latitude.hashCode() << 31 + loc.longitude.hashCode()
