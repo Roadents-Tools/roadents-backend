@@ -93,7 +93,7 @@ class RevStationRouteGeneratorTest extends AssertionsForJUnit {
           })
         rval
       },
-      queryGenerator = RevStationRouteRequest.simpleGenerator(-4 * TimeDelta.HOUR, resSize)
+      queryGenerator = RevStationQueryBuilder.simpleBuilder(-4 * TimeDelta.HOUR, resSize)
     )
 
     val res = RevStationRouteGenerator.buildStationRouteList(req)

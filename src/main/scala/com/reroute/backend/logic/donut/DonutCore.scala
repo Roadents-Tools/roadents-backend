@@ -3,11 +3,10 @@ package com.reroute.backend.logic.donut
 import com.reroute.backend.locations.{LocationRetriever, LocationsRequest}
 import com.reroute.backend.logic.ApplicationResult
 import com.reroute.backend.logic.interfaces.LogicCore
-import com.reroute.backend.logic.stationroute.{StationQueryGenerator, StationRouteGenerator, StationRouteRequest}
+import com.reroute.backend.logic.stationroute.{StationQueryBuilder, StationRouteGenerator, StationRouteRequest}
 import com.reroute.backend.model.location._
 import com.reroute.backend.model.routing._
 import com.reroute.backend.model.time.TimeDelta
-import com.reroute.backend.stations.{ArrivableRequest, PathsRequest, TransferRequest}
 import com.typesafe.scalalogging.Logger
 
 import scala.collection.breakOut
@@ -30,30 +29,7 @@ object DonutCore extends LogicCore[DonutRequest] {
 
     //Get the station routes
     logger.debug(s"Donut req got walk times: ${request.totaltime.hours}, ${request.totalwalktime.hours}, ${request.maxwalktime.hours}")
-    val queryGenerator = StationQueryGenerator(
-      genStartQuery = start => (
-        start,
-        Seq(request.maxwalktime, request.totalwalktime, request.totaltime).min.avgWalkDist,
-        (request.limit * WALK_MODIFIER).toInt
-      ),
-      genTransferQuery = (rt, curlayer) => TransferRequest(
-        rt.currentEnd.asInstanceOf[Station],
-        request.effectiveWalkLeft(rt).avgWalkDist,
-        (request.limit / curlayer * WALK_MODIFIER).toInt
-      ),
-      genArrivableQuery = (rt, data, curlayer) => ArrivableRequest(
-        data,
-        data.nextDeparture(rt.endTime),
-        data.nextDeparture(rt.endTime).timeUntil(request.endTime),
-        (request.limit / curlayer * ARRIVABLE_MODIFIER).toInt
-      ),
-      genPathsQuery = (rt, curlayer) => PathsRequest(
-        rt.currentEnd.asInstanceOf[Station],
-        rt.endTime,
-        request.effectiveWaitLeft(rt),
-        (request.limit / curlayer * PATHS_MODIFIER).toInt
-      )
-    )
+    val queryGenerator = StationQueryBuilder.standardBuilder(request, WALK_MODIFIER, PATHS_MODIFIER, ARRIVABLE_MODIFIER)
     val yieldFilter: Route => Boolean = (route: Route) => {
       val totdt = route.totalTime <= request.totaltime
       val notWalkEnd = !route.steps.headOption.exists(_.isInstanceOf[WalkStep])

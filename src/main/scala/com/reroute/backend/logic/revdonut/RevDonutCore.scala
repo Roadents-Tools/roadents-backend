@@ -3,11 +3,10 @@ package com.reroute.backend.logic.revdonut
 import com.reroute.backend.locations.{LocationRetriever, LocationsRequest}
 import com.reroute.backend.logic.ApplicationResult
 import com.reroute.backend.logic.interfaces.LogicCore
-import com.reroute.backend.logic.revstationroute.{RevStationQueryGenerator, RevStationRouteGenerator, RevStationRouteRequest}
+import com.reroute.backend.logic.revstationroute.{RevStationQueryBuilder, RevStationRouteGenerator, RevStationRouteRequest}
 import com.reroute.backend.model.location._
 import com.reroute.backend.model.routing._
 import com.reroute.backend.model.time.TimeDelta
-import com.reroute.backend.stations.{ArrivableRequest, PathsRequest, TransferRequest}
 import com.typesafe.scalalogging.Logger
 
 import scala.collection.breakOut
@@ -30,30 +29,6 @@ object RevDonutCore extends LogicCore[RevDonutRequest] {
 
     //Get the station routes
     logger.info(s"Got revreq $request.")
-    val queryGenerator = RevStationQueryGenerator(
-      genStartQuery = start => (
-        start,
-        request.effectiveWalkLeft(new Route(start, request.starttime)).avgWalkDist,
-        (request.limit * WALK_MODIFIER).toInt
-      ),
-      genTransferQuery = (rt, curlayer) => TransferRequest(
-        rt.currentEnd.asInstanceOf[Station],
-        request.effectiveWalkLeft(rt).avgWalkDist,
-        (request.limit / curlayer * WALK_MODIFIER).toInt
-      ),
-      genPathsQuery = (rt, curlayer) => PathsRequest(
-        rt.currentEnd.asInstanceOf[Station],
-        rt.endTime,
-        request.effectiveWaitLeft(rt),
-        (request.limit / curlayer * PATHS_MODIFIER).toInt
-      ),
-      genDepartableQuery = (rt, data, curlayer) => ArrivableRequest(
-        data,
-        data.prevArrival(rt.endTime),
-        request.totaltime + data.prevArrival(rt.endTime).timeUntil(rt.endTime),
-        (request.limit / curlayer * ARRIVABLE_MODIFIER).toInt
-      )
-    )
     val yieldFilter: Route => Boolean = (route: Route) => {
       val totdt = route.totalTime >= request.totaltime
       val notWalkEnd = !route.steps.headOption.exists(_.isInstanceOf[WalkStep])
@@ -85,7 +60,7 @@ object RevDonutCore extends LogicCore[RevDonutRequest] {
       request.limit * BRANCH_MODIFIER,
       yieldFilter,
       branchFilter,
-      queryGenerator
+      RevStationQueryBuilder.standardBuilder(request, WALK_MODIFIER, PATHS_MODIFIER, ARRIVABLE_MODIFIER)
     )
 
     val stationRoutes = RevStationRouteGenerator.buildStationRouteList(stroutesreq)

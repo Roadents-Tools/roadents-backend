@@ -94,7 +94,7 @@ class StationRouteGeneratorTest extends AssertionsForJUnit {
         }
         rval
       },
-      queryGenerator = StationRouteRequest.simpleGenerator(4 * TimeDelta.HOUR, resSize)
+      queryGenerator = StationQueryBuilder.simpleBuilder(4 * TimeDelta.HOUR, resSize)
     )
 
     val res = StationRouteGenerator.buildStationRouteList(req)

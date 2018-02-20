@@ -1,6 +1,7 @@
 package com.reroute.backend.logic.donut
 
 import com.moodysalem.TimezoneMapper
+import com.reroute.backend.logic.stationroute.StandardQuerying
 import com.reroute.backend.logic.{ApplicationRequest, RequestMapper}
 import com.reroute.backend.model.distance.{DistUnits, Distance}
 import com.reroute.backend.model.location.{DestCategory, InputLocation}
@@ -69,83 +70,8 @@ class DonutRequest private(
 }
 
 object DonutRequest {
-  private final val LAT_KEY = "latitude"
-  private final val LNG_KEY = "longitude"
-  private final val QUERY_KEY = "query"
-  private final val DELTA_KEY = "total_time"
-  private final val TIME_KEY = "departure_time"
-  private final val TOTAL_WALK_KEY = "max_walk_time"
-  private final val WALK_KEY = "max_step_walk_time"
-  private final val WAIT_KEY = "max_wait_time"
-  private final val STEP_WAIT_KEY = "max_step_wait_time"
-  private final val MIN_STEP_WAIT_KEY = "min_step_wait_time"
-  private final val MIN_DIST_KEY = "min_dist"
-  private final val STEPS_KEY = "steps"
-  private final val LIMIT_KEY = "limit"
-
-  private final val WALK_DEFAULT = 300 * TimeDelta.SECOND
-  private final val MIN_STEP_WAIT_DEFAULT = 60 * TimeDelta.SECOND
-  private final val STEPS_DEFAULT = 5
-  private final val LIMIT_DEFAULT = 50
-
-  private final val DELTA_VALUE_MAX = 10800
-  private final val WALK_MAX = 900
-  private final val WALK_MIN = 60
-
-  private final val STEPS_MIN = 1
-  private final val STEPS_MAX = 10
-  private final val LIMIT_MIN = 1
-  private final val LIMIT_MAX = 100
-
-  def apply(
-             startPoint: InputLocation,
-             desttype: DestCategory,
-             maxDelta: TimeDelta,
-             inpstarttime: Option[TimePoint] = None,
-             totalwalktime: Option[TimeDelta] = None,
-             inmaxwalktime: Option[TimeDelta] = None,
-             totalwaittime: Option[TimeDelta] = None,
-             maxwaittime: Option[TimeDelta] = None,
-             inminwaittime: Option[TimeDelta] = None,
-             mindist: Option[Distance] = None,
-             insteps: Option[Int] = None,
-             inlimit: Option[Int] = None
-           ): DonutRequest = {
-
-    val startTime = inpstarttime.getOrElse(TimePoint.now(TimezoneMapper.tzNameAt(startPoint.latitude, startPoint.longitude)))
-    val totalWalkMax = totalwalktime.getOrElse(maxDelta)
-    val totalWaitMax = totalwaittime.getOrElse(maxDelta)
-    val stepWaitMax = maxwaittime.getOrElse(totalWaitMax)
-    val minNetDist = mindist.getOrElse(Distance.NULL)
-    val minwaittime = inminwaittime.getOrElse(MIN_STEP_WAIT_DEFAULT)
-    val maxwalktime = inmaxwalktime.getOrElse(WALK_DEFAULT)
-    val steps = insteps.getOrElse(STEPS_DEFAULT)
-    val limit = inlimit.getOrElse(LIMIT_DEFAULT)
-
-    new DonutRequest(
-      start = startPoint,
-      starttime = startTime,
-      desttype = desttype,
-      totaltime = maxDelta,
-      totalwaittime = totalWaitMax,
-      totalwalktime = totalWalkMax,
-      maxwaittime = stepWaitMax,
-      minwaittime = minwaittime,
-      maxwalktime = maxwalktime,
-      mindist = minNetDist,
-      steps = steps,
-      limit = limit
-    )
-  }
 
   implicit object ReqMapper extends RequestMapper[DonutRequest] {
-
-    private def deltaMap(inp: String): TimeDelta = {
-      //Strips all digits after the decimal using a regex
-      val trunked = inp.replaceAll("\\..*", "")
-
-      TimeDelta.SECOND * trunked.toLong
-    }
 
     override def buildQuery(callArgs: Map[String, String]): Either[String, DonutRequest] = Try {
 
@@ -199,6 +125,92 @@ object DonutRequest {
     } recoverWith {
       case e: IllegalArgumentException => Try(Left(e.getMessage))
     } getOrElse Left("Unknown error occurred. Please contact Reroute for help.")
+
+    private def deltaMap(inp: String): TimeDelta = {
+      //Strips all digits after the decimal using a regex
+      val trunked = inp.replaceAll("\\..*", "")
+
+      TimeDelta.SECOND * trunked.toLong
+    }
   }
+
+  implicit object QueryBuilderWrapper extends StandardQuerying[DonutRequest] {
+    override def limit(req: DonutRequest): Int = req.limit
+
+    override def effectiveWalkLeft(req: DonutRequest, rt: Route): TimeDelta = req.effectiveWalkLeft(rt)
+
+    override def effectiveWaitLeft(req: DonutRequest, rt: Route): TimeDelta = req.effectiveWaitLeft(rt)
+
+    override def starttime(req: DonutRequest): TimePoint = req.starttime
+
+    override def totaltime(req: DonutRequest): TimeDelta = req.totaltime
+  }
+
+  private final val LAT_KEY = "latitude"
+  private final val LNG_KEY = "longitude"
+  private final val QUERY_KEY = "query"
+  private final val DELTA_KEY = "total_time"
+  private final val TIME_KEY = "departure_time"
+  private final val TOTAL_WALK_KEY = "max_walk_time"
+  private final val WALK_KEY = "max_step_walk_time"
+  private final val WAIT_KEY = "max_wait_time"
+  private final val STEP_WAIT_KEY = "max_step_wait_time"
+  private final val MIN_STEP_WAIT_KEY = "min_step_wait_time"
+  private final val MIN_DIST_KEY = "min_dist"
+  private final val STEPS_KEY = "steps"
+  private final val LIMIT_KEY = "limit"
+  private final val WALK_DEFAULT = 300 * TimeDelta.SECOND
+  private final val MIN_STEP_WAIT_DEFAULT = 60 * TimeDelta.SECOND
+  private final val STEPS_DEFAULT = 5
+  private final val LIMIT_DEFAULT = 50
+  private final val DELTA_VALUE_MAX = 10800
+  private final val WALK_MAX = 900
+  private final val WALK_MIN = 60
+  private final val STEPS_MIN = 1
+  private final val STEPS_MAX = 10
+  private final val LIMIT_MIN = 1
+  private final val LIMIT_MAX = 100
+
+  def apply(
+             startPoint: InputLocation,
+             desttype: DestCategory,
+             maxDelta: TimeDelta,
+             inpstarttime: Option[TimePoint] = None,
+             totalwalktime: Option[TimeDelta] = None,
+             inmaxwalktime: Option[TimeDelta] = None,
+             totalwaittime: Option[TimeDelta] = None,
+             maxwaittime: Option[TimeDelta] = None,
+             inminwaittime: Option[TimeDelta] = None,
+             mindist: Option[Distance] = None,
+             insteps: Option[Int] = None,
+             inlimit: Option[Int] = None
+           ): DonutRequest = {
+
+    val startTime = inpstarttime.getOrElse(TimePoint.now(TimezoneMapper.tzNameAt(startPoint.latitude, startPoint.longitude)))
+    val totalWalkMax = totalwalktime.getOrElse(maxDelta)
+    val totalWaitMax = totalwaittime.getOrElse(maxDelta)
+    val stepWaitMax = maxwaittime.getOrElse(totalWaitMax)
+    val minNetDist = mindist.getOrElse(Distance.NULL)
+    val minwaittime = inminwaittime.getOrElse(MIN_STEP_WAIT_DEFAULT)
+    val maxwalktime = inmaxwalktime.getOrElse(WALK_DEFAULT)
+    val steps = insteps.getOrElse(STEPS_DEFAULT)
+    val limit = inlimit.getOrElse(LIMIT_DEFAULT)
+
+    new DonutRequest(
+      start = startPoint,
+      starttime = startTime,
+      desttype = desttype,
+      totaltime = maxDelta,
+      totalwaittime = totalWaitMax,
+      totalwalktime = totalWalkMax,
+      maxwaittime = stepWaitMax,
+      minwaittime = minwaittime,
+      maxwalktime = maxwalktime,
+      mindist = minNetDist,
+      steps = steps,
+      limit = limit
+    )
+  }
+
 }
 
