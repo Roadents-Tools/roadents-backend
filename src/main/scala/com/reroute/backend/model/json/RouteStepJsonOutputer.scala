@@ -7,6 +7,7 @@ object RouteStepJsonOutputer extends JsonOutputer[RouteStep] {
   override def output(inputObject: RouteStep): String = inputObject match {
     case stp: TransitStep => transitStepStringify(stp)
     case stp: WalkStep => walkStepStringify(stp)
+    case stp: PitstopStep => pitstopStepStringify(stp)
     case _ => "null"
   }
 
@@ -42,6 +43,7 @@ object RouteStepJsonOutputer extends JsonOutputer[RouteStep] {
     val startJson = LocationJsonOutputer.output(step.startpt)
     s"""{
           "start_point" : $startJson,
+          "end_point" : $startJson,
           "total_time" : ${step.totaltime.seconds.toInt},
           "step_type" : "stop"
         }"""
