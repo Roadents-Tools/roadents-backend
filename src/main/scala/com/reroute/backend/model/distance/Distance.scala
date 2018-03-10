@@ -39,4 +39,9 @@ object Distance {
   final val MAX_VALUE = Distance(Double.MaxValue)
 
   def apply(distance: Double, units: DistUnits): Distance = new Distance(distance * units.toMeters)
+
+  implicit class DistanceMathOps(val n: Double) extends AnyVal {
+    @inline
+    def *(o: Distance): Distance = o * n
+  }
 }
