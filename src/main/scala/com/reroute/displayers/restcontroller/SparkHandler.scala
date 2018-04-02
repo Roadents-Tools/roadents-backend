@@ -2,6 +2,7 @@ package com.reroute.displayers.restcontroller
 
 import com.reroute.backend.logic.demo.DemoLogicCore
 import com.reroute.backend.logic.donut.DonutCore
+import com.reroute.backend.logic.finderdemo.FinderDemoCore
 import com.reroute.backend.logic.interfaces.LogicCore
 import com.reroute.backend.logic.revdonut.RevDonutCore
 import com.reroute.backend.logic.{ApplicationRequest, ApplicationResult, RequestMapper}
@@ -18,7 +19,8 @@ object SparkHandler {
   val paths: Seq[SparkArg[_ <: ApplicationRequest]] = Seq(
     SparkArg("/generator", DonutCore),
     SparkArg("/demo", DemoLogicCore),
-    SparkArg("/funnel", RevDonutCore)
+    SparkArg("/funnel", RevDonutCore),
+    SparkArg("/finderdemo", FinderDemoCore)
   )
 
   def main(args: Array[String]): Unit = {

@@ -26,7 +26,7 @@ object FinderDemoSorter {
   private def makeSumOrdering(f: Route => Int): Ordering[(Route, Route)] = {
     Ordering.by((rts: (Route, Route)) => rts match {
       case (rt1, rt2) => (f(rt1) + f(rt2), (rt1.totalTime - rt2.totalTime).abs)
-    })
+    })(Ordering.Tuple2)
   }
 }
 

@@ -54,10 +54,11 @@ object FinderDemoCore extends LogicCore[FinderDemoRequest] {
     logger.info(s"Got ${combos.length} combos.")
 
     //Create a mapping from each sorter to its returned starta-startb route pairs, and then flatten and return
+    val empty = (new Route(req.starta, req.starttime), new Route(req.startb, req.starttime))
     val combosToSorts = FinderDemoSorter.VALUES
       .map(sorter => {
         val sorted = combos.sorted(sorter.sorter)
-        sorter -> sorted.take(RESULTS_PER_SORT)
+        sorter -> sorted.take(RESULTS_PER_SORT).padTo(RESULTS_PER_SORT, empty)
       })
 
     val rval = combosToSorts

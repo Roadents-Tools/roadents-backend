@@ -10,22 +10,40 @@ trait LocationPoint {
   def location: Array[Double] = Array(latitude, longitude)
 
   def overlaps(other: LocationPoint): Boolean = {
-    Math.abs(this.latitude - other.latitude) <= 0.000001 && Math.abs(this.longitude - other.longitude) <= 0.000001
+    Math.abs(this.latitude - other.latitude) <= 0.00001 && Math.abs(this.longitude - other.longitude) <= 0.00001
   }
 
   def distanceTo(other: LocationPoint): Distance = {
+    val dlat = (latitude - other.latitude).abs
+    val dlng = (longitude - other.longitude).abs
+    if (dlat <= 0.01 && dlng <= 0.01) rectDist(other)
+    else haversineDist(other)
+  }
+
+  @inline
+  private def rectDist(other: LocationPoint): Distance = {
+    val deglen = LocationPoint.LENGTH_DEGREE_LAT
+    val dx = other.latitude - this.latitude
+    val dy = (other.longitude - this.longitude) * Math.cos(Math.toRadians(this.latitude))
+    val coeff = math.sqrt(dx * dx + dy * dy)
+    deglen * coeff
+  }
+
+  @inline
+  private def haversineDist(other: LocationPoint): Distance = {
 
     val dLat = Math.toRadians(this.latitude - other.latitude)
     val dLng = Math.toRadians(this.longitude - other.longitude)
 
-    val sindLat = Math.sin(dLat / 2)
-    val sindLng = Math.sin(dLng / 2)
+    val sindLat = Math.pow(Math.sin(dLat / 2), 2)
+    val sindLng = Math.pow(Math.sin(dLng / 2), 2)
 
-    val a = Math.pow(sindLat, 2) + Math.pow(sindLng, 2) * Math.cos(Math.toRadians(other.latitude)) * Math.cos(Math.toRadians(this.latitude))
+    val a = sindLat + sindLng * Math.cos(Math.toRadians(other.latitude)) * Math.cos(Math.toRadians(this.latitude))
 
     val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
     val ckm = c * LocationPoint.EARTH_RADIUS_KM
     Distance(ckm, DistUnits.KILOMETERS)
+
   }
 }
 
