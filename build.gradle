@@ -36,7 +36,7 @@ repositories {
 }
 
 dependencies {
-    compile 'org.scala-lang:scala-library:2.12.4'
+    compile 'org.scala-lang:scala-library:2.12.6'
     compile 'com.google.guava:guava:19.0'
     compile 'se.walkercrou:google-places-api-java:2.1.2'
     compile 'org.apache.httpcomponents:httpcore:4.4.1'
