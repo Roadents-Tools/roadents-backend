@@ -1,5 +1,9 @@
 FROM openjdk:10.0.1-jdk
 
+ENV STATDB_NAME localdb
+ENV STATDB_URL jdbc:postgres://localhost:5432/Stations_GTFS
+ENV LOCDB_NAME localdb
+ENV LOCDB_URL jdbc:postgres://localhost:5432/locations
 WORKDIR /home/project-donut-server-backend-spark
 
 COPY gradlew .

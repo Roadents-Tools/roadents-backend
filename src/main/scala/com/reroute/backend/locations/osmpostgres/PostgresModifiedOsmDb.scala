@@ -40,9 +40,11 @@ class PostgresModifiedOsmDb(val config: PostgresConfig) extends LocationProvider
     val props = new Properties()
     props.setProperty("user", config.user)
     props.setProperty("password", config.pass)
-    props.setProperty("ssl", "true")
-    props.setProperty("sslfactory", "org.postgresql.ssl.NonValidatingFactory")
-    props.setProperty("sslcompression", "true")
+    if (config.ssl) {
+      props.setProperty("ssl", "true")
+      props.setProperty("sslfactory", "org.postgresql.ssl.NonValidatingFactory")
+      props.setProperty("sslcompression", "true")
+    }
 
     DriverManager.getConnection(config.dburl, props)
   }
@@ -51,7 +53,12 @@ class PostgresModifiedOsmDb(val config: PostgresConfig) extends LocationProvider
     case e =>
       logger.error(e.getMessage, e)
       con = initConnection()
-      if (con.isFailure) logger.error("New connection err:" + con.failed.get.getMessage, con.failed.get)
+      if (con.isFailure) {
+        logger.error(s"Error with database ${config.dbname}.")
+        logger.error(s"Config: $config")
+        logger.error(s"Message: ${con.failed.get.getMessage}")
+        logger.error("", con.failed.get)
+      }
       con
   })
 

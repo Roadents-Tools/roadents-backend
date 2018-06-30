@@ -11,25 +11,23 @@ import scala.collection.mutable
 
 object LocationProviderManager {
 
-  private var isTest = false
   private var loadedProviders: Seq[LocationProvider] = Nil
 
-  private val psqlConfigs = Seq(
-    PostgresConfig(
-      dbname = "localdb",
-      dburl = "jdbc:postgresql://debstop.dynamic.ucsd.edu:5433/locations"
-    )
-  )
-
-  private def initializeProvidersList(): Unit = {
-    loadedProviders = if (isTest) Seq(new TestLocationProvider()) else {
-      psqlConfigs.map(new PostgresModifiedOsmDb(_))
+  private def initializeDatabases(test: Boolean = false): Seq[LocationProvider] = {
+    if (!test) {
+      Seq(new PostgresModifiedOsmDb(PostgresConfig(
+        dbname = sys.env("LOCDB_NAME"),
+        dburl = sys.env("LOCDB_URL")
+      )))
+    }
+    else {
+      Seq(new TestLocationProvider())
     }
   }
 
   private def providers: Seq[LocationProvider] = {
     if (loadedProviders == Nil) {
-      initializeProvidersList()
+      loadedProviders = initializeDatabases()
     }
     loadedProviders
   }
@@ -45,7 +43,6 @@ object LocationProviderManager {
   }
 
   def setTest(test: Boolean): Unit = {
-    this.isTest = test
-    initializeProvidersList()
+    loadedProviders = initializeDatabases(test)
   }
 }

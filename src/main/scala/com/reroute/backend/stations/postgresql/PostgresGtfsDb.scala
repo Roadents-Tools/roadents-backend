@@ -38,9 +38,11 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
     val props = new Properties()
     props.setProperty("user", config.user)
     props.setProperty("password", config.pass)
-    props.setProperty("ssl", "true")
-    props.setProperty("sslfactory", "org.postgresql.ssl.NonValidatingFactory")
-    props.setProperty("sslcompression", "true")
+    if (config.ssl) {
+      props.setProperty("ssl", "true")
+      props.setProperty("sslfactory", "org.postgresql.ssl.NonValidatingFactory")
+      props.setProperty("sslcompression", "true")
+    }
 
     DriverManager.getConnection(config.dburl, props)
   }
@@ -49,7 +51,12 @@ class PostgresGtfsDb(private val config: PostgresConfig) extends StationDatabase
     case e =>
       logger.error(e.getMessage)
       con = initConnection()
-      if (con.isFailure) logger.error("New connection err:" + con.failed.get.getMessage)
+      if (con.isFailure) {
+        logger.error(s"Error with database ${config.dbname}.")
+        logger.error(s"Config: $config")
+        logger.error(s"Message: ${con.failed.get.getMessage}")
+        logger.error("", con.failed.get)
+      }
       con
   })
 

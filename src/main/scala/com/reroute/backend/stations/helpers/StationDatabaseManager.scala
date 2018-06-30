@@ -51,10 +51,15 @@ object StationDatabaseManager {
   }
 
   private def initializeDatabases(test: Boolean = false): Seq[StationDatabase] = {
-    if (!test) Seq(new PostgresGtfsDb(PostgresConfig(
-      dbname = "localdb",
-      dburl = "jdbc:postgresql://debstop.dynamic.ucsd.edu:5433/Stations_GTFS"
-    ))) else Seq(new TestStationDb())
+    if (!test) {
+      Seq(new PostgresGtfsDb(PostgresConfig(
+        dbname = sys.env("STATDB_NAME"),
+        dburl = sys.env("STATDB_URL")
+      )))
+    }
+    else {
+      Seq(new TestStationDb())
+    }
   }
 
   def getPathsForStation(request: Seq[PathsRequest]): Map[PathsRequest, Seq[StationWithRoute]] = {

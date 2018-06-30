@@ -18,6 +18,7 @@ case class PostgresConfig(
                            dbname: String = "",
                            user: String = "donut",
                            pass: String = "donutpass",
-                           area: Option[(LocationPoint, Distance)] = None
+                           area: Option[(LocationPoint, Distance)] = None,
+                           ssl: Boolean = true
                          )
 
