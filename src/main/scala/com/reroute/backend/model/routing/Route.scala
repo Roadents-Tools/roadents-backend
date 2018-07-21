@@ -17,7 +17,7 @@ class Route(val start: LocationPoint, val starttime: TimePoint, val steps: List[
 
   def addStep(step: RouteStep): Route = {
     require(currentEnd == step.startpt, s"Route is discontinuous. Tried adding ${step.startpt} to $currentEnd")
-    require(!hasPoint(step.endpt), s"Already have location ${step.endpt} in the route.")
+    require(!hasPoint(step.endpt) || !hasRoute(step), s"Already have location ${step.endpt} in the route.")
     require(step.totaltime.abs > TimeDelta.SECOND || step.startpt.overlaps(step.endpt),
             s"Teleported from ${step.startpt} to ${step.endpt}")
     require(steps.forall(
@@ -45,6 +45,14 @@ class Route(val start: LocationPoint, val starttime: TimePoint, val steps: List[
   }
 
   def hasPoint(point: LocationPoint): Boolean = steps.exists(_.endpt.overlaps(point))
+
+  def hasRoute(step: RouteStep): Boolean = step match {
+    case stp: TransitStep => steps.exists({
+      case haveStp: TransitStep => haveStp.transitpath == stp.transitpath
+      case _ => false
+    })
+    case _ => true
+  }
 
   def +(step: RouteStep): Route = addStep(step)
 

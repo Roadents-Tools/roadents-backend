@@ -32,25 +32,23 @@ object FinderDemoCore extends LogicCore[FinderDemoRequest] {
     logger.info(s"Got ${usableOverlaps.length} usable overlaps.")
 
     //Get the usable locations
-    val locreqs = usableOverlaps.map(_._3)
+    val locreqs = usableOverlaps
+      .map(_._3)
       .map(c => LocationsRequest(c.center, c.range.in(DistUnits.AVG_WALK_MINUTES) * TimeDelta.MINUTE, req.query))
     val allLocs = LocationRetriever.getLocations(locreqs)
     logger.info(s"Got ${allLocs.size} total locations.")
 
-    // Create all possible (route from a, route from b) combos by raw checking each
-    // (a station route, b station route) x [location list] combo
-    // These end up nested by locationsrequest and are then flattened
-    val nestedCombos = for ((rta, rtb, area) <- usableOverlaps; (locreq, locs) <- allLocs) yield {
-      val locsCircle = CircleArea(locreq.center, locreq.timeRange.minutes * TimeDelta.AVG_WALK_SPEED_PER_MINUTE)
-      if (!locsCircle.intersects(area)) Seq.empty
-      else {
-        val rtaAttached = locs.map(attachDestination(rta, _))
-        val rtbAttached = locs.map(attachDestination(rtb, _))
-        rtaAttached.zip(rtbAttached)
-          .filter({ case (rtad, rtbd) => rtad.totalTime < req.maxdelta && rtbd.totalTime < req.maxdelta })
-      }
-    }
-    val combos = nestedCombos.flatten
+    val combos = allLocs.values.flatten.toSet
+      .take(DEST_LIMIT)
+      .map((loc: ReturnedLocation) => {
+        val (mina, minb, _) = usableOverlaps.minBy { case (rta, rtb, _) =>
+          rta.totalTime + rtb.totalTime +
+            rta.currentEnd.distanceTo(loc).avgWalkTime +
+            rtb.currentEnd.distanceTo(loc).avgWalkTime
+        }
+        (attachDestination(mina, loc), attachDestination(minb, loc))
+      })
+      .toSeq
     logger.info(s"Got ${combos.length} combos.")
 
     //Create a mapping from each sorter to its returned starta-startb route pairs, and then flatten and return
@@ -61,9 +59,26 @@ object FinderDemoCore extends LogicCore[FinderDemoRequest] {
         sorter -> sorted.take(RESULTS_PER_SORT).padTo(RESULTS_PER_SORT, empty)
       })
 
+    logger.info("Double checking.")
+
+    for ((sort, rts) <- combosToSorts) {
+      assert(rts.lengthCompare(RESULTS_PER_SORT) == 0)
+      assert(
+        rts.head._1.totalTime <= req.maxdelta && rts.head._2.totalTime <= req.maxdelta,
+        s"Diffs: (${req.maxdelta.minutes - rts.head._1.totalTime.minutes}, ${req.maxdelta.minutes - rts.head._2.totalTime.minutes})"
+      )
+      for (idx <- 1 until RESULTS_PER_SORT) {
+        assert(sort.sorter.lteq(rts(idx - 1), rts(idx)), s"Sorter ordering: ${sort.tag}")
+        assert(rts(idx)._1.totalTime <= req.maxdelta && rts(idx)._2.totalTime <= req.maxdelta)
+      }
+    }
+
+    logger.info("Returning...")
+
     val rval = combosToSorts
       .flatMap({ case (_, sorted) => sorted })
       .flatMap({ case (rta, rtb) => Seq(rta, rtb) })
+
 
     ApplicationResult.Result(rval)
   }
@@ -73,7 +88,7 @@ object FinderDemoCore extends LogicCore[FinderDemoRequest] {
       .maxDeltaOnly(req.starta, req.starttime, req.maxdelta, 4 * DEST_LIMIT)
       .copy(
         branchFilter = primaryBranchFilter(req),
-        yieldFilter = primaryBranchFilter(req)
+        yieldFilter = primaryYieldFilter(req)
       )
     StationRouteGenerator.buildStationRouteList(statratreq)
   }
@@ -84,7 +99,7 @@ object FinderDemoCore extends LogicCore[FinderDemoRequest] {
       .maxDeltaOnly(req.starta, req.starttime, req.maxdelta, DEST_LIMIT)
       .copy(
         branchFilter = secondaryBranchFilter(req, toOverlap),
-        yieldFilter = secondaryBranchFilter(req, toOverlap)
+        yieldFilter = secondaryYieldFilter(req, toOverlap)
       )
     StationRouteGenerator.buildStationRouteList(statratreq)
   }
