@@ -1,45 +1,39 @@
 package com.reroute.backend.stations
 
-import com.reroute.backend.model.distance.Distance
-import com.reroute.backend.model.location.{InputLocation, Station, StationWithRoute}
+import com.reroute.backend.model.location.StationWithRoute
 import com.reroute.backend.stations.helpers.{StationCacheManager, StationDatabaseManager}
+import com.reroute.backend.stations.interfaces.StationDatabase
+import com.typesafe.scalalogging.Logger
 
-object TransitDataRetriever {
+object TransitDataRetriever extends StationDatabase {
+  private final val logger = Logger[TransitDataRetriever.type]
 
-  def getStartingStations(start: InputLocation, dist: Distance, limit: Int = Int.MaxValue): Seq[Station] = {
-    val cached = StationCacheManager.getStartingStations(start, dist, limit)
-    cached match {
-      case Some(res) => res
-      case None => val dbres = StationDatabaseManager.getStartingStations(start, dist, limit)
-        StationCacheManager.putStartingStations(start, dist, dbres)
-        dbres
-    }
-  }
-
-  def getTransferStations(request: Seq[TransferRequest]): Map[TransferRequest, Seq[Station]] = {
-    val cached = StationCacheManager.getTransferStations(request)
+  override def getWalkableStations(request: Seq[WalkableRequest]): Map[WalkableRequest, Seq[StationWithRoute]] = {
+    val cached = StationCacheManager.getWalkableStations(request)
     val remaining = request.filter(req => cached.get(req).isEmpty)
     if (remaining.isEmpty) return cached
-    val dbres = StationDatabaseManager.getTransferStations(remaining)
-    StationCacheManager.putTransferStations(dbres.toSeq)
+    val dbres = StationDatabaseManager.getWalkableStations(remaining)
+    StationCacheManager.cacheWalkableRequests(dbres)
     cached ++ dbres
   }
 
-  def getPathsForStation(request: Seq[PathsRequest]): Map[PathsRequest, Seq[StationWithRoute]] = {
-    val cached = StationCacheManager.getPathsForStation(request)
-    val remaining = request.filter(req => cached.get(req).isEmpty)
-    if (remaining.isEmpty) return cached
-    val dbres = StationDatabaseManager.getPathsForStation(remaining)
-    StationCacheManager.putPathsForStation(dbres.toSeq)
-    cached ++ dbres
+  override def databaseName: String = "GlobalTransitDatabase"
+
+  override def close(): Unit = {
+    StationCacheManager.close()
+    StationDatabaseManager.close()
   }
 
-  def getArrivableStation(request: Seq[ArrivableRequest]): Map[ArrivableRequest, Seq[StationWithRoute]] = {
-    val cached = StationCacheManager.getArrivableStation(request)
+  override def isUp: Boolean = {
+    StationDatabaseManager.isUp
+  }
+
+  def getArrivableStations(request: Seq[ArrivableRequest]): Map[ArrivableRequest, Seq[StationWithRoute]] = {
+    val cached = StationCacheManager.getArrivableStations(request)
     val remaining = request.filter(req => cached.get(req).isEmpty)
     if (remaining.isEmpty) return cached
-    val dbres = StationDatabaseManager.getArrivableStation(remaining)
-    StationCacheManager.putArrivableStation(dbres.toSeq)
+    val dbres = StationDatabaseManager.getArrivableStations(remaining)
+    StationCacheManager.cacheArrivableRequests(dbres)
     cached ++ dbres
   }
 }

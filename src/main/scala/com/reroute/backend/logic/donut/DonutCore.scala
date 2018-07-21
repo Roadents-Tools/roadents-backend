@@ -51,11 +51,6 @@ object DonutCore extends LogicCore[DonutRequest] {
         case stp: WalkStep => stp.totaltime < request.maxwalktime
         case stp: TransitStep => stp.waittime < request.maxwaittime && stp.waittime > request.minwaittime
       })
-      if (!totdt) logger.warn(s"A: ${route.totalTime.hours} VS ${request.totaltime.hours}")
-      if (!totwalkdt) logger.warn(s"B: ${route.walkTime.hours} VS ${request.totalwalktime.hours}")
-      if (!totwaitdt) logger.warn(s"C: ${route.waitTime.seconds} VS ${request.totalwaittime.seconds}")
-      if (!stepcnt) logger.warn(s"D: ${route.steps.size} VS ${request.steps}")
-      if (!stepvalid) logger.warn(s"E: ${route.steps.map(_.totaltime.seconds)}")
       totdt && totwalkdt && totwaitdt && stepcnt && stepvalid
     }
     val stroutesreq = StationRouteRequest(

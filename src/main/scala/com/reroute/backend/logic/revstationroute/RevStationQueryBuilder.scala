@@ -1,15 +1,12 @@
 package com.reroute.backend.logic.revstationroute
 
-import com.reroute.backend.model.distance.Distance
-import com.reroute.backend.model.location.{InputLocation, Station, StationWithRoute}
+import com.reroute.backend.model.location.{Station, StationWithRoute}
 import com.reroute.backend.model.routing.Route
 import com.reroute.backend.model.time.{TimeDelta, TimePoint}
-import com.reroute.backend.stations.{ArrivableRequest, PathsRequest, TransferRequest}
+import com.reroute.backend.stations.{ArrivableRequest, WalkableRequest}
 
 case class RevStationQueryBuilder(
-                                   genStartQuery: InputLocation => (InputLocation, Distance, Int),
-                                   genTransferQuery: (Route, Int) => TransferRequest,
-                                   genPathsQuery: (Route, Int) => PathsRequest,
+                                   genWalkableQuery: (Route, Int) => WalkableRequest,
                                    genDepartableQuery: (Route, StationWithRoute, Int) => ArrivableRequest
                                  )
 
@@ -34,21 +31,12 @@ object RevStationQueryBuilder {
                                              ): RevStationQueryBuilder = {
     val request = StandardGeneratorBase(base)
     RevStationQueryBuilder(
-      genStartQuery = start => (
-        start,
-        request.effectiveWalkLeft(new Route(start, request.starttime)).avgWalkDist,
-        (request.limit * walk_modifier).toInt
-      ),
-      genTransferQuery = (rt, curlayer) => TransferRequest(
+      genWalkableQuery = (rt, curlayer) => WalkableRequest(
         rt.currentEnd.asInstanceOf[Station],
         request.effectiveWalkLeft(rt).avgWalkDist,
-        (request.limit / curlayer * walk_modifier).toInt
-      ),
-      genPathsQuery = (rt, curlayer) => PathsRequest(
-        rt.currentEnd.asInstanceOf[Station],
         rt.endTime,
         request.effectiveWaitLeft(rt),
-        (request.limit / curlayer * paths_modifier).toInt
+        (request.limit / curlayer * walk_modifier).toInt
       ),
       genDepartableQuery = (rt, data, curlayer) => ArrivableRequest(
         data,
@@ -61,26 +49,17 @@ object RevStationQueryBuilder {
 
   def simpleBuilder(maxdelta: TimeDelta, limit: Int): RevStationQueryBuilder = {
     RevStationQueryBuilder(
-      genStartQuery = start => (
-        start,
-        maxdelta.abs.avgWalkDist,
-        limit * 3
-      ),
-      genTransferQuery = (rt, curlayer) => TransferRequest(
-        rt.currentEnd.asInstanceOf[Station],
+      genWalkableQuery = (rt, curlayer) => WalkableRequest(
+        rt.currentEnd,
         (maxdelta - rt.totalTime).abs.avgWalkDist,
-        (10.0 / curlayer * limit).toInt
-      ),
-      genPathsQuery = (rt, curlayer) => PathsRequest(
-        rt.currentEnd.asInstanceOf[Station],
         rt.endTime,
-        maxdelta - rt.totalTime,
+        (maxdelta.abs - rt.totalTime.abs) * -1,
         (10.0 / curlayer * limit).toInt
       ),
       genDepartableQuery = (rt, data, curlayer) => ArrivableRequest(
         data,
         data.prevArrival(rt.endTime),
-        maxdelta + data.prevArrival(rt.endTime).timeUntil(rt.endTime),
+        (maxdelta.abs - data.prevArrival(rt.endTime).timeUntil(rt.endTime).abs) * -1,
         (10.0 / curlayer * limit).toInt
       )
     )

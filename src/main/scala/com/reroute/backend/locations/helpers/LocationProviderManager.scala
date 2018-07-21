@@ -14,10 +14,12 @@ object LocationProviderManager {
   private var loadedProviders: Seq[LocationProvider] = Nil
 
   private def initializeDatabases(test: Boolean = false): Seq[LocationProvider] = {
+    val name = sys.env.getOrElse("LOCDB_NAME", "EMPTY")
+    val url = sys.env.getOrElse("LOCDB_URL", "")
     if (!test) {
       Seq(new PostgresModifiedOsmDb(PostgresConfig(
-        dbname = sys.env("LOCDB_NAME"),
-        dburl = sys.env("LOCDB_URL")
+        dbname = name,
+        dburl = url
       )))
     }
     else {

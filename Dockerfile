@@ -9,12 +9,10 @@ WORKDIR /home/project-donut-server-backend-spark
 COPY gradlew .
 COPY gradle/ gradle/
 
-RUN ls gradle/wrapper/
-RUN ./gradlew
-
 COPY build.gradle .
-COPY src/ ./src
+RUN ./gradlew build
 
+COPY src/ ./src
 RUN ./gradlew build
 
 EXPOSE 4567

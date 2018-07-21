@@ -137,7 +137,8 @@ public class ScratchRunner {
                 PostgresConfig.apply$default$2(),
                 PostgresConfig.apply$default$3(),
                 PostgresConfig.apply$default$4(),
-                PostgresConfig.apply$default$5()
+                PostgresConfig.apply$default$5(),
+                PostgresConfig.apply$default$6()
         );
         System.out.println("Got inserts. Now trying to run.");
         Try<Object> status = PostgresModifiedOsmLoader.runInserts(conf, ins);
