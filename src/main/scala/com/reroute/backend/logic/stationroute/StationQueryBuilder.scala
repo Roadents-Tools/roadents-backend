@@ -1,15 +1,12 @@
 package com.reroute.backend.logic.stationroute
 
-import com.reroute.backend.model.distance.Distance
-import com.reroute.backend.model.location.{InputLocation, Station, StationWithRoute}
+import com.reroute.backend.model.location.StationWithRoute
 import com.reroute.backend.model.routing.Route
 import com.reroute.backend.model.time.{TimeDelta, TimePoint}
-import com.reroute.backend.stations.{ArrivableRequest, PathsRequest, TransferRequest}
+import com.reroute.backend.stations.{ArrivableRequest, WalkableRequest}
 
 case class StationQueryBuilder(
-                                genStartQuery: InputLocation => (InputLocation, Distance, Int),
-                                genTransferQuery: (Route, Int) => TransferRequest,
-                                genPathsQuery: (Route, Int) => PathsRequest,
+                                genWalkableQuery: (Route, Int) => WalkableRequest,
                                 genArrivableQuery: (Route, StationWithRoute, Int) => ArrivableRequest
                               )
 
@@ -17,21 +14,12 @@ object StationQueryBuilder {
 
   def simpleBuilder(maxdelta: TimeDelta, limit: Int): StationQueryBuilder = {
     StationQueryBuilder(
-      genStartQuery = start => (
-        start,
-        maxdelta.avgWalkDist,
-        limit * 3
-      ),
-      genTransferQuery = (rt, curlayer) => TransferRequest(
-        rt.currentEnd.asInstanceOf[Station],
+      genWalkableQuery = (rt, curlayer) => WalkableRequest(
+        rt.currentEnd,
         (maxdelta - rt.totalTime).avgWalkDist,
-        (10.0 / curlayer * limit).toInt
-      ),
-      genPathsQuery = (rt, curlayer) => PathsRequest(
-        rt.currentEnd.asInstanceOf[Station],
         rt.endTime,
         maxdelta - rt.totalTime,
-        (10.0 / curlayer * limit).toInt
+        if (curlayer > 0) (10.0 / curlayer * limit).toInt else limit * 3
       ),
       genArrivableQuery = (rt, data, curlayer) => ArrivableRequest(
         data,
@@ -49,27 +37,17 @@ object StationQueryBuilder {
 
     val request = StandardGeneratorBase(base)
     StationQueryBuilder(
-      genStartQuery = start => (
-        start,
-        request.effectiveWalkLeft(new Route(start, request.starttime)).avgWalkDist,
-        (request.limit * walk_modifier).toInt
-      ),
-      genTransferQuery = (rt, curlayer) => TransferRequest(
-        rt.currentEnd.asInstanceOf[Station],
-        request.effectiveWalkLeft(rt).avgWalkDist,
-        (request.limit / curlayer * walk_modifier).toInt
-      ),
       genArrivableQuery = (rt, data, curlayer) => ArrivableRequest(
         data,
         data.nextDeparture(rt.endTime),
         data.nextDeparture(rt.endTime).timeUntil(request.starttime + request.totaltime),
         (request.limit / curlayer * arrivable_modifier).toInt
       ),
-      genPathsQuery = (rt, curlayer) => PathsRequest(
-        rt.currentEnd.asInstanceOf[Station],
+      genWalkableQuery = (rt, curlayer) => WalkableRequest(
+        rt.currentEnd,
+        request.effectiveWalkLeft(rt).avgWalkDist,
         rt.endTime,
-        request.effectiveWaitLeft(rt),
-        (request.limit / curlayer * paths_modifier).toInt
+        request.effectiveWalkLeft(rt) + request.effectiveWaitLeft(rt)
       )
     )
   }
