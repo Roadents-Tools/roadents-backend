@@ -80,7 +80,7 @@ object RevStationQueryBuilder {
       genDepartableQuery = (rt, data, curlayer) => ArrivableRequest(
         data,
         data.prevArrival(rt.endTime),
-        maxdelta + data.prevArrival(rt.endTime).timeUntil(rt.endTime),
+        (maxdelta.abs - data.prevArrival(rt.endTime).timeUntil(rt.endTime).abs) * -1,
         (10.0 / curlayer * limit).toInt
       )
     )
